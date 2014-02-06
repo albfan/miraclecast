@@ -1,0 +1,40 @@
+= MiracleCast - Wifi-Display/Miracast Implementation =
+
+TODO
+
+Website:
+  http://www.freedesktop.org/wiki/Software/miraclecast
+
+== Requirements ==
+
+TODO
+
+== Download ==
+
+Released tarballs can be found at:
+  http://www.freedesktop.org/software/miraclecast/releases
+
+== Install ==
+
+  To compile MiracleCast, run the standard autotools commands:
+    $ test -f ./configure || NOCONFIGURE=1 ./autogen.sh
+    $ ./configure --prefix=/usr
+    $ make
+    $ sudo make install
+  To compile and run the test applications, use:
+    $ make check
+
+== Documentation ==
+
+WIP
+
+== License ==
+
+  This software is licensed under the terms of an MIT-like license. Please see
+  ./COPYING for further information.
+
+== Contact ==
+
+  This software is maintained by:
+    David Herrmann <dh.herrmann@gmail.com>
+  If you have any questions, do not hesitate to contact one of the maintainers.
