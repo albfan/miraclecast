@@ -53,7 +53,6 @@ int peer_make_name(unsigned int id, char **out)
 static int peer_new(struct link *l, struct peer **out)
 {
 	unsigned int id;
-	size_t hash = 0;
 	char *name;
 	struct peer *p;
 	int r;
@@ -66,7 +65,7 @@ static int peer_new(struct link *l, struct peer **out)
 	if (r < 0)
 		return r;
 
-	if (shl_htable_lookup_str(&l->m->peers, name, &hash, NULL)) {
+	if (shl_htable_lookup_str(&l->m->peers, name, NULL, NULL)) {
 		free(name);
 		return -EALREADY;
 	}
@@ -83,25 +82,26 @@ static int peer_new(struct link *l, struct peer **out)
 	p->id = id;
 	p->name = name;
 
-	r = shl_htable_insert_str(&l->m->peers, &p->name, &hash);
-	if (r < 0) {
-		log_vERR(r);
-		goto error;
-	}
-
-	++l->m->peer_cnt;
-	shl_dlist_link(&l->peers, &p->list);
-	peer_dbus_added(p);
-	log_info("new peer: %s@%s", p->name, l->name);
-
 	if (out)
 		*out = p;
 
 	return 0;
+}
 
-error:
-	peer_free(p);
-	return r;
+static int peer_link(struct peer *p)
+{
+	int r;
+
+	r = shl_htable_insert_str(&p->l->m->peers, &p->name, NULL);
+	if (r < 0)
+		return log_ERR(r);
+
+	++p->l->m->peer_cnt;
+	shl_dlist_link(&p->l->peers, &p->list);
+	peer_dbus_added(p);
+	log_info("new peer: %s@%s", p->name, p->l->name);
+
+	return 0;
 }
 
 int peer_new_wifi(struct link *l, struct wifi_dev *d, struct peer **out)
@@ -116,10 +116,18 @@ int peer_new_wifi(struct link *l, struct wifi_dev *d, struct peer **out)
 	p->d = d;
 	wifi_dev_set_data(p->d, p);
 
+	r = peer_link(p);
+	if (r < 0)
+		goto error;
+
 	if (out)
 		*out = p;
 
 	return 0;
+
+error:
+	peer_free(p);
+	return r;
 }
 
 void peer_free(struct peer *p)
