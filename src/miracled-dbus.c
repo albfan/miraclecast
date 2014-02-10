@@ -87,7 +87,6 @@ static int peer_dbus_get_link(sd_bus *bus,
 	return 1;
 }
 
-/*
 static int peer_dbus_get_name(sd_bus *bus,
 			      const char *path,
 			      const char *interface,
@@ -96,7 +95,16 @@ static int peer_dbus_get_name(sd_bus *bus,
 			      void *data,
 			      sd_bus_error *err)
 {
-	return -EINVAL;
+	struct peer *p = data;
+	const char *name;
+	int r;
+
+	name = peer_get_friendly_name(p);
+	r = sd_bus_message_append_basic(reply, 's', name ? name : "<unknown>");
+	if (r < 0)
+		return r;
+
+	return 1;
 }
 
 static int peer_dbus_get_connected(sd_bus *bus,
@@ -107,7 +115,15 @@ static int peer_dbus_get_connected(sd_bus *bus,
 				   void *data,
 				   sd_bus_error *err)
 {
-	return -EINVAL;
+	struct peer *p = data;
+	int r, val;
+
+	val = peer_is_connected(p);
+	r = sd_bus_message_append_basic(reply, 'b', &val);
+	if (r < 0)
+		return r;
+
+	return 1;
 }
 
 static int peer_dbus_get_interface(sd_bus *bus,
@@ -118,7 +134,16 @@ static int peer_dbus_get_interface(sd_bus *bus,
 				   void *data,
 				   sd_bus_error *err)
 {
-	return -EINVAL;
+	struct peer *p = data;
+	const char *val;
+	int r;
+
+	val = peer_get_interface(p);
+	r = sd_bus_message_append_basic(reply, 's', val ? : "");
+	if (r < 0)
+		return r;
+
+	return 1;
 }
 
 static int peer_dbus_get_local_address(sd_bus *bus,
@@ -129,7 +154,16 @@ static int peer_dbus_get_local_address(sd_bus *bus,
 				       void *data,
 				       sd_bus_error *err)
 {
-	return -EINVAL;
+	struct peer *p = data;
+	const char *val;
+	int r;
+
+	val = peer_get_local_address(p);
+	r = sd_bus_message_append_basic(reply, 's', val ? : "");
+	if (r < 0)
+		return r;
+
+	return 1;
 }
 
 static int peer_dbus_get_remote_address(sd_bus *bus,
@@ -140,9 +174,17 @@ static int peer_dbus_get_remote_address(sd_bus *bus,
 					void *data,
 					sd_bus_error *err)
 {
-	return -EINVAL;
+	struct peer *p = data;
+	const char *val;
+	int r;
+
+	val = peer_get_remote_address(p);
+	r = sd_bus_message_append_basic(reply, 's', val ? : "");
+	if (r < 0)
+		return r;
+
+	return 1;
 }
-*/
 
 static const sd_bus_vtable peer_dbus_vtable[] = {
 	SD_BUS_VTABLE_START(0),
@@ -171,7 +213,6 @@ static const sd_bus_vtable peer_dbus_vtable[] = {
 			peer_dbus_get_link,
 			0,
 			SD_BUS_VTABLE_PROPERTY_CONST),
-/*
 	SD_BUS_PROPERTY("Name",
 			"s",
 			peer_dbus_get_name,
@@ -197,7 +238,6 @@ static const sd_bus_vtable peer_dbus_vtable[] = {
 			peer_dbus_get_remote_address,
 			0,
 			0),
-*/
 	SD_BUS_SIGNAL("ProvisionRequest", "ss", 0),
 	SD_BUS_VTABLE_END
 };

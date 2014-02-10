@@ -123,4 +123,9 @@ int wifi_dev_connect(struct wifi_dev *d, unsigned int provision,
 		     const char *pin);
 void wifi_dev_disconnect(struct wifi_dev *d);
 
+const char *wifi_dev_get_name(struct wifi_dev *d);
+const char *wifi_dev_get_interface(struct wifi_dev *d);
+const char *wifi_dev_get_local_address(struct wifi_dev *d);
+const char *wifi_dev_get_remote_address(struct wifi_dev *d);
+
 #endif /* MIRACLED_WIFI_H */

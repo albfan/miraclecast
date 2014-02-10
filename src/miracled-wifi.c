@@ -42,6 +42,7 @@
 #include "miracled-wifi.h"
 #include "shl_dlist.h"
 #include "shl_log.h"
+#include "shl_util.h"
 
 struct wifi {
 	sd_event *event;
@@ -68,6 +69,8 @@ struct wifi_dev {
 	char mac[WFD_WPA_EVENT_MAC_STRLEN];
 	char pin[WIFI_PIN_STRLEN + 1];
 	unsigned int provision;
+
+	char *name;
 
 	char *ifname;
 	unsigned int role;
@@ -301,7 +304,7 @@ static ssize_t wifi_requestf_retry(struct wifi *w, const char *format, ...)
 static int wifi_parse_peer(struct wifi *w, size_t len, struct wifi_dev **out)
 {
 	char buf[512];
-	char *pos, *next;
+	char *pos, *next, *val;
 	int x1, x2, x3, x4, x5, x6, r;
 	struct wifi_dev *d;
 
@@ -336,7 +339,13 @@ static int wifi_parse_peer(struct wifi *w, size_t len, struct wifi_dev **out)
 		if (next)
 			*next = 0;
 
-		log_debug("add info: %s", pos);
+		if ((val = shl_startswith(pos, "device_name="))) {
+			val = strdup(val);
+			if (val) {
+				free(d->name);
+				d->name = val;
+			}
+		}
 	}
 
 	*out = d;
@@ -1139,6 +1148,7 @@ void wifi_dev_unref(struct wifi_dev *d)
 
 	wifi_dev_set_connected(d, false, false);
 	wifi_dev_lost(d);
+	free(d->name);
 	free(d);
 }
 
@@ -1243,4 +1253,36 @@ void wifi_dev_disconnect(struct wifi_dev *d)
 
 	wifi_dev_set_connected(d, false, false);
 	wifi_dev_stop(d);
+}
+
+const char *wifi_dev_get_name(struct wifi_dev *d)
+{
+	if (!d)
+		return NULL;
+
+	return d->name;
+}
+
+const char *wifi_dev_get_interface(struct wifi_dev *d)
+{
+	if (!wifi_dev_is_ready(d))
+		return NULL;
+
+	return d->ifname;
+}
+
+const char *wifi_dev_get_local_address(struct wifi_dev *d)
+{
+	if (!wifi_dev_is_ready(d))
+		return NULL;
+
+	return d->local_addr;
+}
+
+const char *wifi_dev_get_remote_address(struct wifi_dev *d)
+{
+	if (!wifi_dev_is_ready(d))
+		return NULL;
+
+	return d->remote_addr;
 }

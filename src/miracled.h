@@ -63,8 +63,13 @@ int peer_make_name(unsigned int id, char **out);
 int peer_new_wifi(struct link *l, struct wifi_dev *d, struct peer **out);
 void peer_free(struct peer *p);
 
-void peer_process_wifi(struct peer *p, struct wifi_event *ev);
+const char *peer_get_friendly_name(struct peer *p);
+bool peer_is_connected(struct peer *p);
+const char *peer_get_interface(struct peer *p);
+const char *peer_get_local_address(struct peer *p);
+const char *peer_get_remote_address(struct peer *p);
 
+void peer_process_wifi(struct peer *p, struct wifi_event *ev);
 
 /* link */
 

@@ -140,6 +140,61 @@ void peer_free(struct peer *p)
 	free(p);
 }
 
+const char *peer_get_friendly_name(struct peer *p)
+{
+	if (!p)
+		return NULL;
+
+	if (p->d)
+		return wifi_dev_get_name(p->d);
+	else
+		return NULL;
+}
+
+bool peer_is_connected(struct peer *p)
+{
+	if (!p)
+		return false;
+
+	if (p->d)
+		return wifi_dev_is_ready(p->d);
+	else
+		return false;
+}
+
+const char *peer_get_interface(struct peer *p)
+{
+	if (!p)
+		return NULL;
+
+	if (p->d)
+		return wifi_dev_get_interface(p->d);
+	else
+		return NULL;
+}
+
+const char *peer_get_local_address(struct peer *p)
+{
+	if (!p)
+		return NULL;
+
+	if (p->d)
+		return wifi_dev_get_local_address(p->d);
+	else
+		return NULL;
+}
+
+const char *peer_get_remote_address(struct peer *p)
+{
+	if (!p)
+		return NULL;
+
+	if (p->d)
+		return wifi_dev_get_remote_address(p->d);
+	else
+		return NULL;
+}
+
 void peer_process_wifi(struct peer *p, struct wifi_event *ev)
 {
 	if (!p || !p->d)
