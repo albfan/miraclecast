@@ -58,12 +58,13 @@ struct peer {
 #define peer_from_list(_p) \
 	shl_dlist_entry((_p), struct peer, list)
 
+int peer_make_name(unsigned int id, char **out);
+
 int peer_new_wifi(struct link *l, struct wifi_dev *d, struct peer **out);
 void peer_free(struct peer *p);
 
 void peer_process_wifi(struct peer *p, struct wifi_event *ev);
 
-int peer_make_name(unsigned int id, char **out);
 
 /* link */
 
