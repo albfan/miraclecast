@@ -432,6 +432,58 @@ static int verb_remove_link(sd_bus *bus, char **args, unsigned int n)
 	return 0;
 }
 
+static int verb_set_link_name(sd_bus *bus, char **args, unsigned int n)
+{
+	_cleanup_sd_bus_error_ sd_bus_error err = SD_BUS_ERROR_NULL;
+	_cleanup_sd_bus_message_ sd_bus_message *m = NULL;
+	_cleanup_free_ char *path = NULL, *name = NULL;
+	int r;
+
+	name = sd_bus_label_escape(args[1]);
+	if (!name)
+		return log_ENOMEM();
+
+	path = shl_strcat("/org/freedesktop/miracle/link/", name);
+	if (!path)
+		return log_ENOMEM();
+
+	r = sd_bus_message_new_method_call(bus,
+					   "org.freedesktop.miracle",
+					   path,
+					   "org.freedesktop.DBus.Properties",
+					   "Set",
+					   &m);
+	if (r < 0)
+		return log_bus_create(r);
+
+	r = sd_bus_message_append(m, "ss",
+				  "org.freedesktop.miracle.Link", "Name");
+	if (r < 0)
+		return log_bus_create(r);
+
+	r = sd_bus_message_open_container(m, 'v', "s");
+	if (r < 0)
+		return log_bus_create(r);
+
+	r = sd_bus_message_append(m, "s", args[2]);
+	if (r < 0)
+		return log_bus_create(r);
+
+	r = sd_bus_message_close_container(m);
+	if (r < 0)
+		return log_bus_create(r);
+
+	r = sd_bus_call(bus, m, 0, &err, NULL);
+	if (r < 0) {
+		log_error("cannot set friendly-name to %s on link %s: %s",
+			  args[2], args[1], bus_error_message(&err, r));
+		return r;
+	}
+
+	printf("Friendly-name set to %s on link %s\n", args[2], args[1]);
+	return 0;
+}
+
 static int help(void)
 {
 	printf("%s [OPTIONS...] {COMMAND} ...\n\n"
@@ -446,6 +498,7 @@ static int help(void)
 	       "  show-link LINK...               Show details of given link\n"
 	       "  add-link LINK...                Start managing the given link\n"
 	       "  remove-link LINK...             Stop managing the given link\n"
+	       "  set-link-name LINK NAME         Set friendly-name of given link\n"
 	       , program_invocation_short_name);
 
 	return 0;
@@ -504,6 +557,7 @@ static int miraclectl_main(sd_bus *bus, int argc, char *argv[])
 		{ "show-link",		EQUAL,	2,	verb_show_link },
 		{ "add-link",		EQUAL,	3,	verb_add_link },
 		{ "remove-link",	EQUAL,	2,	verb_remove_link },
+		{ "set-link-name",	EQUAL,	3,	verb_set_link_name },
 	};
 	int left;
 	unsigned int i;
