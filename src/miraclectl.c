@@ -140,37 +140,60 @@ static int cli_run(void)
  * verb: list
  */
 
-static int verb_list_links(sd_bus *bus, sd_bus_message *m)
+static int verb_list_link(sd_bus *bus, sd_bus_message *m, const char *link)
 {
-	char *link;
-	unsigned int link_cnt = 0;
-	const char *obj;
+	const char *obj, *name = "<unknown>";
 	int r;
 
-	r = sd_bus_message_enter_container(m, 'a', "{oa{sa{sv}}}");
+	r = sd_bus_message_enter_container(m, 'a', "{sa{sv}}");
 	if (r < 0)
 		return log_bus_parser(r);
 
 	while ((r = sd_bus_message_enter_container(m,
 						   'e',
-						   "oa{sa{sv}}")) > 0) {
-		r = sd_bus_message_read(m, "o", &obj);
+						   "sa{sv}")) > 0) {
+		r = sd_bus_message_read(m, "s", &obj);
 		if (r < 0)
 			return log_bus_parser(r);
 
-		obj = shl_startswith(obj, "/org/freedesktop/miracle/link/");
-		if (obj) {
-			link = sd_bus_label_unescape(obj);
-			if (!link)
-				return log_ENOMEM();
-
-			printf("%24s %-9s\n", link, "");
-
-			free(link);
-			++link_cnt;
+		if (strcmp(obj, "org.freedesktop.miracle.Link")) {
+			r = sd_bus_message_skip(m, "a{sv}");
+			if (r < 0)
+				return log_bus_parser(r);
+			r = sd_bus_message_exit_container(m);
+			if (r < 0)
+				return log_bus_parser(r);
+			continue;
 		}
 
-		r = sd_bus_message_skip(m, "a{sa{sv}}");
+		r = sd_bus_message_enter_container(m, 'a', "{sv}");
+		if (r < 0)
+			return log_bus_parser(r);
+
+		while ((r = sd_bus_message_enter_container(m,
+							   'e',
+							   "sv")) > 0) {
+			r = sd_bus_message_read(m, "s", &obj);
+			if (r < 0)
+				return log_bus_parser(r);
+
+			if (!strcmp(obj, "Name")) {
+				r = bus_message_read_basic_variant(m, "s",
+								   &name);
+				if (r < 0)
+					return log_bus_parser(r);
+			} else {
+				sd_bus_message_skip(m, "v");
+			}
+
+			r = sd_bus_message_exit_container(m);
+			if (r < 0)
+				return log_bus_parser(r);
+		}
+		if (r < 0)
+			return log_bus_parser(r);
+
+		r = sd_bus_message_exit_container(m);
 		if (r < 0)
 			return log_bus_parser(r);
 
@@ -185,14 +208,73 @@ static int verb_list_links(sd_bus *bus, sd_bus_message *m)
 	if (r < 0)
 		return log_bus_parser(r);
 
+	printf("%16s %-24s\n", link, name);
+
+	return 0;
+}
+
+static int verb_list_links(sd_bus *bus, sd_bus_message *m)
+{
+	_cleanup_free_ char *link = NULL;
+	unsigned int link_cnt = 0;
+	const char *obj;
+	int r;
+
+	printf("%16s %-24s\n", "LINK-ID", "NAME");
+
+	r = sd_bus_message_enter_container(m, 'a', "{oa{sa{sv}}}");
+	if (r < 0)
+		return log_bus_parser(r);
+
+	while ((r = sd_bus_message_enter_container(m,
+						   'e',
+						   "oa{sa{sv}}")) > 0) {
+		r = sd_bus_message_read(m, "o", &obj);
+		if (r < 0)
+			return log_bus_parser(r);
+
+		obj = shl_startswith(obj, "/org/freedesktop/miracle/link/");
+		if (!obj) {
+			r = sd_bus_message_skip(m, "a{sa{sv}}");
+			if (r < 0)
+				return log_bus_parser(r);
+			r = sd_bus_message_exit_container(m);
+			if (r < 0)
+				return log_bus_parser(r);
+			continue;
+		}
+
+		free(link);
+		link = sd_bus_label_unescape(obj);
+		if (!link)
+			return log_ENOMEM();
+
+		++link_cnt;
+		r = verb_list_link(bus, m, link);
+		if (r < 0)
+			return r;
+
+		r = sd_bus_message_exit_container(m);
+		if (r < 0)
+			return log_bus_parser(r);
+	}
+	if (r < 0)
+		return log_bus_parser(r);
+
+	r = sd_bus_message_exit_container(m);
+	if (r < 0)
+		return log_bus_parser(r);
+
+	printf("\n");
+
 	return link_cnt;
 }
 
 static int verb_list_peer(sd_bus *bus, sd_bus_message *m, const char *peer)
 {
 	_cleanup_free_ char *link = NULL;
-	const char *obj;
-	int r;
+	const char *obj, *name = "<unknown>";
+	int r, connected = 0;
 
 	r = sd_bus_message_enter_container(m, 'a', "{sa{sv}}");
 	if (r < 0)
@@ -227,13 +309,8 @@ static int verb_list_peer(sd_bus *bus, sd_bus_message *m, const char *peer)
 				return log_bus_parser(r);
 
 			if (!strcmp(obj, "Link")) {
-				r = sd_bus_message_enter_container(m,
-								   'v',
-								   "o");
-				if (r < 0)
-					return log_bus_parser(r);
-
-				r = sd_bus_message_read(m, "o", &obj);
+				r = bus_message_read_basic_variant(m, "o",
+								   &obj);
 				if (r < 0)
 					return log_bus_parser(r);
 
@@ -245,8 +322,14 @@ static int verb_list_peer(sd_bus *bus, sd_bus_message *m, const char *peer)
 					if (!link)
 						return log_ENOMEM();
 				}
-
-				r = sd_bus_message_exit_container(m);
+			} else if (!strcmp(obj, "Name")) {
+				r = bus_message_read_basic_variant(m, "s",
+								   &name);
+				if (r < 0)
+					return log_bus_parser(r);
+			} else if (!strcmp(obj, "Connected")) {
+				r = bus_message_read_basic_variant(m, "b",
+								   &connected);
 				if (r < 0)
 					return log_bus_parser(r);
 			} else {
@@ -275,7 +358,8 @@ static int verb_list_peer(sd_bus *bus, sd_bus_message *m, const char *peer)
 	if (r < 0)
 		return log_bus_parser(r);
 
-	printf("%24s %-9s\n", link ? : "<none>", peer);
+	printf("%16s %-9s %-24s %-10s\n",
+	       link ? : "<none>", peer, name, connected ? "yes" : "no");
 
 	return 0;
 }
@@ -286,6 +370,9 @@ static int verb_list_peers(sd_bus *bus, sd_bus_message *m)
 	unsigned int peer_cnt = 0;
 	const char *obj;
 	int r;
+
+	printf("%16s %-9s %-24s %-10s\n",
+	       "LINK", "PEER-ID", "NAME", "CONNECTED");
 
 	r = sd_bus_message_enter_container(m, 'a', "{oa{sa{sv}}}");
 	if (r < 0)
@@ -330,6 +417,8 @@ static int verb_list_peers(sd_bus *bus, sd_bus_message *m)
 	if (r < 0)
 		return log_bus_parser(r);
 
+	printf("\n");
+
 	return peer_cnt;
 }
 
@@ -354,8 +443,6 @@ static int verb_list(sd_bus *bus, char **args, unsigned int n)
 		return r;
 	}
 
-	printf("%24s %-9s\n", "LINK", "PEER");
-
 	/* print links */
 
 	r = verb_list_links(bus, m);
@@ -364,8 +451,6 @@ static int verb_list(sd_bus *bus, char **args, unsigned int n)
 	link_cnt = r;
 
 	sd_bus_message_rewind(m, true);
-	if (link_cnt > 0)
-		printf("\n");
 
 	/* print peers */
 
@@ -373,9 +458,6 @@ static int verb_list(sd_bus *bus, char **args, unsigned int n)
 	if (r < 0)
 		return r;
 	peer_cnt = r;
-
-	if (peer_cnt > 0 || !link_cnt)
-		printf("\n");
 
 	/* print stats */
 
