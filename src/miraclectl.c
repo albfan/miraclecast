@@ -911,7 +911,7 @@ static int verb_scan_list_peer(sd_bus *bus,
 		return log_bus_parser(r);
 
 	if (!strcmp(link, link_filter))
-		printf("%4s %-24s %-4s\n",
+		printf("%4s %-24s %-10s\n",
 		       peer, name, connected ? "yes" : "no");
 
 	return 0;
@@ -1070,7 +1070,7 @@ static int verb_scan(sd_bus *bus, char **args, unsigned int n)
 			    args[1], bus_error_message(&err, r));
 
 	printf("Scan on link %s started, listing peers..\n", args[1]);
-	printf("%4s %-24s %-4s\n", "ID", "NAME", "CONNECTED");
+	printf("%4s %-24s %-10s\n", "ID", "NAME", "CONNECTED");
 	verb_scan_listen(bus, name);
 
 	r = sd_bus_call_method(bus,
