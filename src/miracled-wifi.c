@@ -804,6 +804,14 @@ int wifi_set_discoverable(struct wifi *w, bool on)
 	return 0;
 }
 
+int wifi_set_name(struct wifi *w, const char *name)
+{
+	if (!w || !wifi_is_open(w) || !name || !*name)
+		return log_EINVAL();
+
+	return wifi_requestf_ok(w, "SET device_name %s", name);
+}
+
 struct wifi_dev *wifi_get_devs(struct wifi *w)
 {
 	if (!w || shl_dlist_empty(&w->devs))

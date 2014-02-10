@@ -35,6 +35,7 @@
 #include <systemd/sd-bus.h>
 #include <systemd/sd-daemon.h>
 #include <systemd/sd-event.h>
+#include <time.h>
 #include <unistd.h>
 #include "miracled.h"
 #include "shl_htable.h"
@@ -112,11 +113,13 @@ static void manager_free(struct manager *m)
 		sd_event_source_unref(m->sigs[i]);
 	sd_bus_unref(m->bus);
 	sd_event_unref(m->event);
+	free(m->friendly_name);
 	free(m);
 }
 
 static int manager_new(struct manager **out)
 {
+	char buf[64] = { };
 	struct manager *m;
 	static const int sigs[] = {
 		SIGINT, SIGTERM, SIGQUIT, SIGHUP, SIGPIPE, SIGCHLD, 0
@@ -131,6 +134,13 @@ static int manager_new(struct manager **out)
 
 	shl_htable_init_str(&m->links);
 	shl_htable_init_str(&m->peers);
+
+	snprintf(buf, sizeof(buf) - 1, "unknown-%u", rand());
+	m->friendly_name = strdup(buf);
+	if (!m->friendly_name) {
+		r = log_ENOMEM();
+		goto error;
+	}
 
 	r = sd_event_default(&m->event);
 	if (r < 0) {
@@ -184,8 +194,58 @@ error:
 	return r;
 }
 
+static void manager_read_name(struct manager *m)
+{
+	_cleanup_sd_bus_error_ sd_bus_error err = SD_BUS_ERROR_NULL;
+	_cleanup_sd_bus_message_ sd_bus_message *rep = NULL;
+	const char *name;
+	char *str;
+	int r;
+
+	r = sd_bus_call_method(m->bus,
+			       "org.freedesktop.hostname1",
+			       "/org/freedesktop/hostname1",
+			       "org.freedesktop.DBus.Properties",
+			       "Get",
+			       &err,
+			       &rep,
+			       "ss", "org.freedesktop.hostname1", "Hostname");
+	if (r < 0) {
+		return;
+	}
+
+	r = sd_bus_message_enter_container(rep, 'v', "s");
+	if (r < 0)
+		goto error;
+
+	r = sd_bus_message_read(rep, "s", &name);
+	if (r < 0)
+		goto error;
+
+	if (!name || !*name) {
+		log_warning("no hostname set on systemd.hostname1, using: %s",
+			    m->friendly_name);
+		return;
+	}
+
+	str = strdup(name);
+	if (!str)
+		return log_vENOMEM();
+
+	free(m->friendly_name);
+	m->friendly_name = str;
+	log_debug("friendly-name from local hostname: %s", str);
+
+	return;
+
+error:
+	log_warning("cannot read hostname from systemd.hostname1: %s",
+		    bus_error_message(&err, r));
+}
+
 static int manager_run(struct manager *m)
 {
+	manager_read_name(m);
 	return sd_event_loop(m->event);
 }
 
@@ -256,6 +316,8 @@ int main(int argc, char **argv)
 {
 	struct manager *m = NULL;
 	int r;
+
+	srand(time(NULL));
 
 	r = parse_argv(argc, argv);
 	if (r < 0)

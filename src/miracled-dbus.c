@@ -303,7 +303,15 @@ static int link_dbus_set_name(sd_bus *bus,
 			      void *data,
 			      sd_bus_error *err)
 {
-	return -EACCES;
+	struct link *l = data;
+	int r;
+	const char *name;
+
+	r = sd_bus_message_read(value, "s", &name);
+	if (r < 0)
+		return r;
+
+	return link_set_friendly_name(l, name);
 }
 
 static const sd_bus_vtable link_dbus_vtable[] = {

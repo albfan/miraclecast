@@ -101,6 +101,8 @@ int link_new(struct manager *m,
 	     struct link **out);
 void link_free(struct link *l);
 
+int link_set_friendly_name(struct link *l, const char *name);
+
 /* manager */
 
 struct manager {
@@ -114,6 +116,8 @@ struct manager {
 	size_t peer_cnt;
 	struct shl_htable links;
 	struct shl_htable peers;
+
+	char *friendly_name;
 };
 
 #define MANAGER_FIRST_LINK(_m) \

@@ -155,6 +155,10 @@ static int link_wifi_init(struct link *l)
 	if (r < 0)
 		return r;
 
+	r = wifi_set_name(l->w, l->friendly_name);
+	if (r < 0)
+		return r;
+
 	for (d = wifi_get_devs(l->w); d; d = wifi_dev_next(d))
 		peer_new_wifi(l, d, NULL);
 
@@ -212,7 +216,7 @@ int link_new(struct manager *m,
 		goto error;
 	}
 
-	l->friendly_name = strdup("");
+	l->friendly_name = strdup(m->friendly_name);
 	if (!l->friendly_name) {
 		r = log_ENOMEM();
 		goto error;
@@ -269,4 +273,34 @@ void link_free(struct link *l)
 	free(l->name);
 	free(l->interface);
 	free(l);
+}
+
+int link_set_friendly_name(struct link *l, const char *name)
+{
+	char *dup;
+	int r;
+
+	if (!l || !name)
+		return log_EINVAL();
+
+	dup = strdup(name);
+	if (!dup)
+		return log_ENOMEM();
+
+	r = 0;
+	switch (l->type) {
+	case LINK_WIFI:
+		r = wifi_set_name(l->w, name);
+		break;
+	}
+
+	if (r < 0) {
+		free(dup);
+		return r;
+	}
+
+	free(l->friendly_name);
+	l->friendly_name = dup;
+
+	return 0;
 }

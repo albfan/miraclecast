@@ -101,6 +101,7 @@ int wifi_open(struct wifi *w, const char *wpa_path);
 void wifi_close(struct wifi *w);
 
 int wifi_set_discoverable(struct wifi *w, bool on);
+int wifi_set_name(struct wifi *w, const char *name);
 
 struct wifi_dev *wifi_get_devs(struct wifi *w);
 struct wifi_dev *wifi_dev_next(struct wifi_dev *d);
