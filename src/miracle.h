@@ -65,4 +65,33 @@ static inline int log_bus_parser(int r)
 	return r;
 }
 
+static inline int log_bus_create(int r)
+{
+	log_error("cannot create dbus message: %s", strerror(r < 0 ? -r : r));
+	return r;
+}
+
+static inline int bus_message_read_basic_variant(sd_bus_message *m,
+						 const char *sig, void *ptr)
+{
+	int r;
+
+	if (!sig || !*sig || sig[1] || !ptr)
+		return -EINVAL;
+
+	r = sd_bus_message_enter_container(m, 'v', sig);
+	if (r < 0)
+		return r;
+
+	r = sd_bus_message_read(m, sig, ptr);
+	if (r < 0)
+		return r;
+
+	r = sd_bus_message_exit_container(m);
+	if (r < 0)
+		return r;
+
+	return 0;
+}
+
 #endif /* MIRACLE_H */
