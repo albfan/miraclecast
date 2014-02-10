@@ -623,9 +623,21 @@ static int verb_add_link(sd_bus *bus, char **args, unsigned int n)
 {
 	_cleanup_sd_bus_error_ sd_bus_error err = SD_BUS_ERROR_NULL;
 	_cleanup_sd_bus_message_ sd_bus_message *m = NULL;
-	_cleanup_free_ char *link = NULL;
+	_cleanup_free_ char *link = NULL, *type = NULL;
 	const char *name;
+	char *t, *iface;
 	int r;
+
+	type = strdup(args[1]);
+	if (!type)
+		return log_ENOMEM();
+
+	t = strchr(type, ':');
+	if (!t)
+		return log_EINVAL();
+
+	*t = 0;
+	iface = t + 1;
 
 	r = sd_bus_call_method(bus,
 			       "org.freedesktop.miracle",
@@ -634,10 +646,10 @@ static int verb_add_link(sd_bus *bus, char **args, unsigned int n)
 			       "AddLink",
 			       &err,
 			       &m,
-			       "ss", args[1], args[2]);
+			       "ss", type, iface);
 	if (r < 0) {
 		log_error("cannot add link %s:%s: %s",
-			  args[1], args[2], bus_error_message(&err, r));
+			  type, iface, bus_error_message(&err, r));
 		return r;
 	}
 
@@ -1166,7 +1178,7 @@ static int miraclectl_main(sd_bus *bus, int argc, char *argv[])
 		{ "list",		LESS,	1,	verb_list },
 		{ "show-link",		EQUAL,	2,	verb_show_link },
 		{ "show-peer",		EQUAL,	2,	verb_show_peer },
-		{ "add-link",		EQUAL,	3,	verb_add_link },
+		{ "add-link",		EQUAL,	2,	verb_add_link },
 		{ "remove-link",	EQUAL,	2,	verb_remove_link },
 		{ "set-link-name",	EQUAL,	3,	verb_set_link_name },
 		{ "start-scan",		EQUAL,	2,	verb_start_scan },
