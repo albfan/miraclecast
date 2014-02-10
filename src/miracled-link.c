@@ -301,6 +301,7 @@ int link_set_friendly_name(struct link *l, const char *name)
 
 	free(l->friendly_name);
 	l->friendly_name = dup;
+	link_dbus_properties_changed(l, "Name", NULL);
 
 	return 0;
 }

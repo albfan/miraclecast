@@ -23,9 +23,11 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+#include <alloca.h>
 #include <errno.h>
 #include <stdbool.h>
 #include <stdlib.h>
+#include <stdarg.h>
 #include <systemd/sd-bus.h>
 #include "shl_log.h"
 #include "shl_macro.h"
@@ -93,5 +95,30 @@ static inline int bus_message_read_basic_variant(sd_bus_message *m,
 
 	return 0;
 }
+
+#define strv_from_stdarg_alloca(first) ({ \
+		char **_l; \
+		if (!first) { \
+			_l = (char**)&first; \
+		} else { \
+			unsigned _n; \
+			va_list _ap; \
+			_n = 1; \
+			va_start(_ap, first); \
+			while (va_arg(_ap, char*)) \
+				_n++; \
+			va_end(_ap); \
+			_l = alloca(sizeof(char*) * (_n + 1)); \
+			_l[_n = 0] = (char*)first; \
+			va_start(_ap, first); \
+			for (;;) { \
+				_l[++_n] = va_arg(_ap, char*); \
+				if (!_l[_n]) \
+					break; \
+			} \
+			va_end(_ap); \
+		} \
+		_l; \
+	})
 
 #endif /* MIRACLE_H */

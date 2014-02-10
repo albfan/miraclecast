@@ -264,6 +264,25 @@ static int peer_dbus_find(sd_bus *bus,
 	return 1;
 }
 
+void peer_dbus_properties_changed(struct peer *p, const char *prop, ...)
+{
+	_cleanup_free_ char *path = NULL;
+	char **strv;
+	int r;
+
+	path = shl_strcat("/org/freedesktop/miracle/peer/", p->name);
+	if (!path)
+		return log_vENOMEM();
+
+	strv = strv_from_stdarg_alloca(prop);
+	r = sd_bus_emit_properties_changed_strv(p->l->m->bus,
+						path,
+						"org.freedesktop.miracle.Peer",
+						strv);
+	if (r < 0)
+		log_vERR(r);
+}
+
 /*
  * Link DBus
  */
@@ -405,6 +424,25 @@ static int link_dbus_find(sd_bus *bus,
 
 	*found = l;
 	return 1;
+}
+
+void link_dbus_properties_changed(struct link *l, const char *prop, ...)
+{
+	_cleanup_free_ char *path = NULL;
+	char **strv;
+	int r;
+
+	path = shl_strcat("/org/freedesktop/miracle/link/", l->name);
+	if (!path)
+		return log_vENOMEM();
+
+	strv = strv_from_stdarg_alloca(prop);
+	r = sd_bus_emit_properties_changed_strv(l->m->bus,
+						path,
+						"org.freedesktop.miracle.Link",
+						strv);
+	if (r < 0)
+		log_vERR(r);
 }
 
 /*

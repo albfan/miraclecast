@@ -204,8 +204,10 @@ void peer_process_wifi(struct peer *p, struct wifi_event *ev)
 	case WIFI_DEV_PROVISION:
 		break;
 	case WIFI_DEV_CONNECT:
+		peer_dbus_properties_changed(p, "Connected", NULL);
 		break;
 	case WIFI_DEV_DISCONNECT:
+		peer_dbus_properties_changed(p, "Connected", NULL);
 		break;
 	default:
 		log_debug("unhandled WIFI event: %u", ev->type);

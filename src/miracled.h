@@ -138,4 +138,9 @@ void manager_dbus_disconnect(struct manager *m);
 struct link *manager_find_link(struct manager *m, const char *name);
 struct peer *manager_find_peer(struct manager *m, const char *name);
 
+/* dbus */
+
+void peer_dbus_properties_changed(struct peer *p, const char *prop, ...);
+void link_dbus_properties_changed(struct link *l, const char *prop, ...);
+
 #endif /* MIRACLED_H */
