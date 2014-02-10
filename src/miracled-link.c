@@ -307,3 +307,29 @@ int link_set_friendly_name(struct link *l, const char *name)
 
 	return 0;
 }
+
+int link_start_scan(struct link *l)
+{
+	if (!l)
+		return -EINVAL;
+
+	switch (l->type) {
+	case LINK_VIRTUAL:
+		return -EOPNOTSUPP;
+	case LINK_WIFI:
+		return wifi_set_discoverable(l->w, true);
+	}
+
+	return -EINVAL;
+}
+
+void link_stop_scan(struct link *l)
+{
+	if (!l)
+		return;
+
+	switch (l->type) {
+	case LINK_WIFI:
+		wifi_set_discoverable(l->w, false);
+	}
+}

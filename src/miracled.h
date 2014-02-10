@@ -108,6 +108,9 @@ void link_free(struct link *l);
 
 int link_set_friendly_name(struct link *l, const char *name);
 
+int link_start_scan(struct link *l);
+void link_stop_scan(struct link *l);
+
 /* manager */
 
 struct manager {

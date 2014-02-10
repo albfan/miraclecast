@@ -332,13 +332,24 @@ void peer_dbus_removed(struct peer *p)
 static int link_dbus_start_scan(sd_bus *bus, sd_bus_message *msg,
 				void *data, sd_bus_error *err)
 {
-	return -EINVAL;
+	struct link *l = data;
+	int r;
+
+	r = link_start_scan(l);
+	if (r < 0)
+		return r;
+
+	return sd_bus_reply_method_return(msg, NULL);
 }
 
 static int link_dbus_stop_scan(sd_bus *bus, sd_bus_message *msg,
 			       void *data, sd_bus_error *err)
 {
-	return -EINVAL;
+	struct link *l = data;
+
+	link_stop_scan(l);
+
+	return sd_bus_reply_method_return(msg, NULL);
 }
 
 static int link_dbus_get_type(sd_bus *bus,
