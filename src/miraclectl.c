@@ -375,6 +375,134 @@ static int verb_show_link(sd_bus *bus, char **args, unsigned int n)
 	return 0;
 }
 
+static int verb_show_peer(sd_bus *bus, char **args, unsigned int n)
+{
+	_cleanup_sd_bus_error_ sd_bus_error err = SD_BUS_ERROR_NULL;
+	_cleanup_sd_bus_message_ sd_bus_message *m = NULL;
+	_cleanup_free_ char *path = NULL, *name = NULL;
+	_cleanup_free_ char *link = NULL, *fname = NULL, *iface = NULL;
+	_cleanup_free_ char *laddr = NULL, *raddr = NULL;
+	const char *t;
+	int r, is_connected = false;
+
+	name = sd_bus_label_escape(args[1]);
+	if (!name)
+		return log_ENOMEM();
+
+	path = shl_strcat("/org/freedesktop/miracle/peer/", name);
+	if (!path)
+		return log_ENOMEM();
+
+	r = sd_bus_call_method(bus,
+			       "org.freedesktop.miracle",
+			       path,
+			       "org.freedesktop.DBus.Properties",
+			       "GetAll",
+			       &err,
+			       &m,
+			       "s", "org.freedesktop.miracle.Peer");
+	if (r < 0) {
+		log_error("cannot retrieve peer %s: %s",
+			  args[1], bus_error_message(&err, r));
+		return r;
+	}
+
+	r = sd_bus_message_enter_container(m, 'a', "{sv}");
+	if (r < 0)
+		return log_bus_parser(r);
+
+	while ((r = sd_bus_message_enter_container(m, 'e', "sv")) > 0) {
+		r = sd_bus_message_read(m, "s", &t);
+		if (r < 0)
+			return log_bus_parser(r);
+
+		if (!strcmp(t, "Link")) {
+			r = bus_message_read_basic_variant(m, "o", &t);
+			if (r < 0)
+				return log_bus_parser(r);
+
+			t = shl_startswith(t,
+					   "/org/freedesktop/miracle/link/");
+			if (t) {
+				free(link);
+				link = sd_bus_label_unescape(t);
+				if (!link)
+					return log_ENOMEM();
+			}
+		} else if (!strcmp(t, "Name")) {
+			r = bus_message_read_basic_variant(m, "s", &t);
+			if (r < 0)
+				return log_bus_parser(r);
+
+			free(fname);
+			fname = strdup(t);
+			if (!fname)
+				return log_ENOMEM();
+		} else if (!strcmp(t, "Connected")) {
+			r = bus_message_read_basic_variant(m, "b",
+							   &is_connected);
+			if (r < 0)
+				return log_bus_parser(r);
+		} else if (!strcmp(t, "Interface")) {
+			r = bus_message_read_basic_variant(m, "s", &t);
+			if (r < 0)
+				return log_bus_parser(r);
+
+			free(iface);
+			iface = strdup(t);
+			if (!iface)
+				return log_ENOMEM();
+		} else if (!strcmp(t, "LocalAddress")) {
+			r = bus_message_read_basic_variant(m, "s", &t);
+			if (r < 0)
+				return log_bus_parser(r);
+
+			free(laddr);
+			laddr = strdup(t);
+			if (!laddr)
+				return log_ENOMEM();
+		} else if (!strcmp(t, "RemoteAddress")) {
+			r = bus_message_read_basic_variant(m, "s", &t);
+			if (r < 0)
+				return log_bus_parser(r);
+
+			free(raddr);
+			raddr = strdup(t);
+			if (!raddr)
+				return log_ENOMEM();
+		} else {
+			r = sd_bus_message_skip(m, "v");
+			if (r < 0)
+				return log_bus_parser(r);
+		}
+
+		r = sd_bus_message_exit_container(m);
+		if (r < 0)
+			return log_bus_parser(r);
+	}
+	if (r < 0)
+		return log_bus_parser(r);
+
+	r = sd_bus_message_exit_container(m);
+	if (r < 0)
+		return log_bus_parser(r);
+
+	printf("Peer=%s\n", args[1]);
+	if (link)
+		printf("Link=%s\n", link);
+	if (fname)
+		printf("Name=%s\n", fname);
+	printf("Connected=%d\n", is_connected);
+	if (iface)
+		printf("Interface=%s\n", iface);
+	if (laddr)
+		printf("LocalAddress=%s\n", laddr);
+	if (raddr)
+		printf("RemoteAddress=%s\n", raddr);
+
+	return 0;
+}
+
 static int verb_add_link(sd_bus *bus, char **args, unsigned int n)
 {
 	_cleanup_sd_bus_error_ sd_bus_error err = SD_BUS_ERROR_NULL;
@@ -500,6 +628,7 @@ static int help(void)
 	       "Commands:\n"
 	       "  list                            List managed links and their peers\n"
 	       "  show-link LINK...               Show details of given link\n"
+	       "  show-peer PEER...               Show details of given peer\n"
 	       "  add-link LINK...                Start managing the given link\n"
 	       "  remove-link LINK...             Stop managing the given link\n"
 	       "  set-link-name LINK NAME         Set friendly-name of given link\n"
@@ -563,6 +692,7 @@ static int miraclectl_main(sd_bus *bus, int argc, char *argv[])
 	} verbs[] = {
 		{ "list",		LESS,	1,	verb_list },
 		{ "show-link",		EQUAL,	2,	verb_show_link },
+		{ "show-peer",		EQUAL,	2,	verb_show_peer },
 		{ "add-link",		EQUAL,	3,	verb_add_link },
 		{ "remove-link",	EQUAL,	2,	verb_remove_link },
 		{ "set-link-name",	EQUAL,	3,	verb_set_link_name },
