@@ -140,7 +140,14 @@ struct peer *manager_find_peer(struct manager *m, const char *name);
 
 /* dbus */
 
+_shl_sentinel_
 void peer_dbus_properties_changed(struct peer *p, const char *prop, ...);
+void peer_dbus_added(struct peer *p);
+void peer_dbus_removed(struct peer *p);
+
+_shl_sentinel_
 void link_dbus_properties_changed(struct link *l, const char *prop, ...);
+void link_dbus_added(struct link *l);
+void link_dbus_removed(struct link *l);
 
 #endif /* MIRACLED_H */

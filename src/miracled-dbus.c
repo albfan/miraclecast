@@ -283,6 +283,48 @@ void peer_dbus_properties_changed(struct peer *p, const char *prop, ...)
 		log_vERR(r);
 }
 
+void peer_dbus_added(struct peer *p)
+{
+	_cleanup_free_ char *path = NULL;
+	int r;
+
+	path = shl_strcat("/org/freedesktop/miracle/peer/", p->name);
+	if (!path)
+		return log_vENOMEM();
+
+	r = sd_bus_emit_interfaces_added(p->l->m->bus,
+					 path,
+					 /*
+					 "org.freedesktop.DBus.Properties",
+					 "org.freedesktop.DBus.Introspectable",
+					 */
+					 "org.freedesktop.miracle.Peer",
+					 NULL);
+	if (r < 0)
+		log_vERR(r);
+}
+
+void peer_dbus_removed(struct peer *p)
+{
+	_cleanup_free_ char *path = NULL;
+	int r;
+
+	path = shl_strcat("/org/freedesktop/miracle/peer/", p->name);
+	if (!path)
+		return log_vENOMEM();
+
+	r = sd_bus_emit_interfaces_removed(p->l->m->bus,
+					   path,
+					   /*
+					   "org.freedesktop.DBus.Properties",
+					   "org.freedesktop.DBus.Introspectable",
+					   */
+					   "org.freedesktop.miracle.Peer",
+					   NULL);
+	if (r < 0)
+		log_vERR(r);
+}
+
 /*
  * Link DBus
  */
@@ -441,6 +483,48 @@ void link_dbus_properties_changed(struct link *l, const char *prop, ...)
 						path,
 						"org.freedesktop.miracle.Link",
 						strv);
+	if (r < 0)
+		log_vERR(r);
+}
+
+void link_dbus_added(struct link *l)
+{
+	_cleanup_free_ char *path = NULL;
+	int r;
+
+	path = shl_strcat("/org/freedesktop/miracle/link/", l->name);
+	if (!path)
+		return log_vENOMEM();
+
+	r = sd_bus_emit_interfaces_added(l->m->bus,
+					 path,
+					 /*
+					 "org.freedesktop.DBus.Properties",
+					 "org.freedesktop.DBus.Introspectable",
+					 */
+					 "org.freedesktop.miracle.Link",
+					 NULL);
+	if (r < 0)
+		log_vERR(r);
+}
+
+void link_dbus_removed(struct link *l)
+{
+	_cleanup_free_ char *path = NULL;
+	int r;
+
+	path = shl_strcat("/org/freedesktop/miracle/link/", l->name);
+	if (!path)
+		return log_vENOMEM();
+
+	r = sd_bus_emit_interfaces_removed(l->m->bus,
+					   path,
+					   /*
+					   "org.freedesktop.DBus.Properties",
+					   "org.freedesktop.DBus.Introspectable",
+					   */
+					   "org.freedesktop.miracle.Link",
+					   NULL);
 	if (r < 0)
 		log_vERR(r);
 }

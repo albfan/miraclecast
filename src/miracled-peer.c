@@ -91,6 +91,7 @@ static int peer_new(struct link *l, struct peer **out)
 
 	++l->m->peer_cnt;
 	shl_dlist_link(&l->peers, &p->list);
+	peer_dbus_added(p);
 	log_info("new peer: %s@%s", p->name, l->name);
 
 	if (out)
@@ -130,6 +131,7 @@ void peer_free(struct peer *p)
 
 	if (shl_htable_remove_str(&p->l->m->peers, p->name, NULL, NULL)) {
 		log_info("remove managed peer: %s@%s", p->name, p->l->name);
+		peer_dbus_removed(p);
 		--p->l->m->peer_cnt;
 		shl_dlist_unlink(&p->list);
 	}

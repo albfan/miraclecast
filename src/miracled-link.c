@@ -239,6 +239,7 @@ int link_new(struct manager *m,
 	}
 
 	++m->link_cnt;
+	link_dbus_added(l);
 	log_info("new managed link: %s", l->name);
 
 	if (out)
@@ -265,6 +266,7 @@ void link_free(struct link *l)
 
 	if (shl_htable_remove_str(&l->m->links, l->name, NULL, NULL)) {
 		log_info("remove managed link: %s", l->name);
+		link_dbus_removed(l);
 		--l->m->link_cnt;
 	}
 
