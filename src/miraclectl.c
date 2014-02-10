@@ -486,6 +486,10 @@ static int verb_set_link_name(sd_bus *bus, char **args, unsigned int n)
 
 static int help(void)
 {
+	/*
+	 * 80-char barrier:
+	 *      01234567890123456789012345678901234567890123456789012345678901234567890123456789
+	 */
 	printf("%s [OPTIONS...] {COMMAND} ...\n\n"
 	       "Send control command to or query the MiracleCast manager.\n\n"
 	       "  -h --help             Show this help\n"
@@ -500,6 +504,10 @@ static int help(void)
 	       "  remove-link LINK...             Stop managing the given link\n"
 	       "  set-link-name LINK NAME         Set friendly-name of given link\n"
 	       , program_invocation_short_name);
+	/*
+	 * 80-char barrier:
+	 *      01234567890123456789012345678901234567890123456789012345678901234567890123456789
+	 */
 
 	return 0;
 }
