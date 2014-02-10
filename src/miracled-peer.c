@@ -33,6 +33,23 @@
 #include "miracled-wifi.h"
 #include "shl_log.h"
 
+int peer_make_name(unsigned int id, char **out)
+{
+	char buf[64] = { };
+	char *name;
+
+	if (!out)
+		return 0;
+
+	snprintf(buf, sizeof(buf) - 1, "%u", id);
+	name = sd_bus_label_escape(buf);
+	if (!name)
+		return log_ENOMEM();
+
+	*out = name;
+	return 0;
+}
+
 static int peer_new(struct link *l, struct peer **out)
 {
 	unsigned int id;
@@ -139,21 +156,4 @@ void peer_process_wifi(struct peer *p, struct wifi_event *ev)
 		log_debug("unhandled WIFI event: %u", ev->type);
 		break;
 	}
-}
-
-int peer_make_name(unsigned int id, char **out)
-{
-	char buf[64] = { };
-	char *name;
-
-	if (!out)
-		return 0;
-
-	snprintf(buf, sizeof(buf) - 1, "%u", id);
-	name = sd_bus_label_escape(buf);
-	if (!name)
-		return log_ENOMEM();
-
-	*out = name;
-	return 0;
 }
