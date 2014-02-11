@@ -293,8 +293,13 @@ int peer_connect(struct peer *p, const char *prov, const char *pin)
 
 void peer_disconnect(struct peer *p)
 {
+	bool change;
+
 	if (!p || !p->d)
 		return;
 
+	change = peer_is_connected(p);
 	wifi_dev_disconnect(p->d);
+	if (change)
+		peer_dbus_properties_changed(p, "Connected", NULL);
 }
