@@ -19,7 +19,8 @@ include_HEADERS =
 EXTRA_DIST = \
 	README \
 	COPYING \
-	NEWS
+	NEWS \
+	res/wpa.conf
 CLEANFILES =
 pkgconfigdir = $(libdir)/pkgconfig
 pkgconfig_DATA =
