@@ -1423,6 +1423,163 @@ static int cmd_scan(char **args, unsigned int n)
 }
 
 /*
+ * cmd: allow
+ */
+
+static int cmd_allow(char **args, unsigned int n)
+{
+	_cleanup_sd_bus_error_ sd_bus_error err = SD_BUS_ERROR_NULL;
+	_shl_cleanup_free_ char *name = NULL, *path = NULL;
+	const char *pin = "";
+	int r;
+
+	if (n > 1)
+		pin = args[1];
+
+	name = sd_bus_label_escape(args[0]);
+	if (!name)
+		return cli_ENOMEM();
+
+	path = shl_strcat("/org/freedesktop/miracle/peer/", name);
+	if (!path)
+		return cli_ENOMEM();
+
+	r = sd_bus_call_method(bus,
+			       "org.freedesktop.miracle",
+			       path,
+			       "org.freedesktop.miracle.Peer",
+			       "Allow",
+			       &err,
+			       NULL,
+			       "s", pin);
+	if (r < 0) {
+		cli_error("cannot allow provision-request for peer %s: %s",
+			  args[0], bus_error_message(&err, r));
+		return r;
+	}
+
+	cli_printf("Provision request allowed for peer %s\n", args[0]);
+
+	return 0;
+}
+
+/*
+ * cmd: reject
+ */
+
+static int cmd_reject(char **args, unsigned int n)
+{
+	_cleanup_sd_bus_error_ sd_bus_error err = SD_BUS_ERROR_NULL;
+	_shl_cleanup_free_ char *name = NULL, *path = NULL;
+	int r;
+
+	name = sd_bus_label_escape(args[0]);
+	if (!name)
+		return cli_ENOMEM();
+
+	path = shl_strcat("/org/freedesktop/miracle/peer/", name);
+	if (!path)
+		return cli_ENOMEM();
+
+	r = sd_bus_call_method(bus,
+			       "org.freedesktop.miracle",
+			       path,
+			       "org.freedesktop.miracle.Peer",
+			       "Reject",
+			       &err,
+			       NULL,
+			       NULL);
+	if (r < 0) {
+		cli_error("cannot reject provision-request for peer %s: %s",
+			  args[0], bus_error_message(&err, r));
+		return r;
+	}
+
+	cli_printf("Provision request rejected for peer %s\n", args[0]);
+
+	return 0;
+}
+
+/*
+ * cmd: connect
+ */
+
+static int cmd_connect(char **args, unsigned int n)
+{
+	_cleanup_sd_bus_error_ sd_bus_error err = SD_BUS_ERROR_NULL;
+	_shl_cleanup_free_ char *name = NULL, *path = NULL;
+	const char *peer, *prov, *pin;
+	int r;
+
+	peer = args[0];
+	prov = (n > 1) ? args[1] : "";
+	pin = (n > 2) ? args[2] : "";
+
+	name = sd_bus_label_escape(peer);
+	if (!name)
+		return cli_ENOMEM();
+
+	path = shl_strcat("/org/freedesktop/miracle/peer/", name);
+	if (!path)
+		return cli_ENOMEM();
+
+	r = sd_bus_call_method(bus,
+			       "org.freedesktop.miracle",
+			       path,
+			       "org.freedesktop.miracle.Peer",
+			       "Connect",
+			       &err,
+			       NULL,
+			       "ss", prov, pin);
+	if (r < 0) {
+		cli_error("cannot connect to peer %s: %s",
+			  peer, bus_error_message(&err, r));
+		return r;
+	}
+
+	cli_printf("Connecting to peer %s\n", peer);
+
+	return 0;
+}
+
+/*
+ * cmd: disconnect
+ */
+
+static int cmd_disconnect(char **args, unsigned int n)
+{
+	_cleanup_sd_bus_error_ sd_bus_error err = SD_BUS_ERROR_NULL;
+	_shl_cleanup_free_ char *name = NULL, *path = NULL;
+	int r;
+
+	name = sd_bus_label_escape(args[0]);
+	if (!name)
+		return cli_ENOMEM();
+
+	path = shl_strcat("/org/freedesktop/miracle/peer/", name);
+	if (!path)
+		return cli_ENOMEM();
+
+	r = sd_bus_call_method(bus,
+			       "org.freedesktop.miracle",
+			       path,
+			       "org.freedesktop.miracle.Peer",
+			       "Disconnect",
+			       &err,
+			       NULL,
+			       NULL);
+	if (r < 0) {
+		cli_error("cannot disconnect from peer %s: %s",
+			  args[0], bus_error_message(&err, r));
+		return r;
+	}
+
+	cli_printf("Disconnected from peer %s\n", args[0]);
+
+	return 0;
+}
+
+/*
  * cmd: quit/exit
  */
 
@@ -1646,6 +1803,159 @@ static int filters_object_fn(sd_bus *bus,
 	return 0;
 }
 
+static int filters_props_peer(const char *peer, const char *prop,
+			      sd_bus_message *m)
+{
+	int r, connected;
+
+	if (!strcmp(prop, "Connected")) {
+		r = bus_message_read_basic_variant(m, "b", &connected);
+		if (r < 0)
+			return cli_log_parser(r);
+
+		if (connected)
+			cli_printf("[" CLI_GREEN "CONNECT" CLI_DEFAULT  "] Peer: %s\n",
+				   peer);
+		else
+			cli_printf("[" CLI_YELLOW "DISCONNECT" CLI_DEFAULT  "] Peer: %s\n",
+				   peer);
+	} else {
+		sd_bus_message_skip(m, "v");
+	}
+
+	return 0;
+}
+
+static int filters_props_link(const char *link, const char *prop,
+			      sd_bus_message *m)
+{
+	const char *name;
+	int r;
+
+	if (!strcmp(prop, "Name")) {
+		r = bus_message_read_basic_variant(m, "s",
+						   &name);
+		if (r < 0)
+			return cli_log_parser(r);
+	} else {
+		sd_bus_message_skip(m, "v");
+	}
+
+	return 0;
+}
+
+static int filters_props_fn(sd_bus *bus,
+			    sd_bus_message *m,
+			    void *data,
+			    sd_bus_error *err)
+{
+	_shl_cleanup_free_ char *peer = NULL, *link = NULL;
+	const char *path, *t;
+	int r;
+
+	if (!sd_bus_message_is_signal(m,
+				      "org.freedesktop.DBus.Properties",
+				      "PropertiesChanged"))
+		return 0;
+
+	path = sd_bus_message_get_path(m);
+	t = shl_startswith(path, "/org/freedesktop/miracle/peer/");
+	if (t) {
+		peer = sd_bus_label_unescape(t);
+		if (!peer)
+			return cli_ENOMEM();
+	}
+
+	t = shl_startswith(path, "/org/freedesktop/miracle/link/");
+	if (t) {
+		link = sd_bus_label_unescape(t);
+		if (!link)
+			return cli_ENOMEM();
+	}
+
+	/* skip iface name */
+	r = sd_bus_message_skip(m, "s");
+	if (r < 0)
+		return cli_log_parser(r);
+
+	r = sd_bus_message_enter_container(m, 'a', "{sv}");
+	if (r < 0)
+		return cli_log_parser(r);
+
+	while ((r = sd_bus_message_enter_container(m,
+						   'e',
+						   "sv")) > 0) {
+		r = sd_bus_message_read(m, "s", &t);
+		if (r < 0)
+			return cli_log_parser(r);
+
+		r = 0;
+		if (link)
+			r = filters_props_link(link, t, m);
+		else if (peer)
+			r = filters_props_peer(peer, t, m);
+		else
+			sd_bus_message_skip(m, "v");
+
+		if (r < 0)
+			return r;
+
+		r = sd_bus_message_exit_container(m);
+		if (r < 0)
+			return cli_log_parser(r);
+	}
+	if (r < 0)
+		return cli_log_parser(r);
+
+	r = sd_bus_message_exit_container(m);
+	if (r < 0)
+		return cli_log_parser(r);
+
+	return 0;
+}
+
+static int filters_peer_fn(sd_bus *bus,
+			   sd_bus_message *m,
+			   void *data,
+			   sd_bus_error *err)
+{
+	_shl_cleanup_free_ char *peer = NULL;
+	const char *path, *type, *pin;
+	int r;
+
+	path = sd_bus_message_get_path(m);
+	path = shl_startswith(path, "/org/freedesktop/miracle/peer/");
+	if (!path)
+		return 0;
+
+	peer = sd_bus_label_unescape(path);
+	if (!peer)
+		return cli_ENOMEM();
+
+	if (sd_bus_message_is_signal(m,
+				     "org.freedesktop.miracle.Peer",
+				     "ProvisionRequest")) {
+		r = sd_bus_message_read(m, "ss", &type, &pin);
+		if (r < 0)
+			return cli_log_parser(r);
+
+		if (!strcmp(type, "pbc"))
+			cli_printf("[" CLI_YELLOW "PROVISION" CLI_DEFAULT  "] Peer %s: incoming PBC provision request\n",
+				   peer);
+		else if (!strcmp(type, "display"))
+			cli_printf("[" CLI_YELLOW "PROVISION" CLI_DEFAULT  "] Peer %s: incoming provision request with PIN: %s\n",
+				   peer, pin);
+		else if (!strcmp(type, "pin"))
+			cli_printf("[" CLI_YELLOW "PROVISION" CLI_DEFAULT  "] Peer %s: incoming PIN provision request\n",
+				   peer, pin);
+		else
+			cli_printf("[" CLI_YELLOW "PROVISION" CLI_DEFAULT  "] Peer %s: incoming provision request\n",
+				   peer);
+	}
+
+	return 0;
+}
+
 static void filters_init()
 {
 	int r;
@@ -1658,10 +1968,42 @@ static void filters_init()
 			     NULL);
 	if (r < 0)
 		cli_error("cannot add dbus match: %d", r);
+
+	r = sd_bus_add_match(bus,
+			     "type='signal',"
+			     "sender='org.freedesktop.miracle',"
+			     "interface='org.freedesktop.DBus.Properties'",
+			     filters_props_fn,
+			     NULL);
+	if (r < 0)
+		cli_error("cannot add dbus match: %d", r);
+
+	r = sd_bus_add_match(bus,
+			     "type='signal',"
+			     "sender='org.freedesktop.miracle',"
+			     "interface='org.freedesktop.miracle.Peer'",
+			     filters_peer_fn,
+			     NULL);
+	if (r < 0)
+		cli_error("cannot add dbus match: %d", r);
 }
 
 static void filters_destroy()
 {
+	sd_bus_remove_match(bus,
+			    "type='signal',"
+			    "sender='org.freedesktop.miracle',"
+			    "interface='org.freedesktop.miracle.Peer'",
+			    filters_peer_fn,
+			    NULL);
+
+	sd_bus_remove_match(bus,
+			    "type='signal',"
+			    "sender='org.freedesktop.miracle',"
+			    "interface='org.freedesktop.DBus.Properties'",
+			    filters_props_fn,
+			    NULL);
+
 	sd_bus_remove_match(bus,
 			    "type='signal',"
 			    "sender='org.freedesktop.miracle',"
@@ -1685,6 +2027,10 @@ static const struct cli_cmd cli_cmds[] = {
 	{ "start-scan",		"[link]",				CLI_N,	LESS,	1,	cmd_start_scan,		"Start neighborhood scan" },
 	{ "stop-scan",		"[link]",				CLI_M,	LESS,	1,	cmd_stop_scan,		"Stop neighborhood scan" },
 	{ "set-link-name",	"[link] <name>",			CLI_M,	MORE,	1,	cmd_set_link_name,	"Set friendly name of link" },
+	{ "allow",		"<peer>",				CLI_Y,	EQUAL,	1,	cmd_allow,		"Allow incoming provision request" },
+	{ "reject",		"<peer>",				CLI_Y,	EQUAL,	1,	cmd_reject,		"Reject incoming provision request" },
+	{ "connect",		"<peer> [provision] [pin]",		CLI_M,	MORE,	1,	cmd_connect,		"Connect to peer" },
+	{ "disconnect",		"<peer>",				CLI_M,	EQUAL,	1,	cmd_disconnect,		"Disconnect from peer" },
 	{ "quit",		NULL,					CLI_Y,	MORE,	0,	cmd_quit,		"Quit program" },
 	{ "exit",		NULL,					CLI_Y,	MORE,	0,	cmd_quit,		NULL },
 	{ "help",		NULL,					CLI_M,	MORE,	0,	NULL,			"Print help" },
