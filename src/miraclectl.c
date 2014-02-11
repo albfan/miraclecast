@@ -1515,7 +1515,7 @@ static int filters_show_peer(const char *peer)
 	if (r < 0)
 		return cli_log_parser(r);
 
-	cli_printf("[" CLI_GREEN "ADD" CLI_DEFAULT  "] Peer %s@%s Name %s\n",
+	cli_printf("[" CLI_GREEN "ADD" CLI_DEFAULT  "] Peer: %s@%s Name: %s\n",
 		   peer, link ? : "<none>", fname ? : "<unknown>");
 
 	return 0;
@@ -1586,7 +1586,7 @@ static int filters_show_link(const char *link)
 	if (r < 0)
 		return cli_log_parser(r);
 
-	cli_printf("[" CLI_GREEN "ADD" CLI_DEFAULT  "] Link %s Name %s\n",
+	cli_printf("[" CLI_GREEN "ADD" CLI_DEFAULT  "] Link: %s Name: %s\n",
 		   link, fname ? : "<unknown>");
 
 	return 0;
@@ -1619,7 +1619,7 @@ static int filters_object_fn(sd_bus *bus,
 			if (r < 0)
 				return r;
 		} else {
-			cli_printf("[" CLI_YELLOW "REMOVE" CLI_DEFAULT  "] Peer %s\n",
+			cli_printf("[" CLI_YELLOW "REMOVE" CLI_DEFAULT  "] Peer: %s\n",
 				   peer);
 		}
 	}
@@ -1635,7 +1635,7 @@ static int filters_object_fn(sd_bus *bus,
 			if (r < 0)
 				return r;
 		} else {
-			cli_printf("[" CLI_YELLOW "REMOVE" CLI_DEFAULT  "] Link %s\n",
+			cli_printf("[" CLI_YELLOW "REMOVE" CLI_DEFAULT  "] Link: %s\n",
 				   link);
 		}
 	}
