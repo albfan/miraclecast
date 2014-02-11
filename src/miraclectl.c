@@ -1307,7 +1307,7 @@ static int cmd_stop_scan(char **args, unsigned int n)
 
 static char *scan_link;
 
-static int cmd_scan_stop(void)
+static int cmd_scan_stop(bool async)
 {
 	_cleanup_sd_bus_error_ sd_bus_error err = SD_BUS_ERROR_NULL;
 	_shl_cleanup_free_ char *path = NULL, *name = NULL;
@@ -1332,11 +1332,14 @@ static int cmd_scan_stop(void)
 			       &err,
 			       NULL,
 			       NULL);
-	if (r < 0)
+	if (r >= 0)
+		cli_printf("Scan stopped on link %s\n", scan_link);
+	else if (async &&
+		 sd_bus_error_has_name(&err, SD_BUS_ERROR_UNKNOWN_OBJECT))
+		/* ignore */ ;
+	else
 		cli_error("cannot stop scan on link %s: %s",
 			  scan_link, bus_error_message(&err, r));
-	else
-		cli_printf("Scan stopped on link %s\n", scan_link);
 
 	free(scan_link);
 	scan_link = NULL;
@@ -1374,7 +1377,7 @@ static int cmd_scan(char **args, unsigned int n)
 	int r;
 
 	if (n > 0 && !strcmp(args[0], "stop"))
-		return cmd_scan_stop();
+		return cmd_scan_stop(false);
 
 	if (scan_link) {
 		log_error("another managed scan is already running on link %s",
@@ -1693,7 +1696,7 @@ static int miraclectl_run(void)
 
 	r = cli_run();
 
-	cmd_scan_stop();
+	cmd_scan_stop(true);
 	filters_destroy();
 
 	return r;
