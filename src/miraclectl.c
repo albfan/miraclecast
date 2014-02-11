@@ -1635,7 +1635,7 @@ static int filters_object_fn(sd_bus *bus,
 			if (r < 0)
 				return r;
 		} else {
-			if (!strcmp(link, scan_link))
+			if (scan_link && !strcmp(link, scan_link))
 				cmd_scan_stop(true);
 
 			cli_printf("[" CLI_YELLOW "REMOVE" CLI_DEFAULT  "] Link: %s\n",
