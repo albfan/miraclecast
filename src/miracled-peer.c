@@ -205,13 +205,49 @@ const char *peer_get_remote_address(struct peer *p)
 		return NULL;
 }
 
+static const char *peer_provision_str[WIFI_PROVISION_CNT] = {
+	[WIFI_PROVISION_PBC] = "pbc",
+	[WIFI_PROVISION_DISPLAY] = "display",
+	[WIFI_PROVISION_PIN] = "pin",
+};
+
+static const char *peer_provision_to_str(unsigned int prov)
+{
+	if (prov >= WIFI_PROVISION_CNT)
+		return NULL;
+
+	return peer_provision_str[prov];
+}
+
+static unsigned int peer_provision_from_str(const char *prov)
+{
+	unsigned int i;
+
+	if (!prov || !*prov)
+		return WIFI_PROVISION_CNT;
+
+	for (i = 0; i < WIFI_PROVISION_CNT; ++i)
+		if (peer_provision_str[i])
+			if (!strcmp(prov, peer_provision_str[i]))
+				return i;
+
+	return WIFI_PROVISION_CNT;
+}
+
 void peer_process_wifi(struct peer *p, struct wifi_event *ev)
 {
+	const char *prov;
+
 	if (!p || !p->d)
 		return;
 
 	switch (ev->type) {
 	case WIFI_DEV_PROVISION:
+		prov = peer_provision_to_str(ev->dev_provision.type);
+		if (!prov)
+			break;
+
+		peer_dbus_provision_request(p, prov, ev->dev_provision.pin);
 		break;
 	case WIFI_DEV_CONNECT:
 		peer_dbus_properties_changed(p, "Connected", NULL);
@@ -223,4 +259,42 @@ void peer_process_wifi(struct peer *p, struct wifi_event *ev)
 		log_debug("unhandled WIFI event: %u", ev->type);
 		break;
 	}
+}
+
+int peer_allow(struct peer *p, const char *pin)
+{
+	if (!p || !p->d)
+		return -EOPNOTSUPP;
+
+	wifi_dev_allow(p->d, pin);
+	return 0;
+}
+
+void peer_reject(struct peer *p)
+{
+	if (!p || !p->d)
+		return;
+
+	wifi_dev_reject(p->d);
+}
+
+int peer_connect(struct peer *p, const char *prov, const char *pin)
+{
+	if (!p || !p->d)
+		return -EOPNOTSUPP;
+
+	if (!prov)
+		prov = "";
+	if (!pin)
+		pin = "";
+
+	return wifi_dev_connect(p->d, peer_provision_from_str(prov), pin);
+}
+
+void peer_disconnect(struct peer *p)
+{
+	if (!p || !p->d)
+		return;
+
+	wifi_dev_disconnect(p->d);
 }

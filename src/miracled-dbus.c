@@ -43,25 +43,55 @@
 static int peer_dbus_allow(sd_bus *bus, sd_bus_message *msg,
 			   void *data, sd_bus_error *err)
 {
-	return -EINVAL;
+	struct peer *p = data;
+	const char *pin;
+	int r;
+
+	r = sd_bus_message_read(msg, "s", &pin);
+	if (r < 0)
+		return r;
+
+	r = peer_allow(p, pin);
+	if (r < 0)
+		return r;
+
+	return sd_bus_reply_method_return(msg, NULL);
 }
 
 static int peer_dbus_reject(sd_bus *bus, sd_bus_message *msg,
 			    void *data, sd_bus_error *err)
 {
-	return -EINVAL;
+	struct peer *p = data;
+
+	peer_reject(p);
+	return sd_bus_reply_method_return(msg, NULL);
 }
 
 static int peer_dbus_connect(sd_bus *bus, sd_bus_message *msg,
 			     void *data, sd_bus_error *err)
 {
-	return -EINVAL;
+	struct peer *p = data;
+	const char *prov, *pin;
+	int r;
+
+	r = sd_bus_message_read(msg, "ss", &prov, &pin);
+	if (r < 0)
+		return r;
+
+	r = peer_connect(p, prov, pin);
+	if (r < 0)
+		return r;
+
+	return sd_bus_reply_method_return(msg, NULL);
 }
 
 static int peer_dbus_disconnect(sd_bus *bus, sd_bus_message *msg,
 				void *data, sd_bus_error *err)
 {
-	return -EINVAL;
+	struct peer *p = data;
+
+	peer_disconnect(p);
+	return sd_bus_reply_method_return(msg, NULL);
 }
 
 static int peer_dbus_get_link(sd_bus *bus,
@@ -199,7 +229,7 @@ static const sd_bus_vtable peer_dbus_vtable[] = {
 		      peer_dbus_reject,
 		      0),
 	SD_BUS_METHOD("Connect",
-		      NULL,
+		      "ss",
 		      NULL,
 		      peer_dbus_connect,
 		      0),
@@ -262,6 +292,31 @@ static int peer_dbus_find(sd_bus *bus,
 
 	*found = p;
 	return 1;
+}
+
+void peer_dbus_provision_request(struct peer *p,
+				 const char *type,
+				 const char *pin)
+{
+	_cleanup_free_ char *path = NULL;
+	int r;
+
+	if (!type)
+		return;
+	if (!pin)
+		pin = "";
+
+	path = shl_strcat("/org/freedesktop/miracle/peer/", p->name);
+	if (!path)
+		return log_vENOMEM();
+
+	r = sd_bus_emit_signal(p->l->m->bus,
+			       path,
+			       "org.freedesktop.miracle.Peer",
+			       "ProvisionRequest",
+			       "ss", type, pin);
+	if (r < 0)
+		log_vERR(r);
 }
 
 void peer_dbus_properties_changed(struct peer *p, const char *prop, ...)

@@ -71,6 +71,11 @@ const char *peer_get_remote_address(struct peer *p);
 
 void peer_process_wifi(struct peer *p, struct wifi_event *ev);
 
+int peer_allow(struct peer *p, const char *pin);
+void peer_reject(struct peer *p);
+int peer_connect(struct peer *p, const char *prov, const char *pin);
+void peer_disconnect(struct peer *p);
+
 /* link */
 
 enum link_type {
@@ -143,6 +148,9 @@ struct peer *manager_find_peer(struct manager *m, const char *name);
 
 /* dbus */
 
+void peer_dbus_provision_request(struct peer *p,
+				 const char *type,
+				 const char *pin);
 _shl_sentinel_
 void peer_dbus_properties_changed(struct peer *p, const char *prop, ...);
 void peer_dbus_added(struct peer *p);
