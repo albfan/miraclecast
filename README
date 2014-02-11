@@ -1,24 +1,53 @@
 = MiracleCast - Wifi-Display/Miracast Implementation =
 
-TODO
+The MiracleCast project provides software to connect external monitors to your
+system via Wifi. It is compatible to the Wifi-Display specification also known
+as Miracast. MiracleCast implements the Display-Source as well as Display-Sink
+side.
+
+The Display-Source side allows you to connect external displays to your system
+and stream local content to the device. A lot of effort is put into making this
+as easy as connecting external displays via HDMI.
+On the other hand, the Display-Sink side allows you to create wifi-capable
+external displays yourself. You can use it on your embedded devices or even on
+full desktops to allow other systems to use your device as external display.
 
 Website:
   http://www.freedesktop.org/wiki/Software/miraclecast
 
 == Requirements ==
 
-TODO
+  The MiracleCast projects requires the following software to be installed:
+    - libwfd: A stand-alone library implementing the Wifi-Display protocol.
+              http://www.freedesktop.org/wiki/Software/miraclecast/libwfd
+      required: >=libwfd-1
+
+    - systemd: A system management daemon. It is used for device-management
+               (udev), dbus management (sd-bus) and service management.
+      required: >=systemd-209
+
+    - glib: A utility library. Used by the current DHCP implementation. Will
+            be removed once sd-dns gains DHCP-server capabilities.
+      required: ~=glib2-2.38 (might work with older releases, untested..)
+
+    - check: Test-suite for C programs. Used for optional tests of the
+             MiracleCast code base.
+      optional: ~=check-0.9.11 (might work with older releases, untested..)
+
+  Note that systemd-209 is not released, yet. However, several unreleased
+  interfaces of it are used. Please see the MiracleCast website for hints how
+  you can use it right now.
 
 == Download ==
 
-Released tarballs can be found at:
-  http://www.freedesktop.org/software/miraclecast/releases
+  Released tarballs can be found at:
+    http://www.freedesktop.org/software/miraclecast/releases
 
 == Install ==
 
   To compile MiracleCast, run the standard autotools commands:
     $ test -f ./configure || NOCONFIGURE=1 ./autogen.sh
-    $ ./configure --prefix=/usr
+    $ ./configure --prefix=/usr/local
     $ make
     $ sudo make install
   To compile and run the test applications, use:
@@ -26,7 +55,7 @@ Released tarballs can be found at:
 
 == Documentation ==
 
-WIP
+  WIP - Please see the MiracleCast website
 
 == License ==
 
