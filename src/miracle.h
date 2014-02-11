@@ -35,17 +35,12 @@
 #ifndef MIRACLE_H
 #define MIRACLE_H
 
-static inline void cleanup_free(void *p)
-{
-	free(*(void**)p);
-}
-
 static inline void cleanup_sd_bus_message(sd_bus_message **ptr)
 {
 	sd_bus_message_unref(*ptr);
 }
 
-#define _cleanup_free_ _shl_cleanup_(cleanup_free)
+#define _cleanup_free_ _shl_cleanup_free_
 #define _cleanup_sd_bus_error_ _shl_cleanup_(sd_bus_error_free)
 #define _cleanup_sd_bus_message_ _shl_cleanup_(cleanup_sd_bus_message)
 

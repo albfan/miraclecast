@@ -17,6 +17,7 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
+#include "shl_macro.h"
 
 /* strict atoi */
 
@@ -92,5 +93,23 @@ static inline char *shl_startswith(const char *str, const char *prefix)
 	else
 		return NULL;
 }
+
+/* strv */
+
+void shl_strv_free(char **strv);
+
+static inline void shl_strv_freep(char ***strv)
+{
+	shl_strv_free(*strv);
+}
+
+#define _shl_cleanup_strv_ _shl_cleanup_(shl_strv_freep)
+
+/* quoted strings */
+
+char shl_qstr_unescape_char(char c);
+void shl_qstr_decode_n(char *str, size_t length);
+int shl_qstr_tokenize_n(const char *str, size_t length, char ***out);
+int shl_qstr_tokenize(const char *str, char ***out);
 
 #endif  /* SHL_UTIL_H */

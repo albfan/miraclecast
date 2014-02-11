@@ -321,3 +321,212 @@ char *shl_strjoin(const char *first, ...) {
 	*p = 0;
 	return str;
 }
+
+/*
+ * strv
+ */
+
+void shl_strv_free(char **strv)
+{
+	unsigned int i;
+
+	if (!strv)
+		return;
+
+	for (i = 0; strv[i]; ++i)
+		free(strv[i]);
+
+	free(strv);
+}
+
+/*
+ * Quoted Strings
+ */
+
+char shl_qstr_unescape_char(char c)
+{
+	switch (c) {
+	case 'a':
+		return '\a';
+	case 'b':
+		return '\b';
+	case 'f':
+		return '\f';
+	case 'n':
+		return '\n';
+	case 'r':
+		return '\r';
+	case 't':
+		return '\t';
+	case 'v':
+		return '\v';
+	case '"':
+		return '"';
+	case '\'':
+		return '\'';
+	case '\\':
+		return '\\';
+	default:
+		return 0;
+	}
+}
+
+void shl_qstr_decode_n(char *str, size_t length)
+{
+	size_t i;
+	bool escaped;
+	char *pos, c, quoted;
+
+	quoted = 0;
+	escaped = false;
+	pos = str;
+
+	for (i = 0; i < length; ++i) {
+		if (escaped) {
+			escaped = false;
+			c = shl_qstr_unescape_char(str[i]);
+			if (c) {
+				*pos++ = c;
+			} else if (!str[i]) {
+				/* ignore binary 0 */
+			} else {
+				*pos++ = '\\';
+				*pos++ = str[i];
+			}
+		} else if (quoted) {
+			if (str[i] == '\\')
+				escaped = true;
+			else if (str[i] == '"' && quoted == '"')
+				quoted = 0;
+			else if (str[i] == '\'' && quoted == '\'')
+				quoted = 0;
+			else if (!str[i])
+				/* ignore binary 0 */ ;
+			else
+				*pos++ = str[i];
+		} else {
+			if (str[i] == '\\')
+				escaped = true;
+			else if (str[i] == '"' || str[i] == '\'')
+				quoted = str[i];
+			else if (!str[i])
+				/* ignore binary 0 */ ;
+			else
+				*pos++ = str[i];
+		}
+	}
+
+	if (escaped)
+		*pos++ = '\\';
+
+	*pos = 0;
+}
+
+static int shl__qstr_push(char ***strv,
+			  size_t *strv_num,
+			  size_t *strv_size,
+			  const char *str,
+			  size_t len)
+{
+	size_t strv_need;
+	char *ns;
+
+	strv_need = (*strv_num + 2) * sizeof(**strv);
+	if (!shl_greedy_realloc0((void**)strv, strv_size, strv_need))
+		return -ENOMEM;
+
+	ns = malloc(len + 1);
+	memcpy(ns, str, len);
+	ns[len] = 0;
+
+	shl_qstr_decode_n(ns, len);
+	(*strv)[*strv_num] = ns;
+	*strv_num += 1;
+
+	return 0;
+}
+
+int shl_qstr_tokenize_n(const char *str, size_t length, char ***out)
+{
+	char **strv, quoted;
+	size_t i, strv_num, strv_size;
+	const char *pos;
+	bool escaped;
+	int r;
+
+	if (!out)
+		return -EINVAL;
+	if (!str)
+		str = "";
+
+	strv_num = 0;
+	strv_size = sizeof(*strv);
+	strv = malloc(strv_size);
+	if (!strv)
+		return -ENOMEM;
+
+	quoted = 0;
+	escaped = false;
+	pos = str;
+
+	for (i = 0; i < length; ++i) {
+		if (escaped) {
+			escaped = false;
+		} else if (str[i] == '\\') {
+			escaped = true;
+		} else if (quoted) {
+			if (str[i] == '"' && quoted == '"')
+				quoted = 0;
+			else if (str[i] == '\'' && quoted == '\'')
+				quoted = 0;
+		} else if (str[i] == '"' && quoted == '"') {
+			quoted = '"';
+		} else if (str[i] == '\'' && quoted == '\'') {
+			quoted = '\'';
+		} else if (str[i] == ' ') {
+			/* ignore multiple separators */
+			if (pos != &str[i]) {
+				r = shl__qstr_push(&strv,
+						   &strv_num,
+						   &strv_size,
+						   pos,
+						   &str[i] - pos);
+				if (r < 0)
+					goto error;
+			}
+
+			pos = &str[i + 1];
+		}
+	}
+
+	/* copy trailing token if available */
+	if (i > 0 && pos != &str[i]) {
+		r = shl__qstr_push(&strv,
+				   &strv_num,
+				   &strv_size,
+				   pos,
+				   &str[i] - pos);
+		if (r < 0)
+			goto error;
+	}
+
+	if ((int)strv_num < (ssize_t)strv_num) {
+		r = -ENOMEM;
+		goto error;
+	}
+
+	strv[strv_num] = NULL;
+	*out = strv;
+	return strv_num;
+
+error:
+	for (i = 0; i < strv_num; ++i)
+		free(strv[i]);
+	free(strv);
+	return r;
+}
+
+int shl_qstr_tokenize(const char *str, char ***out)
+{
+	return shl_qstr_tokenize_n(str, str ? strlen(str) : 0, out);
+}

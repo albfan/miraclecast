@@ -43,6 +43,21 @@
 #define _shl_weakref_(_val) __attribute__((__weakref__(#_val)))
 #define _shl_cleanup_(_val) __attribute__((__cleanup__(_val)))
 
+static inline void shl_freep(void *p)
+{
+	free(*(void**)p);
+}
+
+#define _shl_cleanup_free_ _shl_cleanup_(shl_freep)
+
+static inline void shl_set_errno(int *r)
+{
+	errno = *r;
+}
+
+#define SHL_PROTECT_ERRNO \
+	_shl_cleanup_(shl_set_errno) _shl_unused_ int shl__errno = errno
+
 /* 2-level stringify helper */
 #define SHL__STRINGIFY(_val) #_val
 #define SHL_STRINGIFY(_val) SHL__STRINGIFY(_val)
