@@ -43,6 +43,8 @@ LT_INIT
 PKG_CHECK_MODULES([DEPS], [libwfd libsystemd-daemon >= 208])
 PKG_CHECK_MODULES([GDHCP], [glib-2.0])
 
+AC_CHECK_HEADERS(readline/readline.h,, AC_MSG_ERROR(GNU readline not found))
+
 #
 # Test for "check" which we use for our test-suite. If not found, we disable
 # all tests.

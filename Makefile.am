@@ -119,6 +119,7 @@ miraclectl_CPPFLAGS = \
 	$(DEPS_CFLAGS)
 miraclectl_LDADD = \
 	libshl.la \
+	-lreadline \
 	$(DEPS_LIBS)
 miraclectl_LDFLAGS = $(AM_LDFLAGS)
 
