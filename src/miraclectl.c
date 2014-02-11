@@ -53,7 +53,7 @@ static sd_event *cli_event;
 static sd_event_source *cli_sigs[_NSIG];
 static sd_event_source *cli_stdin;
 static bool cli_rl;
-static int cli_max_sev;
+static int cli_max_sev = LOG_NOTICE;
 
 #define CLI_DEFAULT		"\x1B[0m"
 #define CLI_RED			"\x1B[0;91m"
