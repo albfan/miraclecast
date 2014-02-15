@@ -13,13 +13,13 @@ external displays yourself. You can use it on your embedded devices or even on
 full desktops to allow other systems to use your device as external display.
 
 Website:
-  http://www.freedesktop.org/wiki/Software/miraclecast
+  http://www.freedesktop.org/wiki/Software/miracle
 
 == Requirements ==
 
   The MiracleCast projects requires the following software to be installed:
     - libwfd: A stand-alone library implementing the Wifi-Display protocol.
-              http://www.freedesktop.org/wiki/Software/miraclecast/libwfd
+              http://www.freedesktop.org/wiki/Software/miracle/libwfd
       required: >=libwfd-1
 
     - systemd: A system management daemon. It is used for device-management
@@ -41,7 +41,7 @@ Website:
 == Download ==
 
   Released tarballs can be found at:
-    http://www.freedesktop.org/software/miraclecast/releases
+    http://www.freedesktop.org/software/miracle/releases
 
 == Install ==
 

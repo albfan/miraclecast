@@ -5,11 +5,11 @@
 
 AC_PREREQ(2.68)
 
-AC_INIT([miraclecast],
+AC_INIT([miracle],
         [1],
-        [http://www.freedesktop.org/wiki/Software/miraclecast],
-        [miraclecast],
-        [http://www.freedesktop.org/wiki/Software/miraclecast])
+        [http://www.freedesktop.org/wiki/Software/miracle],
+        [miracle],
+        [http://www.freedesktop.org/wiki/Software/miracle])
 AC_CONFIG_SRCDIR([src/miraclectl.c])
 AC_CONFIG_AUX_DIR([build-aux])
 AC_CONFIG_MACRO_DIR([m4])
