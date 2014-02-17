@@ -107,7 +107,7 @@ struct manager {
  *     D:<addr>   # primary DNS server
  *     G:<addr>   # primary gateway
  *   sent on remote lease:
- *     R:<addr>   # addr given to remote device
+ *     R:<mac> <addr>   # addr given to remote device
  */
 static void write_comm(const void *msg, size_t size)
 {
@@ -372,6 +372,12 @@ static void server_log_fn(const char *str, void *data)
 	log_format(NULL, 0, NULL, "gdhcp", LOG_DEBUG, "%s", str);
 }
 
+static void server_event_fn(const char *mac, const char *lease, void *data)
+{
+	log_debug("remote lease: %s %s", mac, lease);
+	writef_comm("R:%s %s", mac, lease);
+}
+
 static gboolean manager_signal_fn(GIOChannel *chan, GIOCondition mask,
 				  gpointer data)
 {
@@ -584,7 +590,7 @@ static int manager_new(struct manager **out)
 		}
 
 		m->server = g_dhcp_server_new(G_DHCP_IPV4, m->ifindex,
-					      &serr);
+					      &serr, server_event_fn, m);
 		if (!m->server) {
 			r = -EINVAL;
 
@@ -684,6 +690,8 @@ static int manager_run(struct manager *m)
 			log_error("cannot start DHCP server: %d", r);
 			return -EFAULT;
 		}
+
+		writef_comm("L:%s", arg_local);
 	}
 
 	g_main_loop_run(m->loop);

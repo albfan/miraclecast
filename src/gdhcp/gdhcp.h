@@ -201,12 +201,14 @@ typedef enum {
 
 typedef void (*GDHCPSaveLeaseFunc) (unsigned char *mac,
 			unsigned int nip, unsigned int expire);
+typedef void (*g_dhcp_event_fn) (const char *mac, const char *ip, void *data);
 struct _GDHCPServer;
 
 typedef struct _GDHCPServer GDHCPServer;
 
 GDHCPServer *g_dhcp_server_new(GDHCPType type,
-		int ifindex, GDHCPServerError *error);
+		int ifindex, GDHCPServerError *error,
+		g_dhcp_event_fn event_fn, void *fn_data);
 int g_dhcp_server_start(GDHCPServer *server);
 void g_dhcp_server_stop(GDHCPServer *server);
 

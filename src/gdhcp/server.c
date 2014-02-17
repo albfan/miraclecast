@@ -34,6 +34,7 @@
 #include <netpacket/packet.h>
 #include <net/ethernet.h>
 #include <net/if_arp.h>
+#include <netinet/ether.h>
 
 #include <linux/if.h>
 #include <linux/filter.h>
@@ -67,6 +68,8 @@ struct _GDHCPServer {
 	GDHCPSaveLeaseFunc save_lease_func;
 	GDHCPDebugFunc debug_func;
 	gpointer debug_data;
+	g_dhcp_event_fn event_fn;
+	void *fn_data;
 };
 
 struct dhcp_lease {
@@ -347,7 +350,8 @@ done:
 }
 
 GDHCPServer *g_dhcp_server_new(GDHCPType type,
-		int ifindex, GDHCPServerError *error)
+		int ifindex, GDHCPServerError *error,
+		g_dhcp_event_fn event_fn, void *fn_data)
 {
 	GDHCPServer *dhcp_server = NULL;
 
@@ -400,6 +404,8 @@ GDHCPServer *g_dhcp_server_new(GDHCPType type,
 	dhcp_server->save_lease_func = NULL;
 	dhcp_server->debug_func = NULL;
 	dhcp_server->debug_data = NULL;
+	dhcp_server->event_fn = event_fn;
+	dhcp_server->fn_data = fn_data;
 
 	*error = G_DHCP_SERVER_ERROR_NONE;
 
@@ -612,6 +618,11 @@ static void send_ACK(GDHCPServer *dhcp_server,
 	send_packet_to_client(dhcp_server, &packet);
 
 	add_lease(dhcp_server, 0, packet.chaddr, packet.yiaddr);
+
+	if (dhcp_server->event_fn)
+		dhcp_server->event_fn(ether_ntoa((void*)packet.chaddr),
+				      inet_ntoa(addr),
+				      dhcp_server->fn_data);
 }
 
 static void send_NAK(GDHCPServer *dhcp_server,
