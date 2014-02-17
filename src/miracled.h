@@ -97,6 +97,7 @@ struct link {
 	struct wifi *w;
 	sd_event_source *wpa_child_source;
 	sd_event_source *wpa_startup_source;
+	unsigned int wpa_startup_attempts;
 
 	bool running : 1;
 };

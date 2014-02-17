@@ -184,7 +184,7 @@ static int link_wifi_startup_fn(sd_event_source *source,
 
 	r = link_wifi_start(l);
 	if (r < 0) {
-		if (wifi_is_open(l->w)) {
+		if (wifi_is_open(l->w) || ++l->wpa_startup_attempts >= 5) {
 			log_error("cannot start wifi on link %s", l->name);
 			link_free(l);
 			return 0;
