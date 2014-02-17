@@ -172,6 +172,14 @@ static void wifi_hup(struct wifi *w)
 	wifi_raise(w, &wev);
 }
 
+static void wifi_scan_stopped(struct wifi *w)
+{
+	struct wifi_event wev = { };
+
+	wev.type = WIFI_SCAN_STOPPED;
+	wifi_raise(w, &wev);
+}
+
 static void wifi_show_dev(struct wifi *w, struct wifi_dev *d)
 {
 	struct wifi_event wev = { };
@@ -419,6 +427,7 @@ static void wifi_event_p2p_find_stopped(struct wifi *w, char *msg,
 		return;
 
 	w->discoverable = false;
+	wifi_scan_stopped(w);
 }
 
 static void wifi_event_p2p_device_found(struct wifi *w, char *msg,

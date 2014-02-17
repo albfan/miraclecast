@@ -1956,6 +1956,33 @@ static int filters_peer_fn(sd_bus *bus,
 	return 0;
 }
 
+static int filters_link_fn(sd_bus *bus,
+			   sd_bus_message *m,
+			   void *data,
+			   sd_bus_error *err)
+{
+	_shl_cleanup_free_ char *link = NULL;
+	const char *path;
+
+	path = sd_bus_message_get_path(m);
+	path = shl_startswith(path, "/org/freedesktop/miracle/link/");
+	if (!path)
+		return 0;
+
+	link = sd_bus_label_unescape(path);
+	if (!link)
+		return cli_ENOMEM();
+
+	if (sd_bus_message_is_signal(m,
+				     "org.freedesktop.miracle.Link",
+				     "ScanStopped")) {
+		if (scan_link && !strcmp(link, scan_link))
+			cmd_scan_stop(true);
+	}
+
+	return 0;
+}
+
 static void filters_init()
 {
 	int r;
@@ -1986,10 +2013,26 @@ static void filters_init()
 			     NULL);
 	if (r < 0)
 		cli_error("cannot add dbus match: %d", r);
+
+	r = sd_bus_add_match(bus,
+			     "type='signal',"
+			     "sender='org.freedesktop.miracle',"
+			     "interface='org.freedesktop.miracle.Link'",
+			     filters_link_fn,
+			     NULL);
+	if (r < 0)
+		cli_error("cannot add dbus match: %d", r);
 }
 
 static void filters_destroy()
 {
+	sd_bus_remove_match(bus,
+			    "type='signal',"
+			    "sender='org.freedesktop.miracle',"
+			    "interface='org.freedesktop.miracle.Link'",
+			    filters_link_fn,
+			    NULL);
+
 	sd_bus_remove_match(bus,
 			    "type='signal',"
 			    "sender='org.freedesktop.miracle',"

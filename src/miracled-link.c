@@ -110,6 +110,9 @@ static void link_wifi_event_fn(struct wifi *w, void *data,
 		/* destroy this link */
 		link_free(l);
 		break;
+	case WIFI_SCAN_STOPPED:
+		link_dbus_scan_stopped(l);
+		break;
 	case WIFI_DEV_FOUND:
 		peer_new_wifi(l, ev->dev_found.dev, NULL);
 		break;

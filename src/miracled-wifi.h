@@ -42,6 +42,7 @@ struct wifi_dev;
 
 enum wifi_event_type {
 	WIFI_HUP,
+	WIFI_SCAN_STOPPED,
 	WIFI_DEV_FOUND,
 	WIFI_DEV_LOST,
 	WIFI_DEV_PROVISION,

@@ -509,6 +509,7 @@ static const sd_bus_vtable link_dbus_vtable[] = {
 				 link_dbus_set_name,
 				 0,
 				 SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
+	SD_BUS_SIGNAL("ScanStopped", NULL, 0),
 	SD_BUS_VTABLE_END
 };
 
@@ -549,6 +550,24 @@ void link_dbus_properties_changed(struct link *l, const char *prop, ...)
 						path,
 						"org.freedesktop.miracle.Link",
 						strv);
+	if (r < 0)
+		log_vERR(r);
+}
+
+void link_dbus_scan_stopped(struct link *l)
+{
+	_cleanup_free_ char *path = NULL;
+	int r;
+
+	path = shl_strcat("/org/freedesktop/miracle/link/", l->name);
+	if (!path)
+		return log_vENOMEM();
+
+	r = sd_bus_emit_signal(l->m->bus,
+			       path,
+			       "org.freedesktop.miracle.Link",
+			       "ScanStopped",
+			       NULL);
 	if (r < 0)
 		log_vERR(r);
 }
