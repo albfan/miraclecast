@@ -23,6 +23,9 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+#ifndef MIRACLE_H
+#define MIRACLE_H
+
 #include <alloca.h>
 #include <errno.h>
 #include <stdbool.h>
@@ -31,9 +34,6 @@
 #include <systemd/sd-bus.h>
 #include "shl_log.h"
 #include "shl_macro.h"
-
-#ifndef MIRACLE_H
-#define MIRACLE_H
 
 static inline void cleanup_sd_bus_message(sd_bus_message **ptr)
 {
