@@ -412,9 +412,6 @@ static int help(void)
 	       "     --version          Show package version\n"
 	       "     --log-level <lvl>  Maximum level for log messages\n"
 	       "     --log-time         Prefix log-messages with timestamp\n"
-	       "\n"
-	       "     --netdev <dev>     Network device to run on\n"
-	       "     --wpa-rundir <dir> wpa_supplicant runtime dir [default: /run/wpa_supplicant]\n"
 	       , program_invocation_short_name);
 
 	return 0;
