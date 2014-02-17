@@ -709,7 +709,7 @@ static int make_address(char *buf, const char *prefix, const char *suffix,
 		goto error;
 
 	inet_ntop(AF_INET, &addr, buf, INET_ADDRSTRLEN);
-	buf[INET_ADDRSTRLEN] = 0;
+	buf[INET_ADDRSTRLEN - 1] = 0;
 	return 0;
 
 error:
@@ -728,7 +728,7 @@ static int make_subnet(char *buf, const char *subnet)
 		goto error;
 
 	inet_ntop(AF_INET, &addr, buf, INET_ADDRSTRLEN);
-	buf[INET_ADDRSTRLEN] = 0;
+	buf[INET_ADDRSTRLEN - 1] = 0;
 	return 0;
 
 error:
