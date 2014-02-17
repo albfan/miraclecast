@@ -31,7 +31,9 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #include <stdarg.h>
+#include <sys/time.h>
 #include <systemd/sd-bus.h>
+#include <time.h>
 #include "shl_log.h"
 #include "shl_macro.h"
 
@@ -115,5 +117,15 @@ static inline int bus_message_read_basic_variant(sd_bus_message *m,
 		} \
 		_l; \
 	})
+
+static inline int64_t now(clockid_t clock_id)
+{
+	struct timespec ts;
+
+	clock_gettime(clock_id, &ts);
+
+	return (int64_t)ts.tv_sec * 1000000LL +
+	       (int64_t)ts.tv_nsec / 1000LL;
+}
 
 #endif /* MIRACLE_H */
