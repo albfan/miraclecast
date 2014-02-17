@@ -138,7 +138,7 @@ static int manager_udev_fn(sd_event_source *source,
 	if (!action)
 		goto out;
 
-	if (!strcmp(action, "add"))
+	if (!strcmp(action, "add") && arg_manage_wifi)
 		manager_add_link_from_udev(m, d);
 	else if (!strcmp(action, "remove"))
 		manager_remove_link_from_udev(m, d);
