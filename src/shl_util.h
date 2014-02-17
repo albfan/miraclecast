@@ -84,7 +84,7 @@ void *shl_greedy_realloc0(void **mem, size_t *size, size_t need);
 /* string helpers */
 
 char *shl_strcat(const char *first, const char *second);
-char *shl_strjoin(const char *first, ...);
+_shl_sentinel_ char *shl_strjoin(const char *first, ...);
 
 static inline char *shl_startswith(const char *str, const char *prefix)
 {
