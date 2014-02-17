@@ -25,6 +25,7 @@
 
 #include <errno.h>
 #include <getopt.h>
+#include <libudev.h>
 #include <libwfd.h>
 #include <signal.h>
 #include <stdbool.h>
@@ -39,7 +40,9 @@
 #include <unistd.h>
 #include "miracled.h"
 #include "shl_htable.h"
+#include "shl_macro.h"
 #include "shl_log.h"
+#include "shl_util.h"
 
 /*
  * Peer Handling
@@ -77,6 +80,70 @@ struct link *manager_find_link(struct manager *m, const char *name)
  * Manager Handling
  */
 
+static void manager_add_link_from_udev(struct manager *m,
+				       struct udev_device *d)
+{
+	struct link *l;
+
+	if (!udev_device_has_tag(d, "miracle"))
+		return;
+
+	log_debug("link %s tagged via udev",
+		  udev_device_get_sysname(d));
+
+	link_new(m,
+		 LINK_WIFI,
+		 udev_device_get_sysname(d),
+		 &l);
+}
+
+static void manager_remove_link_from_udev(struct manager *m,
+					  struct udev_device *d)
+{
+	_shl_cleanup_free_ char *name = NULL;
+	int r;
+	struct link *l;
+
+	r = link_make_name(LINK_WIFI, udev_device_get_sysname(d), &name);
+	if (r < 0)
+		return log_vERR(r);
+
+	l = manager_find_link(m, name);
+	if (!l)
+		return;
+
+	log_debug("link %s removed via udev", name);
+
+	link_free(l);
+}
+
+static int manager_udev_fn(sd_event_source *source,
+			   int fd,
+			   uint32_t mask,
+			   void *data)
+{
+	struct manager *m = data;
+	struct udev_device *d = NULL;
+	const char *action;
+
+	d = udev_monitor_receive_device(m->udev_mon);
+	if (!d)
+		goto out;
+
+	action = udev_device_get_action(d);
+	if (!action)
+		goto out;
+
+	if (!strcmp(action, "add"))
+		manager_add_link_from_udev(m, d);
+	else if (!strcmp(action, "remove"))
+		manager_remove_link_from_udev(m, d);
+
+out:
+	udev_device_unref(d);
+	return 0;
+}
+
 static int manager_signal_fn(sd_event_source *source,
 			     const struct signalfd_siginfo *ssi,
 			     void *data)
@@ -109,6 +176,11 @@ static void manager_free(struct manager *m)
 	shl_htable_clear_str(&m->peers, NULL, NULL);
 
 	manager_dbus_disconnect(m);
+
+	sd_event_source_unref(m->udev_mon_source);
+	udev_monitor_unref(m->udev_mon);
+	udev_unref(m->udev);
+
 	for (i = 0; m->sigs[i]; ++i)
 		sd_event_source_unref(m->sigs[i]);
 	sd_bus_unref(m->bus);
@@ -182,6 +254,43 @@ static int manager_new(struct manager **out)
 		}
 	}
 
+	m->udev = udev_new();
+	if (!m->udev) {
+		r = log_ENOMEM();
+		goto error;
+	}
+
+	m->udev_mon = udev_monitor_new_from_netlink(m->udev, "udev");
+	if (!m->udev_mon) {
+		r = log_ENOMEM();
+		goto error;
+	}
+
+	r = udev_monitor_filter_add_match_subsystem_devtype(m->udev_mon,
+							    "net",
+							    "wlan");
+	if (r < 0) {
+		log_vERR(r);
+		goto error;
+	}
+
+	r = udev_monitor_enable_receiving(m->udev_mon);
+	if (r < 0) {
+		log_vERR(r);
+		goto error;
+	}
+
+	r = sd_event_add_io(m->event,
+			    udev_monitor_get_fd(m->udev_mon),
+			    EPOLLHUP | EPOLLERR | EPOLLIN,
+			    manager_udev_fn,
+			    m,
+			    &m->udev_mon_source);
+	if (r < 0) {
+		log_vERR(r);
+		goto error;
+	}
+
 	r = manager_dbus_connect(m);
 	if (r < 0)
 		goto error;
@@ -243,9 +352,55 @@ error:
 		    bus_error_message(&err, r));
 }
 
+static void manager_read_links(struct manager *m)
+{
+	struct udev_enumerate *e = NULL;
+	struct udev_list_entry *l;
+	struct udev_device *d;
+	int r;
+
+	e = udev_enumerate_new(m->udev);
+	if (!e)
+		goto error;
+
+	r = udev_enumerate_add_match_subsystem(e, "net");
+	if (r < 0)
+		goto error;
+
+	r = udev_enumerate_add_match_property(e, "DEVTYPE", "wlan");
+	if (r < 0)
+		goto error;
+
+	r = udev_enumerate_add_match_is_initialized(e);
+	if (r < 0)
+		goto error;
+
+	r = udev_enumerate_scan_devices(e);
+	if (r < 0)
+		goto error;
+
+	udev_list_entry_foreach(l, udev_enumerate_get_list_entry(e)) {
+		d = udev_device_new_from_syspath(m->udev,
+						 udev_list_entry_get_name(l));
+		if (!d)
+			goto error;
+
+		manager_add_link_from_udev(m, d);
+		udev_device_unref(d);
+	}
+
+	goto out;
+
+error:
+	log_warning("cannot enumerate links via udev");
+out:
+	udev_enumerate_unref(e);
+}
+
 static int manager_run(struct manager *m)
 {
 	manager_read_name(m);
+	manager_read_links(m);
 	return sd_event_loop(m->event);
 }
 

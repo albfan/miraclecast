@@ -24,6 +24,7 @@
  */
 
 #include <errno.h>
+#include <libudev.h>
 #include <stdbool.h>
 #include <stdlib.h>
 #include <systemd/sd-bus.h>
@@ -122,6 +123,9 @@ struct manager {
 	sd_event *event;
 	sd_bus *bus;
 	sd_event_source *sigs[_NSIG];
+	struct udev *udev;
+	struct udev_monitor *udev_mon;
+	sd_event_source *udev_mon_source;
 
 	unsigned int peer_ids;
 
