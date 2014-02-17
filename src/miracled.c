@@ -44,6 +44,10 @@
 #include "shl_log.h"
 #include "shl_util.h"
 
+bool arg_manage_wifi = false;
+const char *arg_wpa_rundir = "/run/wpa_supplicant";
+const char *arg_wpa_bindir = "/usr/bin";
+
 /*
  * Peer Handling
  */
@@ -406,13 +410,26 @@ static int manager_run(struct manager *m)
 
 static int help(void)
 {
+	/*
+	 * 80-char barrier:
+	 *      01234567890123456789012345678901234567890123456789012345678901234567890123456789
+	 */
 	printf("%s [OPTIONS...] ...\n\n"
 	       "Wifi-Display Daemon.\n\n"
 	       "  -h --help             Show this help\n"
 	       "     --version          Show package version\n"
 	       "     --log-level <lvl>  Maximum level for log messages\n"
 	       "     --log-time         Prefix log-messages with timestamp\n"
+	       "\n"
+	       "     --manage-wifi      Enable internal wifi-management via wpa_supplicant if\n"
+	       "                        they're not managed externally (like NetworkManager)\n"
+	       "     --wpa-rundir <dir> wpa_supplicant runtime dir [/run/wpa_supplicant]\n"
+	       "     --wpa-bindir <dir> wpa_supplicant binary dir [/usr/bin]\n"
 	       , program_invocation_short_name);
+	/*
+	 * 80-char barrier:
+	 *      01234567890123456789012345678901234567890123456789012345678901234567890123456789
+	 */
 
 	return 0;
 }
@@ -423,12 +440,20 @@ static int parse_argv(int argc, char *argv[])
 		ARG_VERSION = 0x100,
 		ARG_LOG_LEVEL,
 		ARG_LOG_TIME,
+
+		ARG_MANAGE_WIFI,
+		ARG_WPA_RUNDIR,
+		ARG_WPA_BINDIR,
 	};
 	static const struct option options[] = {
 		{ "help",	no_argument,		NULL,	'h' },
 		{ "version",	no_argument,		NULL,	ARG_VERSION },
 		{ "log-level",	required_argument,	NULL,	ARG_LOG_LEVEL },
 		{ "log-time",	no_argument,		NULL,	ARG_LOG_TIME },
+
+		{ "manage-wifi",	no_argument,		NULL,	ARG_MANAGE_WIFI },
+		{ "wpa-rundir",		required_argument,	NULL,	ARG_WPA_RUNDIR },
+		{ "wpa-bindir",		required_argument,	NULL,	ARG_WPA_BINDIR },
 		{}
 	};
 	int c;
@@ -445,6 +470,16 @@ static int parse_argv(int argc, char *argv[])
 			break;
 		case ARG_LOG_TIME:
 			log_init_time();
+			break;
+
+		case ARG_MANAGE_WIFI:
+			arg_manage_wifi = true;
+			break;
+		case ARG_WPA_RUNDIR:
+			arg_wpa_rundir = optarg;
+			break;
+		case ARG_WPA_BINDIR:
+			arg_wpa_bindir = optarg;
 			break;
 		case '?':
 			return -EINVAL;

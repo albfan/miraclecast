@@ -444,6 +444,25 @@ static int link_dbus_get_interface(sd_bus *bus,
 	return 1;
 }
 
+static int link_dbus_get_running(sd_bus *bus,
+				 const char *path,
+				 const char *interface,
+				 const char *property,
+				 sd_bus_message *reply,
+				 void *data,
+				 sd_bus_error *err)
+{
+	struct link *l = data;
+	int r, val;
+
+	val = l->running;
+	r = sd_bus_message_append_basic(reply, 'b', &val);
+	if (r < 0)
+		return r;
+
+	return 1;
+}
+
 static int link_dbus_get_name(sd_bus *bus,
 			      const char *path,
 			      const char *interface,
@@ -503,6 +522,11 @@ static const sd_bus_vtable link_dbus_vtable[] = {
 			link_dbus_get_interface,
 			0,
 			SD_BUS_VTABLE_PROPERTY_CONST),
+	SD_BUS_PROPERTY("Running",
+			"b",
+			link_dbus_get_running,
+			0,
+			SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
 	SD_BUS_WRITABLE_PROPERTY("Name",
 				 "s",
 				 link_dbus_get_name,

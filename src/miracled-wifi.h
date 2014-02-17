@@ -97,6 +97,12 @@ void wifi_free(struct wifi *w);
 void wifi_set_data(struct wifi *w, void *data);
 void *wifi_get_data(struct wifi *w);
 
+pid_t wifi_get_supplicant_pid(struct wifi *w);
+int wifi_spawn_supplicant(struct wifi *w,
+			  const char *rundir,
+			  const char *binary,
+			  const char *ifname);
+
 bool wifi_is_open(struct wifi *w);
 int wifi_open(struct wifi *w, const char *wpa_path);
 void wifi_close(struct wifi *w);

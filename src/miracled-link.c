@@ -138,23 +138,17 @@ static void link_wifi_event_fn(struct wifi *w, void *data,
 	}
 }
 
-static int link_wifi_init(struct link *l)
+static int link_wifi_start(struct link *l)
 {
+	_shl_cleanup_free_ char *path = NULL;
 	struct wifi_dev *d;
 	int r;
-	char *path;
 
-	r = wifi_new(l->m->event, link_wifi_event_fn, l, &l->w);
-	if (r < 0)
-		return r;
-
-	path = shl_strcat("/run/wpa_supplicant/", l->interface);
+	path = shl_strjoin(arg_wpa_rundir, "/", l->interface, NULL);
 	if (!path)
 		return log_ENOMEM();
 
 	r = wifi_open(l->w, path);
-	free(path);
-
 	if (r < 0)
 		return r;
 
@@ -168,8 +162,104 @@ static int link_wifi_init(struct link *l)
 	return 0;
 }
 
+static int link_wifi_child_fn(sd_event_source *source,
+			      const siginfo_t *si,
+			      void *data)
+{
+	struct link *l = data;
+
+	log_error("wpa_supplicant died unexpectedly on link %s", l->name);
+
+	link_free(l);
+
+	return 0;
+}
+
+static int link_wifi_startup_fn(sd_event_source *source,
+				uint64_t usec,
+				void *data)
+{
+	struct link *l = data;
+	int r;
+
+	r = link_wifi_start(l);
+	if (r < 0) {
+		if (wifi_is_open(l->w)) {
+			log_error("cannot start wifi on link %s", l->name);
+			link_free(l);
+			return 0;
+		}
+
+		/* reschedule timer */
+		sd_event_source_set_time(source,
+					 now(CLOCK_MONOTONIC) + 200 * 1000);
+		sd_event_source_set_enabled(source, SD_EVENT_ON);
+		log_debug("wpa_supplicant startup still ongoing, reschedule..");
+		return 0;
+	}
+
+	log_debug("wpa_supplicant startup finished on link %s", l->name);
+
+	sd_event_source_set_enabled(source, SD_EVENT_OFF);
+	l->running = true;
+	link_dbus_properties_changed(l, "Running", NULL);
+
+	return 0;
+}
+
+static int link_wifi_init(struct link *l)
+{
+	_shl_cleanup_free_ char *path = NULL;
+	int r;
+
+	r = wifi_new(l->m->event, link_wifi_event_fn, l, &l->w);
+	if (r < 0)
+		return r;
+
+	if (!arg_manage_wifi) {
+		r = link_wifi_start(l);
+		if (r < 0)
+			log_error("cannot open wpa_supplicant socket for link %s",
+				  l->name);
+		else
+			l->running = true;
+
+		return r;
+	}
+
+	path = shl_strcat(arg_wpa_bindir, "/wpa_supplicant");
+	if (!path)
+		return log_ENOMEM();
+
+	r = wifi_spawn_supplicant(l->w, arg_wpa_rundir, path, l->interface);
+	if (r < 0)
+		return r;
+
+	r = sd_event_add_child(l->m->event,
+			       wifi_get_supplicant_pid(l->w),
+			       WEXITED,
+			       link_wifi_child_fn,
+			       l,
+			       &l->wpa_child_source);
+	if (r < 0)
+		return r;
+
+	r = sd_event_add_monotonic(l->m->event,
+				   now(CLOCK_MONOTONIC) + 200 * 1000,
+				   0,
+				   link_wifi_startup_fn,
+				   l,
+				   &l->wpa_startup_source);
+	if (r < 0)
+		return r;
+
+	return 0;
+}
+
 static void link_wifi_destroy(struct link *l)
 {
+	sd_event_source_unref(l->wpa_startup_source);
+	sd_event_source_unref(l->wpa_child_source);
 	wifi_close(l->w);
 	wifi_free(l->w);
 }
@@ -227,6 +317,7 @@ int link_new(struct manager *m,
 
 	switch (l->type) {
 	case LINK_VIRTUAL:
+		l->running = true;
 		break;
 	case LINK_WIFI:
 		r = link_wifi_init(l);

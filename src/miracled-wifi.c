@@ -76,6 +76,8 @@ struct wifi {
 	char *reply_buf;
 	size_t reply_buf_size;
 
+	pid_t wpa_pid;
+
 	struct wfd_wpa_ctrl *wpa;
 	sd_event_source *wpa_source;
 	struct shl_dlist devs;
@@ -784,10 +786,27 @@ error:
 
 void wifi_free(struct wifi *w)
 {
+	int r;
+	pid_t rp;
+
 	if (!w)
 		return;
 
 	wifi_close(w);
+
+	if (w->wpa_pid > 0) {
+		log_debug("killing wpa_supplicant pid:%d and waiting for exit..",
+			  w->wpa_pid);
+		r = kill(w->wpa_pid, SIGTERM);
+		if (r >= 0)
+			rp = waitpid(w->wpa_pid, NULL, 0);
+		if (r < 0 || rp != w->wpa_pid) {
+			r = kill(w->wpa_pid, SIGKILL);
+			if (r >= 0)
+				waitpid(w->wpa_pid, &r, 0);
+		}
+	}
+
 	sd_event_source_unref(w->wpa_source);
 	wfd_wpa_ctrl_unref(w->wpa);
 	free(w->reply_buf);
@@ -832,6 +851,88 @@ static int wifi_read_all_peers(struct wifi *w)
 	return (r == -EAGAIN) ? 0 : r;
 }
 
+pid_t wifi_get_supplicant_pid(struct wifi *w)
+{
+	if (!w)
+		return 0;
+
+	return w->wpa_pid;
+}
+
+static void wifi_run_supplicant(struct wifi *w,
+				const char *rundir,
+				const char *binary,
+				const char *ifname)
+{
+	char *argv[64];
+	int i;
+	sigset_t mask;
+
+	sigemptyset(&mask);
+	sigprocmask(SIG_SETMASK, &mask, NULL);
+
+	/* redirect stdout to stderr for wpa_supplicant */
+	dup2(2, 1);
+
+	/* initialize wpa_supplicant args */
+	i = 0;
+	argv[i++] = (char*)binary;
+	argv[i++] = "-Dnl80211";
+	argv[i++] = "-qq";
+	argv[i++] = "-C";
+	argv[i++] = (char*)rundir;
+	argv[i++] = "-i";
+	argv[i++] = (char*)ifname;
+	argv[i++] = "-p p2p_device=1";
+	argv[i] = NULL;
+
+	/* execute wpa_supplicant; if it fails, the caller issues exit(1) */
+	execve(argv[0], argv, environ);
+}
+
+int wifi_spawn_supplicant(struct wifi *w,
+			  const char *rundir,
+			  const char *binary,
+			  const char *ifname)
+{
+	pid_t pid;
+
+	if (!w)
+		return log_EINVAL();
+	if (w->wpa_pid > 0)
+		return 0;
+
+	if (access(binary, X_OK) < 0) {
+		log_error("execution of wpa_supplicant-binary (%s) not allowed: %m",
+			  binary);
+		return -EINVAL;
+	}
+
+	pid = fork();
+	if (pid < 0) {
+		return log_ERRNO();
+	} else if (!pid) {
+		wifi_run_supplicant(w, rundir, binary, ifname);
+		exit(1);
+	}
+
+	w->wpa_pid = pid;
+	log_info("waiting for wpa_supplicant (pid: %d) startup on %s..",
+		 (int)pid, ifname);
+
+	/* Ouh, yeah.. waiting for wpa_supplicant to start up is.. awful..
+	 * We could use inotify on the ctrl-socket/dir, but these might be
+	 * left-overs from previous runs and thus might get destroyed first.
+	 * And there're some more races.. so lets just do nothing and fire
+	 * a 100ms timer repeatedly in the parent. This gives wpa_supplicant
+	 * enough time to start up and we can test the connection from time to
+	 * time.
+	 * We just need to make sure to catch SIGCHLD so we stop trying if
+	 * wpa_supplicant dies.. All done in the parent. */
+
+	return 0;
+}
+
 int wifi_open(struct wifi *w, const char *wpa_path)
 {
 	int r;
@@ -845,7 +946,7 @@ int wifi_open(struct wifi *w, const char *wpa_path)
 
 	r = wfd_wpa_ctrl_open(w->wpa, wpa_path);
 	if (r < 0) {
-		log_error("cannot open wpa_supplicant socket %s: %d",
+		log_debug("cannot open wpa_supplicant socket %s: %d",
 			  wpa_path, r);
 		goto error;
 	}
@@ -880,7 +981,6 @@ void wifi_close(struct wifi *w)
 	}
 
 	wfd_wpa_ctrl_close(w->wpa);
-	w->wpa = NULL;
 }
 
 int wifi_set_discoverable(struct wifi *w, bool on)

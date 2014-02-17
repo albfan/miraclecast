@@ -95,6 +95,10 @@ struct link {
 	struct shl_dlist peers;
 
 	struct wifi *w;
+	sd_event_source *wpa_child_source;
+	sd_event_source *wpa_startup_source;
+
+	bool running : 1;
 };
 
 #define link_from_htable(_l) \
@@ -165,5 +169,11 @@ void link_dbus_properties_changed(struct link *l, const char *prop, ...);
 void link_dbus_scan_stopped(struct link *l);
 void link_dbus_added(struct link *l);
 void link_dbus_removed(struct link *l);
+
+/* cli arguments */
+
+extern bool arg_manage_wifi;
+extern const char *arg_wpa_rundir;
+extern const char *arg_wpa_bindir;
 
 #endif /* MIRACLED_H */
