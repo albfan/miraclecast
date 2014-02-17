@@ -23,6 +23,31 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+/*
+ * Wifi Interaction
+ * As it turns out, no network-manager currently provides any Wifi-P2P APIs,
+ * therefore, we have no chance but do it ourselves. This file implements a
+ * simple wifi-P2P API by directly talking to a running wpa_supplicant. The
+ * supplicant may be managed by an external network-manager or by ourselves.
+ *
+ * Note that we do *not* intend to keep this interface. Network-managers really
+ * ought to provide something like that via DBus. Once they do, we will ditch
+ * this abstraction and instead use the given API.
+ *
+ * But no-one seems to be interested in that, and more importantly, no-one seems
+ * to be working on that. Hence, we try to do our best here and implement it
+ * ourselves.
+ * The current design is to connect to wpa_supplicant on the default per-ifname
+ * interface and then manage all P2P related stuff. We run "p2p_find" to start a
+ * peer-discovery on request and advertice each found peer via the event
+ * interface. On provision-request or on explicit connect-request, we start a
+ * P2P connection to the peer. Note that we actively prevent multiple such
+ * connections at the same time. The wpa_supplicant API is not able to assign
+ * local groups to p2p-addresses, so we cannot support more than one GO on a
+ * single interface. But that's usually fine as most drivers only support a
+ * single AP, anyway.
+ */
+
 #define LOG_SUBSYSTEM "wifi"
 
 #include <errno.h>
@@ -54,6 +79,8 @@ struct wifi {
 	struct wfd_wpa_ctrl *wpa;
 	sd_event_source *wpa_source;
 	struct shl_dlist devs;
+	struct wifi_dev *connection;
+	struct wifi_dev *pending;
 
 	bool discoverable : 1;
 	bool hup : 1;
@@ -67,6 +94,7 @@ struct wifi_dev {
 	struct wifi *w;
 
 	char mac[WFD_WPA_EVENT_MAC_STRLEN];
+	char iface[WFD_WPA_EVENT_MAC_STRLEN];
 	char pin[WIFI_PIN_STRLEN + 1];
 	unsigned int provision;
 
@@ -104,7 +132,7 @@ static struct wifi_dev *wifi_find_dev_by_mac(struct wifi *w, const char *mac)
 
 	shl_dlist_for_each(i, &w->devs) {
 		d = shl_dlist_entry(i, struct wifi_dev, list);
-		if (!strcasecmp(d->mac, mac))
+		if (!strcasecmp(d->mac, mac) || !strcasecmp(d->iface, mac))
 			return d;
 	}
 
@@ -498,6 +526,9 @@ static void wifi_event_p2p_go_neg_success(struct wifi *w, char *msg,
 
 	log_debug("received P2P-GO-NEG-SUCCESS: %u:%s",
 		  ev->p.p2p_go_neg_success.role, d->mac);
+
+	strcpy(d->iface, ev->p.p2p_go_neg_success.peer_iface);
+	w->pending = d;
 }
 
 static void wifi_event_p2p_group_started(struct wifi *w, char *msg,
@@ -507,8 +538,18 @@ static void wifi_event_p2p_group_started(struct wifi *w, char *msg,
 
 	d = wifi_find_dev_by_mac(w, ev->p.p2p_group_started.go_mac);
 	if (!d) {
-		log_debug("stray P2P-GROUP-STARTED event: %s", msg);
-		return;
+		/* If we cannot find the GO, it's probably because *we* are the
+		 * GO. Unfortunately, wpa_supplicant doesn't provide the peer
+		 * this group is for so just check whether we have a pending
+		 * local GO and use it.
+		 * Yes, this whole w->pending thing is a hack, but what can
+		 * we do.. */
+		if (w->connection || !w->pending) {
+			log_debug("stray P2P-GROUP-STARTED event: %s", msg);
+			return;
+		}
+
+		d = w->pending;
 	}
 
 	log_debug("received P2P-GROUP-STARTED: %s:%u:%s",
@@ -525,6 +566,7 @@ static void wifi_event_p2p_group_started(struct wifi *w, char *msg,
 		return;
 	}
 
+	w->pending = NULL;
 	wifi_dev_start(d, ev->p.p2p_group_started.ifname,
 		       ev->p.p2p_group_started.role);
 }
@@ -547,6 +589,46 @@ static void wifi_event_p2p_group_removed(struct wifi *w, char *msg,
 	if (d->role != ev->p.p2p_group_removed.role)
 		log_warning("role mismatch on group-remove: d.%u, e.%u",
 			    d->role, ev->p.p2p_group_removed.role);
+
+	wifi_dev_stop(d);
+}
+
+static void wifi_event_ap_sta_connected(struct wifi *w, char *msg,
+					struct wfd_wpa_event *ev)
+{
+	struct wifi_dev *d;
+
+	d = wifi_find_dev_by_mac(w, ev->p.ap_sta_connected.iface);
+	if (!d) {
+		d = wifi_find_dev_by_mac(w, ev->p.ap_sta_connected.mac);
+		if (!d) {
+			log_debug("stray AP-STA-CONNECTED event: %s", msg);
+			return;
+		}
+	}
+
+	log_debug("received AP-STA-CONNECTED: %s %s",
+		  ev->p.ap_sta_connected.iface,
+		  ev->p.ap_sta_connected.mac);
+}
+
+static void wifi_event_ap_sta_disconnected(struct wifi *w, char *msg,
+					   struct wfd_wpa_event *ev)
+{
+	struct wifi_dev *d;
+
+	d = wifi_find_dev_by_mac(w, ev->p.ap_sta_disconnected.iface);
+	if (!d) {
+		d = wifi_find_dev_by_mac(w, ev->p.ap_sta_disconnected.mac);
+		if (!d) {
+			log_debug("stray AP-STA-DISCONNECTED event: %s", msg);
+			return;
+		}
+	}
+
+	log_debug("received AP-STA-DISCONNECTED: %s %s",
+		  ev->p.ap_sta_disconnected.iface,
+		  ev->p.ap_sta_disconnected.mac);
 
 	wifi_dev_stop(d);
 }
@@ -599,6 +681,12 @@ static void wifi_wpa_event_fn(struct wfd_wpa_ctrl *ctrl, void *data,
 		break;
 	case WFD_WPA_EVENT_P2P_GROUP_REMOVED:
 		wifi_event_p2p_group_removed(w, buf, &ev);
+		break;
+	case WFD_WPA_EVENT_AP_STA_CONNECTED:
+		wifi_event_ap_sta_connected(w, buf, &ev);
+		break;
+	case WFD_WPA_EVENT_AP_STA_DISCONNECTED:
+		wifi_event_ap_sta_disconnected(w, buf, &ev);
 		break;
 	case WFD_WPA_EVENT_CTRL_EVENT_SCAN_STARTED:
 		/* ignore */
@@ -942,11 +1030,64 @@ static int wifi_dev_spawn_dhcp_client(struct wifi_dev *d)
 	return 0;
 }
 
+static int wifi_dev_spawn_dhcp_server(struct wifi_dev *d, unsigned int subnet)
+{
+	char *argv[64], loglevel[64], commfd[64], prefix[64];
+	int i, r, fds[2];
+	pid_t pid;
+	sigset_t mask;
+
+	r = socketpair(AF_UNIX, SOCK_SEQPACKET, 0, fds);
+	if (r < 0)
+		return log_ERRNO();
+
+	pid = fork();
+	if (pid < 0) {
+		close(fds[0]);
+		close(fds[1]);
+		return log_ERRNO();
+	} else if (!pid) {
+		/* child */
+
+		close(fds[0]);
+		sprintf(loglevel, "%u", log_max_sev);
+		sprintf(commfd, "%d", fds[1]);
+		sprintf(prefix, "192.168.%u", subnet);
+		sigemptyset(&mask);
+		sigprocmask(SIG_SETMASK, &mask, NULL);
+
+		/* redirect stdout to stderr */
+		dup2(2, 1);
+
+		i = 0;
+		argv[i++] = (char*) BUILD_BINDIR "/miracle-dhcp";
+		argv[i++] = "--server";
+		argv[i++] = "--prefix";
+		argv[i++] = prefix;
+		argv[i++] = "--log-level";
+		argv[i++] = loglevel;
+		argv[i++] = "--netdev";
+		argv[i++] = d->ifname;
+		argv[i++] = "--comm-fd";
+		argv[i++] = commfd;
+		argv[i] = NULL;
+
+		execve(argv[0], argv, environ);
+		_exit(1);
+	}
+
+	close(fds[1]);
+	d->dhcp_comm = fds[0];
+	d->dhcp_pid = pid;
+
+	return 0;
+}
+
 static int wifi_dev_comm_fn(sd_event_source *source, int fd, uint32_t mask,
 			    void *data)
 {
 	struct wifi_dev *d = data;
-	char buf[512], *t;
+	char buf[512], *t, *ip;
 	ssize_t l;
 
 	l = recv(fd, buf, sizeof(buf) - 1, MSG_DONTWAIT);
@@ -986,13 +1127,40 @@ static int wifi_dev_comm_fn(sd_event_source *source, int fd, uint32_t mask,
 		free(d->remote_addr);
 		d->remote_addr = t;
 		break;
+	case 'R':
+		ip = strchr(t, ' ');
+		if (!ip || ip == t || !ip[1]) {
+			log_warning("invalid dhcp 'R' line: %s", t);
+			free(t);
+			break;
+		}
+
+		*ip++ = 0;
+		if (strcasecmp(t, d->mac) && strcasecmp(t, d->iface)) {
+			log_debug("ignore 'R' line for unknown mac");
+			free(t);
+			break;
+		}
+
+		ip = strdup(ip);
+		if (!ip) {
+			log_vENOMEM();
+			free(t);
+			break;
+		}
+
+		free(t);
+
+		free(d->remote_addr);
+		d->remote_addr = ip;
+		break;
 	default:
 		free(t);
 		break;
 	}
 
 	if (d->local_addr && d->remote_addr) {
-		/* got DHCP lease, connection is established */
+		/* got/sent DHCP lease, connection is established */
 		wifi_dev_set_connected(d, true, true);
 	}
 
@@ -1024,15 +1192,25 @@ static int wifi_dev_start(struct wifi_dev *d, const char *ifname,
 		return 0;
 	if (!ifname || role >= WFD_WPA_EVENT_ROLE_CNT)
 		return log_EINVAL();
+	if (d->w->connection)
+		return -EALREADY;
 
 	d->ifname = strdup(ifname);
 	if (!d->ifname)
 		return log_ENOMEM();
 
 	d->role = role;
+	d->w->connection = d;
+	d->w->pending = NULL;
 
 	switch (d->role) {
 	case WFD_WPA_EVENT_ROLE_GO:
+		r = wifi_dev_spawn_dhcp_server(d, 77);
+		if (r < 0) {
+			log_error("cannot spawn DHCP server for: %s:%s",
+				  ifname, d->mac);
+			goto error;
+		}
 		break;
 	case WFD_WPA_EVENT_ROLE_CLIENT:
 		r = wifi_dev_spawn_dhcp_client(d);
@@ -1119,6 +1297,9 @@ static void wifi_dev_stop(struct wifi_dev *d)
 	free(d->ifname);
 	d->ifname = NULL;
 	d->role = WFD_WPA_EVENT_ROLE_CNT;
+	if (d->w->connection == d)
+		d->w->connection = NULL;
+	d->w->pending = NULL;
 }
 
 static void wifi_dev_lost(struct wifi_dev *d)
@@ -1130,6 +1311,8 @@ static void wifi_dev_lost(struct wifi_dev *d)
 
 	wifi_dev_stop(d);
 	shl_dlist_unlink(&d->list);
+	if (d->w->pending == d)
+		d->w->pending = NULL;
 	d->w = NULL;
 }
 
@@ -1188,6 +1371,8 @@ void wifi_dev_allow(struct wifi_dev *d, const char *pin)
 		return;
 	if (d->provision == WIFI_PROVISION_CNT)
 		return;
+	if (d->w->connection)
+		return;
 
 	r = 0;
 	switch (d->provision) {
@@ -1238,12 +1423,53 @@ void wifi_dev_reject(struct wifi_dev *d)
 int wifi_dev_connect(struct wifi_dev *d, unsigned int provision,
 		     const char *pin)
 {
+	int r;
+
 	if (!wifi_dev_is_available(d))
 		return log_EINVAL();
 	if (wifi_dev_is_running(d))
 		return 0;
+	if (d->w->connection)
+		return -EALREADY;
 
-	return -EINVAL;
+	r = 0;
+	switch (d->provision) {
+	case WIFI_PROVISION_CNT:
+		/* fallback */
+	case WIFI_PROVISION_PBC:
+		r = wifi_requestf_ok(d->w,
+				     "P2P_CONNECT %s pbc display",
+				     d->mac);
+		break;
+	case WIFI_PROVISION_DISPLAY:
+		if (!pin || !*pin) {
+			r = log_EINVAL();
+			break;
+		}
+
+		r = wifi_requestf_ok(d->w,
+				     "P2P_CONNECT %s %s display",
+				     d->mac, d->pin);
+		break;
+	case WIFI_PROVISION_PIN:
+		if (!pin || !*pin) {
+			r = log_EINVAL();
+			break;
+		}
+
+		r = wifi_requestf_ok(d->w,
+				     "P2P_CONNECT %s %s keypad",
+				     d->mac, pin);
+		break;
+	default:
+		r = -EINVAL;
+		break;
+	}
+
+	if (r < 0)
+		log_warning("cannot issue P2P_CONNECT on dev_connect(): %d", r);
+
+	return 0;
 }
 
 void wifi_dev_disconnect(struct wifi_dev *d)
