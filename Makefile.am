@@ -84,29 +84,6 @@ libmiracle_shared_la_LDFLAGS = $(AM_LDFLAGS)
 libmiracle_shared_la_LIBADD = $(AM_LIBADD)
 
 #
-# gdhcp - dhcp implementation
-#
-
-noinst_LTLIBRARIES += libgdhcp.la
-
-libgdhcp_la_SOURCES = \
-	src/gdhcp/gdhcp.h \
-	src/gdhcp/unaligned.h \
-	src/gdhcp/common.h \
-	src/gdhcp/common.c \
-	src/gdhcp/ipv4ll.h \
-	src/gdhcp/ipv4ll.c \
-	src/gdhcp/client.c \
-	src/gdhcp/server.c
-libgdhcp_la_CPPFLAGS = \
-	$(AM_CPPFLAGS) \
-	$(GDHCP_CFLAGS)
-libgdhcp_la_LDFLAGS = $(AM_LDFLAGS)
-libgdhcp_la_LIBADD = \
-	$(AM_LIBADD) \
-	$(GDHCP_LIBS)
-
-#
 # miraclectl
 #
 
@@ -130,14 +107,21 @@ miraclectl_LDFLAGS = $(AM_LDFLAGS)
 bin_PROGRAMS += miracle-dhcp
 
 miracle_dhcp_SOURCES = \
-	src/miracle-dhcp.c
+	src/dhcp/dhcp.c \
+	src/dhcp/gdhcp.h \
+	src/dhcp/unaligned.h \
+	src/dhcp/common.h \
+	src/dhcp/common.c \
+	src/dhcp/ipv4ll.h \
+	src/dhcp/ipv4ll.c \
+	src/dhcp/client.c \
+	src/dhcp/server.c
 miracle_dhcp_CPPFLAGS = \
 	$(AM_CPPFLAGS) \
 	$(DEPS_CFLAGS) \
 	$(GDHCP_CFLAGS)
 miracle_dhcp_LDADD = \
 	libmiracle-shared.la \
-	libgdhcp.la \
 	$(DEPS_LIBS) \
 	$(GDHCP_LIBS)
 miracle_dhcp_LDFLAGS = $(AM_LDFLAGS)

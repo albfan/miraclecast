@@ -37,5 +37,5 @@ apply:
 	src/shl_htable.[ch]: Released under the conditions of the LGPLv2+.
 	                     Please see LICENSE_htable for more.
 
-	src/gdhcp/*: Released under the conditions of the GPLv2.
-	             Please see LICENSE_gdhcp for more.
+	src/dhcp/*: Released under the conditions of the GPLv2.
+	            Please see LICENSE_gdhcp for more.

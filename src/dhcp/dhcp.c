@@ -69,7 +69,7 @@
 #include <sys/socket.h>
 #include <sys/wait.h>
 #include <unistd.h>
-#include "gdhcp/gdhcp.h"
+#include "dhcp/gdhcp.h"
 #include "shl_log.h"
 
 static const char *arg_netdev;
