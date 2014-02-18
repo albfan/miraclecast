@@ -52,6 +52,7 @@ AM_CFLAGS = \
 AM_CPPFLAGS = \
 	-include $(top_builddir)/config.h \
 	-I $(srcdir)/src \
+	-I $(srcdir)/src/shared \
 	-I /usr/local/include \
 	-DBUILD_ENABLE_DEBUG \
 	'-DBUILD_BINDIR="$(bindir)"'
@@ -64,25 +65,23 @@ AM_LIBADD = \
 	-lsystemd
 
 #
-# SHL - Static Helper Library
-# The SHL subsystem contains several small code pieces used all over libwfd and
-# other applications.
+# Shared Helpers
 #
 
-noinst_LTLIBRARIES += libshl.la
+noinst_LTLIBRARIES += libmiracle-shared.la
 
-libshl_la_SOURCES = \
-	src/shl_dlist.h \
-	src/shl_htable.h \
-	src/shl_htable.c \
-	src/shl_log.h \
-	src/shl_log.c \
-	src/shl_macro.h \
-	src/shl_util.h \
-	src/shl_util.c
-libshl_la_CPPFLAGS = $(AM_CPPFLAGS)
-libshl_la_LDFLAGS = $(AM_LDFLAGS)
-libshl_la_LIBADD = $(AM_LIBADD)
+libmiracle_shared_la_SOURCES = \
+	src/shared/shl_dlist.h \
+	src/shared/shl_htable.h \
+	src/shared/shl_htable.c \
+	src/shared/shl_log.h \
+	src/shared/shl_log.c \
+	src/shared/shl_macro.h \
+	src/shared/shl_util.h \
+	src/shared/shl_util.c
+libmiracle_shared_la_CPPFLAGS = $(AM_CPPFLAGS)
+libmiracle_shared_la_LDFLAGS = $(AM_LDFLAGS)
+libmiracle_shared_la_LIBADD = $(AM_LIBADD)
 
 #
 # gdhcp - dhcp implementation
@@ -119,7 +118,7 @@ miraclectl_CPPFLAGS = \
 	$(AM_CPPFLAGS) \
 	$(DEPS_CFLAGS)
 miraclectl_LDADD = \
-	libshl.la \
+	libmiracle-shared.la \
 	-lreadline \
 	$(DEPS_LIBS)
 miraclectl_LDFLAGS = $(AM_LDFLAGS)
@@ -137,7 +136,7 @@ miracle_dhcp_CPPFLAGS = \
 	$(DEPS_CFLAGS) \
 	$(GDHCP_CFLAGS)
 miracle_dhcp_LDADD = \
-	libshl.la \
+	libmiracle-shared.la \
 	libgdhcp.la \
 	$(DEPS_LIBS) \
 	$(GDHCP_LIBS)
@@ -160,7 +159,7 @@ miracled_CPPFLAGS = \
 	$(AM_CPPFLAGS) \
 	$(DEPS_CFLAGS)
 miracled_LDADD = \
-	libshl.la \
+	libmiracle-shared.la \
 	$(DEPS_LIBS)
 miracled_LDFLAGS = $(AM_LDFLAGS)
 
@@ -178,7 +177,7 @@ endif
 test_sources = \
 	test/test_common.h
 test_libs = \
-	libshl.la \
+	libmiracle-shared.la \
 	$(DEPS_LIBS) \
 	$(CHECK_LIBS)
 test_cflags = \
