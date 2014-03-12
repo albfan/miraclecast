@@ -42,7 +42,7 @@ int peer_make_name(unsigned int id, char **out)
 		return 0;
 
 	snprintf(buf, sizeof(buf) - 1, "%u", id);
-	name = sd_bus_label_escape(buf);
+	name = bus_label_escape(buf);
 	if (!name)
 		return log_ENOMEM();
 

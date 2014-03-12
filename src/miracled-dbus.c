@@ -685,7 +685,7 @@ static int manager_dbus_remove_link(sd_bus *bus, sd_bus_message *msg,
 	if (r < 0)
 		return r;
 
-	link = sd_bus_label_escape(name);
+	link = bus_label_escape(name);
 	if (!link)
 		return log_ENOMEM();
 

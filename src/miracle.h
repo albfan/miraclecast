@@ -128,4 +128,90 @@ static inline int64_t now(clockid_t clock_id)
 	       (int64_t)ts.tv_nsec / 1000LL;
 }
 
+static inline char hexchar(int x)
+{
+	static const char table[16] = "0123456789abcdef";
+	return table[x & 15];
+}
+
+static inline int unhexchar(char c)
+{
+	if (c >= '0' && c <= '9')
+		return c - '0';
+
+	if (c >= 'a' && c <= 'f')
+		return c - 'a' + 10;
+
+	if (c >= 'A' && c <= 'F')
+		return c - 'A' + 10;
+
+	return -1;
+}
+
+static inline char *bus_label_escape(const char *s)
+{
+	char *r, *t;
+	const char *f;
+
+	if (*s == 0)
+		return strdup("_");
+
+	r = calloc(sizeof(char), strlen(s)*3 + 1);
+	if (!r)
+		return NULL;
+
+	for (f = s, t = r; *f; f++) {
+
+		/* Escape everything that is not a-zA-Z0-9. We also
+		* escape 0-9 if it's the first character */
+
+		if (!(*f >= 'A' && *f <= 'Z') &&
+		    !(*f >= 'a' && *f <= 'z') &&
+		    !(f > s && *f >= '0' && *f <= '9')) {
+			*(t++) = '_';
+			*(t++) = hexchar(*f >> 4);
+			*(t++) = hexchar(*f);
+		} else
+			*(t++) = *f;
+	}
+
+	*t = 0;
+
+	return r;
+}
+
+static inline char *bus_label_unescape(const char *f)
+{
+	char *r, *t;
+
+	/* Special case for the empty string */
+	if (!strcmp(f, "_"))
+		return strdup("");
+
+	r = calloc(sizeof(char), strlen(f) + 1);
+	if (!r)
+		return NULL;
+
+	for (t = r; *f; f++) {
+
+		if (*f == '_') {
+			int a, b;
+
+			if ((a = unhexchar(f[1])) < 0 ||
+			    (b = unhexchar(f[2])) < 0) {
+				/* Invalid escape code, let's take it literal then */
+				*(t++) = '_';
+			} else {
+				*(t++) = (char) ((a << 4) | b);
+				f += 2;
+			}
+		} else
+			*(t++) = *f;
+	}
+
+	*t = 0;
+
+	return r;
+}
+
 #endif /* MIRACLE_H */

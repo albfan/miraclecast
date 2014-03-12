@@ -248,10 +248,10 @@ static int manager_new(struct manager **out)
 		sigprocmask(SIG_BLOCK, &mask, NULL);
 
 		r = sd_event_add_signal(m->event,
+					&m->sigs[i],
 					sigs[i],
 					manager_signal_fn,
-					m,
-					&m->sigs[i]);
+					m);
 		if (r < 0) {
 			log_vERR(r);
 			goto error;
@@ -285,11 +285,11 @@ static int manager_new(struct manager **out)
 	}
 
 	r = sd_event_add_io(m->event,
+			    &m->udev_mon_source,
 			    udev_monitor_get_fd(m->udev_mon),
 			    EPOLLHUP | EPOLLERR | EPOLLIN,
 			    manager_udev_fn,
-			    m,
-			    &m->udev_mon_source);
+			    m);
 	if (r < 0) {
 		log_vERR(r);
 		goto error;

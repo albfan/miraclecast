@@ -404,10 +404,10 @@ static int cli_init(void)
 		sigprocmask(SIG_BLOCK, &mask, NULL);
 
 		r = sd_event_add_signal(cli_event,
+					&cli_sigs[i],
 					sigs[i],
 					cli_signal_fn,
-					NULL,
-					&cli_sigs[i]);
+					NULL);
 		if (r < 0) {
 			cli_vERR(r);
 			goto error;
@@ -415,11 +415,11 @@ static int cli_init(void)
 	}
 
 	r = sd_event_add_io(cli_event,
+			    &cli_stdin,
 			    fileno(stdin),
 			    EPOLLHUP | EPOLLERR | EPOLLIN,
 			    cli_stdin_fn,
-			    NULL,
-			    &cli_stdin);
+			    NULL);
 	if (r < 0) {
 		cli_vERR(r);
 		goto error;
@@ -559,7 +559,7 @@ static int cmd_list_links(sd_bus_message *m)
 		}
 
 		free(link);
-		link = sd_bus_label_unescape(obj);
+		link = bus_label_unescape(obj);
 		if (!link)
 			return cli_ENOMEM();
 
@@ -634,7 +634,7 @@ static int cmd_list_peer(sd_bus_message *m,
 					"/org/freedesktop/miracle/link/");
 				if (obj) {
 					free(link);
-					link = sd_bus_label_unescape(obj);
+					link = bus_label_unescape(obj);
 					if (!link)
 						return cli_ENOMEM();
 				}
@@ -717,7 +717,7 @@ static int cmd_list_peers(sd_bus_message *m, const char *link_filter)
 		}
 
 		free(peer);
-		peer = sd_bus_label_unescape(obj);
+		peer = bus_label_unescape(obj);
 		if (!peer)
 			return cli_ENOMEM();
 
@@ -806,7 +806,7 @@ static int cmd_select(char **args, unsigned int n)
 		return 0;
 	}
 
-	name = sd_bus_label_escape(args[0]);
+	name = bus_label_escape(args[0]);
 	if (!name)
 		return cli_ENOMEM();
 
@@ -855,7 +855,7 @@ static int cmd_show_link(char **args, unsigned int n)
 	else if (!(arg_link = selected_link))
 		return log_error("no link selected"), -EINVAL;
 
-	name = sd_bus_label_escape(arg_link);
+	name = bus_label_escape(arg_link);
 	if (!name)
 		return cli_ENOMEM();
 
@@ -955,7 +955,7 @@ static int cmd_show_peer(char **args, unsigned int n)
 	const char *t;
 	int r, is_connected = false;
 
-	name = sd_bus_label_escape(args[0]);
+	name = bus_label_escape(args[0]);
 	if (!name)
 		return cli_ENOMEM();
 
@@ -995,7 +995,7 @@ static int cmd_show_peer(char **args, unsigned int n)
 					   "/org/freedesktop/miracle/link/");
 			if (t) {
 				free(link);
-				link = sd_bus_label_unescape(t);
+				link = bus_label_unescape(t);
 				if (!link)
 					return cli_ENOMEM();
 			}
@@ -1115,7 +1115,7 @@ static int cmd_add_link(char **args, unsigned int n)
 	if (r < 0)
 		return cli_log_parser(r);
 
-	link = sd_bus_label_unescape(name);
+	link = bus_label_unescape(name);
 	if (!link)
 		return cli_ENOMEM();
 
@@ -1171,7 +1171,7 @@ static int cmd_set_link_name(char **args, unsigned int n)
 		arg_name = args[0];
 	}
 
-	name = sd_bus_label_escape(arg_link);
+	name = bus_label_escape(arg_link);
 	if (!name)
 		return cli_ENOMEM();
 
@@ -1180,11 +1180,11 @@ static int cmd_set_link_name(char **args, unsigned int n)
 		return cli_ENOMEM();
 
 	r = sd_bus_message_new_method_call(bus,
+					   &m,
 					   "org.freedesktop.miracle",
 					   path,
 					   "org.freedesktop.DBus.Properties",
-					   "Set",
-					   &m);
+					   "Set");
 	if (r < 0)
 		return log_bus_create(r);
 
@@ -1233,7 +1233,7 @@ static int cmd_start_scan(char **args, unsigned int n)
 	else if (!(arg_link = selected_link))
 		return log_error("no link selected"), -EINVAL;
 
-	name = sd_bus_label_escape(arg_link);
+	name = bus_label_escape(arg_link);
 	if (!name)
 		return cli_ENOMEM();
 
@@ -1275,7 +1275,7 @@ static int cmd_stop_scan(char **args, unsigned int n)
 	else if (!(arg_link = selected_link))
 		return log_error("no link selected"), -EINVAL;
 
-	name = sd_bus_label_escape(arg_link);
+	name = bus_label_escape(arg_link);
 	if (!name)
 		return cli_ENOMEM();
 
@@ -1316,7 +1316,7 @@ static int cmd_scan_stop(bool async)
 	if (!scan_link)
 		return 0;
 
-	name = sd_bus_label_escape(scan_link);
+	name = bus_label_escape(scan_link);
 	if (!name)
 		return cli_ENOMEM();
 
@@ -1390,7 +1390,7 @@ static int cmd_scan(char **args, unsigned int n)
 	else if (!(arg_link = selected_link))
 		return log_error("no link selected"), -EINVAL;
 
-	name = sd_bus_label_escape(arg_link);
+	name = bus_label_escape(arg_link);
 	if (!name)
 		return cli_ENOMEM();
 
@@ -1436,7 +1436,7 @@ static int cmd_allow(char **args, unsigned int n)
 	if (n > 1)
 		pin = args[1];
 
-	name = sd_bus_label_escape(args[0]);
+	name = bus_label_escape(args[0]);
 	if (!name)
 		return cli_ENOMEM();
 
@@ -1473,7 +1473,7 @@ static int cmd_reject(char **args, unsigned int n)
 	_shl_cleanup_free_ char *name = NULL, *path = NULL;
 	int r;
 
-	name = sd_bus_label_escape(args[0]);
+	name = bus_label_escape(args[0]);
 	if (!name)
 		return cli_ENOMEM();
 
@@ -1515,7 +1515,7 @@ static int cmd_connect(char **args, unsigned int n)
 	prov = (n > 1) ? args[1] : "";
 	pin = (n > 2) ? args[2] : "";
 
-	name = sd_bus_label_escape(peer);
+	name = bus_label_escape(peer);
 	if (!name)
 		return cli_ENOMEM();
 
@@ -1552,7 +1552,7 @@ static int cmd_disconnect(char **args, unsigned int n)
 	_shl_cleanup_free_ char *name = NULL, *path = NULL;
 	int r;
 
-	name = sd_bus_label_escape(args[0]);
+	name = bus_label_escape(args[0]);
 	if (!name)
 		return cli_ENOMEM();
 
@@ -1602,7 +1602,7 @@ static int filters_show_peer(const char *peer)
 	const char *t;
 	int r;
 
-	name = sd_bus_label_escape(peer);
+	name = bus_label_escape(peer);
 	if (!name)
 		return cli_ENOMEM();
 
@@ -1642,7 +1642,7 @@ static int filters_show_peer(const char *peer)
 					   "/org/freedesktop/miracle/link/");
 			if (t) {
 				free(link);
-				link = sd_bus_label_unescape(t);
+				link = bus_label_unescape(t);
 				if (!link)
 					return cli_ENOMEM();
 			}
@@ -1686,7 +1686,7 @@ static int filters_show_link(const char *link)
 	const char *t;
 	int r;
 
-	name = sd_bus_label_escape(link);
+	name = bus_label_escape(link);
 	if (!name)
 		return cli_ENOMEM();
 
@@ -1767,7 +1767,7 @@ static int filters_object_fn(sd_bus *bus,
 
 	t = shl_startswith(obj, "/org/freedesktop/miracle/peer/");
 	if (t) {
-		peer = sd_bus_label_unescape(t);
+		peer = bus_label_unescape(t);
 		if (!peer)
 			return cli_ENOMEM();
 
@@ -1783,7 +1783,7 @@ static int filters_object_fn(sd_bus *bus,
 
 	t = shl_startswith(obj, "/org/freedesktop/miracle/link/");
 	if (t) {
-		link = sd_bus_label_unescape(t);
+		link = bus_label_unescape(t);
 		if (!link)
 			return cli_ENOMEM();
 
@@ -1861,14 +1861,14 @@ static int filters_props_fn(sd_bus *bus,
 	path = sd_bus_message_get_path(m);
 	t = shl_startswith(path, "/org/freedesktop/miracle/peer/");
 	if (t) {
-		peer = sd_bus_label_unescape(t);
+		peer = bus_label_unescape(t);
 		if (!peer)
 			return cli_ENOMEM();
 	}
 
 	t = shl_startswith(path, "/org/freedesktop/miracle/link/");
 	if (t) {
-		link = sd_bus_label_unescape(t);
+		link = bus_label_unescape(t);
 		if (!link)
 			return cli_ENOMEM();
 	}
@@ -1928,7 +1928,7 @@ static int filters_peer_fn(sd_bus *bus,
 	if (!path)
 		return 0;
 
-	peer = sd_bus_label_unescape(path);
+	peer = bus_label_unescape(path);
 	if (!peer)
 		return cli_ENOMEM();
 
@@ -1969,7 +1969,7 @@ static int filters_link_fn(sd_bus *bus,
 	if (!path)
 		return 0;
 
-	link = sd_bus_label_unescape(path);
+	link = bus_label_unescape(path);
 	if (!link)
 		return cli_ENOMEM();
 

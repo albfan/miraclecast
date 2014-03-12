@@ -86,7 +86,7 @@ int link_make_name(unsigned int type, const char *interface, char **out)
 	if (!name)
 		return log_ENOMEM();
 
-	res = sd_bus_label_escape(name);
+	res = bus_label_escape(name);
 	free(name);
 	if (!res)
 		return log_ENOMEM();
@@ -236,20 +236,20 @@ static int link_wifi_init(struct link *l)
 		return r;
 
 	r = sd_event_add_child(l->m->event,
+			       &l->wpa_child_source,
 			       wifi_get_supplicant_pid(l->w),
 			       WEXITED,
 			       link_wifi_child_fn,
-			       l,
-			       &l->wpa_child_source);
+			       l);
 	if (r < 0)
 		return r;
 
 	r = sd_event_add_monotonic(l->m->event,
+				   &l->wpa_startup_source,
 				   now(CLOCK_MONOTONIC) + 200 * 1000,
 				   0,
 				   link_wifi_startup_fn,
-				   l,
-				   &l->wpa_startup_source);
+				   l);
 	if (r < 0)
 		return r;
 

@@ -766,11 +766,11 @@ int wifi_new(sd_event *event, wifi_event_t event_fn, void *data,
 		goto error;
 
 	r = sd_event_add_io(w->event,
+			    &w->wpa_source,
 			    wfd_wpa_ctrl_get_fd(w->wpa),
 			    EPOLLHUP | EPOLLERR | EPOLLIN,
 			    wifi_wpa_fd_fn,
-			    w,
-			    &w->wpa_source);
+			    w);
 	if (r < 0) {
 		log_vERR(r);
 		goto error;
@@ -1335,22 +1335,22 @@ static int wifi_dev_start(struct wifi_dev *d, const char *ifname,
 	}
 
 	r = sd_event_add_io(d->w->event,
+			    &d->dhcp_comm_source,
 			    d->dhcp_comm,
 			    EPOLLHUP | EPOLLERR | EPOLLIN,
 			    wifi_dev_comm_fn,
-			    d,
-			    &d->dhcp_comm_source);
+			    d);
 	if (r < 0) {
 		log_vERR(r);
 		goto error;
 	}
 
 	r = sd_event_add_child(d->w->event,
+			       &d->dhcp_pid_source,
 			       d->dhcp_pid,
 			       WEXITED,
 			       wifi_dev_pid_fn,
-			       d,
-			       &d->dhcp_pid_source);
+			       d);
 	if (r < 0) {
 		log_vERR(r);
 		goto error;
