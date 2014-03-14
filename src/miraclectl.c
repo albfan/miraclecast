@@ -90,7 +90,7 @@ static bool is_cli(void)
 static void cli_printv(const char *fmt, va_list args)
 {
 	SHL_PROTECT_ERRNO;
-	_shl_cleanup_free_ char *line = NULL;
+	_shl_free_ char *line = NULL;
 	int point;
 	bool async;
 
@@ -281,8 +281,8 @@ static int cli_do(char **args, unsigned int n)
 
 static void cli_handler_fn(char *input)
 {
-	_shl_cleanup_free_ char *original = input;
-	_shl_cleanup_strv_ char **args = NULL;
+	_shl_free_ char *original = input;
+	_shl_strv_free_ char **args = NULL;
 	int r;
 
 	if (!input) {
@@ -529,7 +529,7 @@ static int cmd_list_link(sd_bus_message *m, const char *link)
 
 static int cmd_list_links(sd_bus_message *m)
 {
-	_shl_cleanup_free_ char *link = NULL;
+	_shl_free_ char *link = NULL;
 	unsigned int link_cnt = 0;
 	const char *obj;
 	int r;
@@ -588,7 +588,7 @@ static int cmd_list_peer(sd_bus_message *m,
 			 const char *link_filter,
 			 const char *peer)
 {
-	_shl_cleanup_free_ char *link = NULL;
+	_shl_free_ char *link = NULL;
 	const char *obj, *name = "<unknown>";
 	int r, connected = 0;
 
@@ -686,7 +686,7 @@ static int cmd_list_peer(sd_bus_message *m,
 
 static int cmd_list_peers(sd_bus_message *m, const char *link_filter)
 {
-	_shl_cleanup_free_ char *peer = NULL;
+	_shl_free_ char *peer = NULL;
 	unsigned int peer_cnt = 0;
 	const char *obj;
 	int r;
@@ -793,7 +793,7 @@ static int cmd_list(char **args, unsigned int n)
 static int cmd_select(char **args, unsigned int n)
 {
 	_cleanup_sd_bus_error_ sd_bus_error err = SD_BUS_ERROR_NULL;
-	_shl_cleanup_free_ char *path = NULL, *name = NULL;
+	_shl_free_ char *path = NULL, *name = NULL;
 	int r;
 
 	if (!n) {
@@ -845,8 +845,8 @@ static int cmd_show_link(char **args, unsigned int n)
 {
 	_cleanup_sd_bus_error_ sd_bus_error err = SD_BUS_ERROR_NULL;
 	_cleanup_sd_bus_message_ sd_bus_message *m = NULL;
-	_shl_cleanup_free_ char *path = NULL, *name = NULL;
-	_shl_cleanup_free_ char *type = NULL, *iface = NULL, *fname = NULL;
+	_shl_free_ char *path = NULL, *name = NULL;
+	_shl_free_ char *type = NULL, *iface = NULL, *fname = NULL;
 	const char *t, *arg_link;
 	int r;
 
@@ -949,9 +949,9 @@ static int cmd_show_peer(char **args, unsigned int n)
 {
 	_cleanup_sd_bus_error_ sd_bus_error err = SD_BUS_ERROR_NULL;
 	_cleanup_sd_bus_message_ sd_bus_message *m = NULL;
-	_shl_cleanup_free_ char *path = NULL, *name = NULL;
-	_shl_cleanup_free_ char *link = NULL, *fname = NULL, *iface = NULL;
-	_shl_cleanup_free_ char *laddr = NULL, *raddr = NULL;
+	_shl_free_ char *path = NULL, *name = NULL;
+	_shl_free_ char *link = NULL, *fname = NULL, *iface = NULL;
+	_shl_free_ char *laddr = NULL, *raddr = NULL;
 	const char *t;
 	int r, is_connected = false;
 
@@ -1081,7 +1081,7 @@ static int cmd_add_link(char **args, unsigned int n)
 {
 	_cleanup_sd_bus_error_ sd_bus_error err = SD_BUS_ERROR_NULL;
 	_cleanup_sd_bus_message_ sd_bus_message *m = NULL;
-	_shl_cleanup_free_ char *link = NULL, *type = NULL;
+	_shl_free_ char *link = NULL, *type = NULL;
 	const char *name;
 	char *t, *iface;
 	int r;
@@ -1158,7 +1158,7 @@ static int cmd_set_link_name(char **args, unsigned int n)
 {
 	_cleanup_sd_bus_error_ sd_bus_error err = SD_BUS_ERROR_NULL;
 	_cleanup_sd_bus_message_ sd_bus_message *m = NULL;
-	_shl_cleanup_free_ char *path = NULL, *name = NULL;
+	_shl_free_ char *path = NULL, *name = NULL;
 	const char *arg_link, *arg_name;
 	int r;
 
@@ -1224,7 +1224,7 @@ static int cmd_set_link_name(char **args, unsigned int n)
 static int cmd_start_scan(char **args, unsigned int n)
 {
 	_cleanup_sd_bus_error_ sd_bus_error err = SD_BUS_ERROR_NULL;
-	_shl_cleanup_free_ char *path = NULL, *name = NULL;
+	_shl_free_ char *path = NULL, *name = NULL;
 	const char *arg_link;
 	int r;
 
@@ -1266,7 +1266,7 @@ static int cmd_start_scan(char **args, unsigned int n)
 static int cmd_stop_scan(char **args, unsigned int n)
 {
 	_cleanup_sd_bus_error_ sd_bus_error err = SD_BUS_ERROR_NULL;
-	_shl_cleanup_free_ char *path = NULL, *name = NULL;
+	_shl_free_ char *path = NULL, *name = NULL;
 	const char *arg_link;
 	int r;
 
@@ -1310,7 +1310,7 @@ static char *scan_link;
 static int cmd_scan_stop(bool async)
 {
 	_cleanup_sd_bus_error_ sd_bus_error err = SD_BUS_ERROR_NULL;
-	_shl_cleanup_free_ char *path = NULL, *name = NULL;
+	_shl_free_ char *path = NULL, *name = NULL;
 	int r;
 
 	if (!scan_link)
@@ -1372,7 +1372,7 @@ static void cmd_scan_list(void)
 static int cmd_scan(char **args, unsigned int n)
 {
 	_cleanup_sd_bus_error_ sd_bus_error err = SD_BUS_ERROR_NULL;
-	_shl_cleanup_free_ char *path = NULL, *name = NULL;
+	_shl_free_ char *path = NULL, *name = NULL;
 	const char *arg_link;
 	int r;
 
@@ -1429,7 +1429,7 @@ static int cmd_scan(char **args, unsigned int n)
 static int cmd_allow(char **args, unsigned int n)
 {
 	_cleanup_sd_bus_error_ sd_bus_error err = SD_BUS_ERROR_NULL;
-	_shl_cleanup_free_ char *name = NULL, *path = NULL;
+	_shl_free_ char *name = NULL, *path = NULL;
 	const char *pin = "";
 	int r;
 
@@ -1470,7 +1470,7 @@ static int cmd_allow(char **args, unsigned int n)
 static int cmd_reject(char **args, unsigned int n)
 {
 	_cleanup_sd_bus_error_ sd_bus_error err = SD_BUS_ERROR_NULL;
-	_shl_cleanup_free_ char *name = NULL, *path = NULL;
+	_shl_free_ char *name = NULL, *path = NULL;
 	int r;
 
 	name = bus_label_escape(args[0]);
@@ -1507,7 +1507,7 @@ static int cmd_reject(char **args, unsigned int n)
 static int cmd_connect(char **args, unsigned int n)
 {
 	_cleanup_sd_bus_error_ sd_bus_error err = SD_BUS_ERROR_NULL;
-	_shl_cleanup_free_ char *name = NULL, *path = NULL;
+	_shl_free_ char *name = NULL, *path = NULL;
 	const char *peer, *prov, *pin;
 	int r;
 
@@ -1549,7 +1549,7 @@ static int cmd_connect(char **args, unsigned int n)
 static int cmd_disconnect(char **args, unsigned int n)
 {
 	_cleanup_sd_bus_error_ sd_bus_error err = SD_BUS_ERROR_NULL;
-	_shl_cleanup_free_ char *name = NULL, *path = NULL;
+	_shl_free_ char *name = NULL, *path = NULL;
 	int r;
 
 	name = bus_label_escape(args[0]);
@@ -1597,8 +1597,8 @@ static int filters_show_peer(const char *peer)
 {
 	_cleanup_sd_bus_error_ sd_bus_error err = SD_BUS_ERROR_NULL;
 	_cleanup_sd_bus_message_ sd_bus_message *m = NULL;
-	_shl_cleanup_free_ char *path = NULL, *name = NULL;
-	_shl_cleanup_free_ char *link = NULL, *fname = NULL;
+	_shl_free_ char *path = NULL, *name = NULL;
+	_shl_free_ char *link = NULL, *fname = NULL;
 	const char *t;
 	int r;
 
@@ -1682,7 +1682,7 @@ static int filters_show_link(const char *link)
 {
 	_cleanup_sd_bus_error_ sd_bus_error err = SD_BUS_ERROR_NULL;
 	_cleanup_sd_bus_message_ sd_bus_message *m = NULL;
-	_shl_cleanup_free_ char *path = NULL, *name = NULL, *fname = NULL;
+	_shl_free_ char *path = NULL, *name = NULL, *fname = NULL;
 	const char *t;
 	int r;
 
@@ -1754,7 +1754,7 @@ static int filters_object_fn(sd_bus *bus,
 			     void *data,
 			     sd_bus_error *err)
 {
-	_shl_cleanup_free_ char *peer = NULL, *link = NULL;
+	_shl_free_ char *peer = NULL, *link = NULL;
 	const char *obj, *t;
 	bool added;
 	int r;
@@ -1849,7 +1849,7 @@ static int filters_props_fn(sd_bus *bus,
 			    void *data,
 			    sd_bus_error *err)
 {
-	_shl_cleanup_free_ char *peer = NULL, *link = NULL;
+	_shl_free_ char *peer = NULL, *link = NULL;
 	const char *path, *t;
 	int r;
 
@@ -1919,7 +1919,7 @@ static int filters_peer_fn(sd_bus *bus,
 			   void *data,
 			   sd_bus_error *err)
 {
-	_shl_cleanup_free_ char *peer = NULL;
+	_shl_free_ char *peer = NULL;
 	const char *path, *type, *pin;
 	int r;
 
@@ -1961,7 +1961,7 @@ static int filters_link_fn(sd_bus *bus,
 			   void *data,
 			   sd_bus_error *err)
 {
-	_shl_cleanup_free_ char *link = NULL;
+	_shl_free_ char *link = NULL;
 	const char *path;
 
 	path = sd_bus_message_get_path(m);

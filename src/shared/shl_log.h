@@ -22,14 +22,30 @@
 #include <stdlib.h>
 
 enum log_severity {
+#ifndef LOG_FATAL
 	LOG_FATAL = 0,
+#endif
+#ifndef LOG_ALERT
 	LOG_ALERT = 1,
+#endif
+#ifndef LOG_CRITICAL
 	LOG_CRITICAL = 2,
+#endif
+#ifndef LOG_ERROR
 	LOG_ERROR = 3,
+#endif
+#ifndef LOG_WARNING
 	LOG_WARNING = 4,
+#endif
+#ifndef LOG_NOTICE
 	LOG_NOTICE = 5,
+#endif
+#ifndef LOG_INFO
 	LOG_INFO = 6,
+#endif
+#ifndef LOG_DEBUG
 	LOG_DEBUG = 7,
+#endif
 	LOG_SEV_NUM,
 };
 

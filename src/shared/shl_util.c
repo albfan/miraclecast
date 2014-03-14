@@ -16,6 +16,10 @@
 #include <stdarg.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
+#include <sys/time.h>
+#include <sys/types.h>
+#include <time.h>
 #include "shl_macro.h"
 #include "shl_util.h"
 
@@ -260,6 +264,44 @@ void *shl_greedy_realloc0(void **mem, size_t *size, size_t need)
 	return p;
 }
 
+void *shl_greedy_realloc_t(void **arr, size_t *cnt, size_t need, size_t ts)
+{
+	size_t ncnt;
+	void *p;
+
+	if (*cnt >= need)
+		return *arr;
+	if (!ts)
+		return NULL;
+
+	ncnt = SHL_ALIGN_POWER2(shl_max_t(size_t, 64U, need));
+	if (ncnt == 0)
+		return NULL;
+
+	p = realloc(*arr, ncnt * ts);
+	if (!p)
+		return NULL;
+
+	*arr = p;
+	*cnt = ncnt;
+	return p;
+}
+
+void *shl_greedy_realloc0_t(void **arr, size_t *cnt, size_t need, size_t ts)
+{
+	size_t prev = *cnt;
+	uint8_t *p;
+
+	p = shl_greedy_realloc_t(arr, cnt, need, ts);
+	if (!p)
+		return NULL;
+
+	if (*cnt > prev)
+		shl_memzero(&p[prev * ts], (*cnt - prev) * ts);
+
+	return p;
+}
+
 /*
  * String Helpers
  */
@@ -320,6 +362,102 @@ char *shl_strjoin(const char *first, ...) {
 
 	*p = 0;
 	return str;
+}
+
+static int shl__split_push(char ***strv,
+			   size_t *strv_num,
+			   size_t *strv_size,
+			   const char *str,
+			   size_t len)
+{
+	size_t strv_need;
+	char *ns;
+
+	strv_need = (*strv_num + 2) * sizeof(**strv);
+	if (!shl_greedy_realloc0((void**)strv, strv_size, strv_need))
+		return -ENOMEM;
+
+	ns = malloc(len + 1);
+	memcpy(ns, str, len);
+	ns[len] = 0;
+
+	(*strv)[*strv_num] = ns;
+	*strv_num += 1;
+
+	return 0;
+}
+
+int shl_strsplit_n(const char *str, size_t len, const char *sep, char ***out)
+{
+	char **strv;
+	size_t i, j, strv_num, strv_size;
+	const char *pos;
+	int r;
+
+	if (!out || !sep)
+		return -EINVAL;
+	if (!str)
+		str = "";
+
+	strv_num = 0;
+	strv_size = sizeof(*strv);
+	strv = malloc(strv_size);
+	if (!strv)
+		return -ENOMEM;
+
+	pos = str;
+
+	for (i = 0; i < len; ++i) {
+		for (j = 0; sep[j]; ++j) {
+			if (str[i] != sep[j])
+				continue;
+
+			/* ignore empty tokens */
+			if (pos != &str[i]) {
+				r = shl__split_push(&strv,
+						    &strv_num,
+						    &strv_size,
+						    pos,
+						    &str[i] - pos);
+				if (r < 0)
+					goto error;
+			}
+
+			pos = &str[i + 1];
+			break;
+		}
+	}
+
+	/* copy trailing token if available */
+	if (i > 0 && pos != &str[i]) {
+		r = shl__split_push(&strv,
+				    &strv_num,
+				    &strv_size,
+				    pos,
+				    &str[i] - pos);
+		if (r < 0)
+			goto error;
+	}
+
+	if ((int)strv_num < (ssize_t)strv_num) {
+		r = -ENOMEM;
+		goto error;
+	}
+
+	strv[strv_num] = NULL;
+	*out = strv;
+	return strv_num;
+
+error:
+	for (i = 0; i < strv_num; ++i)
+		free(strv[i]);
+	free(strv);
+	return r;
+}
+
+int shl_strsplit(const char *str, const char *sep, char ***out)
+{
+	return shl_strsplit_n(str, str ? strlen(str) : 0, sep, out);
 }
 
 /*
@@ -529,4 +667,259 @@ error:
 int shl_qstr_tokenize(const char *str, char ***out)
 {
 	return shl_qstr_tokenize_n(str, str ? strlen(str) : 0, out);
+}
+
+size_t shl__qstr_encode(char *dst, const char *src, bool need_quote)
+{
+	size_t l = 0;
+
+	if (need_quote)
+		dst[l++] = '"';
+
+	for ( ; *src; ++src) {
+		switch (*src) {
+		case '\\':
+		case '\"':
+			dst[l++] = '\\';
+			dst[l++] = *src;
+			break;
+		default:
+			dst[l++] = *src;
+			break;
+		}
+	}
+
+	if (need_quote)
+		dst[l++] = '"';
+
+	return l;
+}
+
+size_t shl__qstr_length(const char *str, bool *need_quote)
+{
+	size_t l = 0;
+
+	*need_quote = false;
+
+	do {
+		switch (*str++) {
+		case 0:
+			return l;
+		case ' ':
+		case '\t':
+		case '\n':
+		case '\v':
+			*need_quote = true;
+		}
+	} while (++l);
+
+	return l - 1;
+}
+
+int shl_qstr_join(char **strv, char **out)
+{
+	_shl_free_ char *line = NULL;
+	size_t len, size, l, need;
+	bool need_quote;
+
+	len = 0;
+	size = 0;
+
+	if (!SHL_GREEDY_REALLOC_T(line, size, 1))
+		return -ENOMEM;
+
+	*line = 0;
+
+	for ( ; *strv; ++strv) {
+		l = shl__qstr_length(*strv, &need_quote);
+
+		/* at most 2 byte per char (escapes) */
+		if (l * 2 < l)
+			return -ENOMEM;
+		need = l * 2;
+
+		/* on top of current length */
+		if (need + len < need)
+			return -ENOMEM;
+		need += len;
+
+		/* at most 4 extra chars: 2 quotes + 0 + separator */
+		if (need + 4 < len)
+			return -ENOMEM;
+		need += 4;
+
+		/* make sure line is big enough */
+		if (!SHL_GREEDY_REALLOC_T(line, size, need))
+			return -ENOMEM;
+
+		if (len)
+			line[len++] = ' ';
+
+		len += shl__qstr_encode(line + len, *strv, need_quote);
+	}
+
+	if ((size_t)(int)len != len)
+		return -ENOMEM;
+
+	line[len] = 0;
+	*out = line;
+	line = NULL;
+	return len;
+}
+
+/*
+ * mkdir
+ */
+
+static int shl__is_dir(const char *path)
+{
+	struct stat st;
+
+	if (stat(path, &st) < 0)
+		return -errno;
+
+	return S_ISDIR(st.st_mode);
+}
+
+const char *shl__path_startswith(const char *path, const char *prefix)
+{
+	size_t pathl, prefixl;
+
+	if (!path)
+		return NULL;
+	if (!prefix)
+		return path;
+
+	if ((path[0] == '/') != (prefix[0] == '/'))
+		return NULL;
+
+	/* compare all components */
+	while (true) {
+		path += strspn(path, "/");
+		prefix += strspn(prefix, "/");
+
+		if (*prefix == 0)
+			return (char*)path;
+		if (*path == 0)
+			return NULL;
+
+		pathl = strcspn(path, "/");
+		prefixl = strcspn(prefix, "/");
+		if (pathl != prefixl || memcmp(path, prefix, pathl))
+			return NULL;
+
+		path += pathl;
+		prefix += prefixl;
+	}
+}
+
+int shl__mkdir_parents(const char *prefix, const char *path, mode_t mode)
+{
+	const char *p, *e;
+	char *t;
+	int r;
+
+	if (!shl__path_startswith(path, prefix))
+		return -ENOTDIR;
+
+	e = strrchr(path, '/');
+	if (!e || e == path)
+		return 0;
+
+	p = strndupa(path, e - path);
+	r = shl__is_dir(p);
+	if (r > 0)
+		return 0;
+	if (r == 0)
+		return -ENOTDIR;
+
+	t = alloca(strlen(path) + 1);
+	p = path + strspn(path, "/");
+
+	while (true) {
+		e = p + strcspn(p, "/");
+		p = e + strspn(e, "/");
+
+		if (*p == 0)
+			return 0;
+
+		memcpy(t, path, e - path);
+		t[e - path] = 0;
+
+		if (prefix && shl__path_startswith(prefix, t))
+			continue;
+
+		r = mkdir(t, mode);
+		if (r < 0 && errno != EEXIST)
+			return -errno;
+	}
+}
+
+static int shl__mkdir_p(const char *prefix, const char *path, mode_t mode)
+{
+	int r;
+
+	r = shl__mkdir_parents(prefix, path, mode);
+	if (r < 0)
+		return r;
+
+	r = mkdir(path, mode);
+	if (r < 0 && (errno != EEXIST || shl__is_dir(path) <= 0))
+		return -errno;
+
+	return 0;
+}
+
+int shl_mkdir_p(const char *path, mode_t mode)
+{
+	return shl__mkdir_p(NULL, path, mode);
+}
+
+int shl_mkdir_p_prefix(const char *prefix, const char *path, mode_t mode)
+{
+	return shl__mkdir_p(prefix, path, mode);
+}
+
+/*
+ * Time
+ */
+
+uint64_t shl_now(clockid_t clock)
+{
+	struct timespec ts;
+
+	clock_gettime(clock, &ts);
+
+	return (uint64_t)ts.tv_sec * 1000000LL +
+	       (uint64_t)ts.tv_nsec / 1000LL;
+}
+
+/*
+ * Ratelimit
+ * Modelled after Linux' lib/ratelimit.c by Dave Young
+ * <hidave.darkstar@gmail.com>, which is licensed GPLv2.
+ */
+
+bool shl_ratelimit_test(struct shl_ratelimit *r)
+{
+	uint64_t ts;
+
+	if (!r || r->interval <= 0 || r->burst <= 0)
+		return true;
+
+	ts = shl_now(CLOCK_MONOTONIC);
+
+	if (r->begin <= 0 || r->begin + r->interval < ts) {
+		r->begin = ts;
+		r->num = 0;
+		goto good;
+	} else if (r->num < r->burst) {
+		goto good;
+	}
+
+	return false;
+
+good:
+	++r->num;
+	return true;
 }

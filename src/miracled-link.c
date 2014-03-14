@@ -140,7 +140,7 @@ static void link_wifi_event_fn(struct wifi *w, void *data,
 
 static int link_wifi_start(struct link *l)
 {
-	_shl_cleanup_free_ char *path = NULL;
+	_shl_free_ char *path = NULL;
 	struct wifi_dev *d;
 	int r;
 
@@ -209,7 +209,7 @@ static int link_wifi_startup_fn(sd_event_source *source,
 
 static int link_wifi_init(struct link *l)
 {
-	_shl_cleanup_free_ char *path = NULL;
+	_shl_free_ char *path = NULL;
 	int r;
 
 	r = wifi_new(l->m->event, link_wifi_event_fn, l, &l->w);

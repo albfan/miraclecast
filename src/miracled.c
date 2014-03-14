@@ -104,7 +104,7 @@ static void manager_add_link_from_udev(struct manager *m,
 static void manager_remove_link_from_udev(struct manager *m,
 					  struct udev_device *d)
 {
-	_shl_cleanup_free_ char *name = NULL;
+	_shl_free_ char *name = NULL;
 	int r;
 	struct link *l;
 

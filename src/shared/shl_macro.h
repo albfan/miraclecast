@@ -48,7 +48,7 @@ static inline void shl_freep(void *p)
 	free(*(void**)p);
 }
 
-#define _shl_cleanup_free_ _shl_cleanup_(shl_freep)
+#define _shl_free_ _shl_cleanup_(shl_freep)
 
 static inline void shl_set_errno(int *r)
 {

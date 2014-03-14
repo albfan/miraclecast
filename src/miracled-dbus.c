@@ -102,7 +102,7 @@ static int peer_dbus_get_link(sd_bus *bus,
 			      void *data,
 			      sd_bus_error *err)
 {
-	_cleanup_free_ char *link = NULL;
+	_shl_free_ char *link = NULL;
 	struct peer *p = data;
 	int r;
 
@@ -298,7 +298,7 @@ void peer_dbus_provision_request(struct peer *p,
 				 const char *type,
 				 const char *pin)
 {
-	_cleanup_free_ char *path = NULL;
+	_shl_free_ char *path = NULL;
 	int r;
 
 	if (!type)
@@ -321,7 +321,7 @@ void peer_dbus_provision_request(struct peer *p,
 
 void peer_dbus_properties_changed(struct peer *p, const char *prop, ...)
 {
-	_cleanup_free_ char *path = NULL;
+	_shl_free_ char *path = NULL;
 	char **strv;
 	int r;
 
@@ -340,7 +340,7 @@ void peer_dbus_properties_changed(struct peer *p, const char *prop, ...)
 
 void peer_dbus_added(struct peer *p)
 {
-	_cleanup_free_ char *path = NULL;
+	_shl_free_ char *path = NULL;
 	int r;
 
 	path = shl_strcat("/org/freedesktop/miracle/peer/", p->name);
@@ -361,7 +361,7 @@ void peer_dbus_added(struct peer *p)
 
 void peer_dbus_removed(struct peer *p)
 {
-	_cleanup_free_ char *path = NULL;
+	_shl_free_ char *path = NULL;
 	int r;
 
 	path = shl_strcat("/org/freedesktop/miracle/peer/", p->name);
@@ -561,7 +561,7 @@ static int link_dbus_find(sd_bus *bus,
 
 void link_dbus_properties_changed(struct link *l, const char *prop, ...)
 {
-	_cleanup_free_ char *path = NULL;
+	_shl_free_ char *path = NULL;
 	char **strv;
 	int r;
 
@@ -580,7 +580,7 @@ void link_dbus_properties_changed(struct link *l, const char *prop, ...)
 
 void link_dbus_scan_stopped(struct link *l)
 {
-	_cleanup_free_ char *path = NULL;
+	_shl_free_ char *path = NULL;
 	int r;
 
 	path = shl_strcat("/org/freedesktop/miracle/link/", l->name);
@@ -598,7 +598,7 @@ void link_dbus_scan_stopped(struct link *l)
 
 void link_dbus_added(struct link *l)
 {
-	_cleanup_free_ char *path = NULL;
+	_shl_free_ char *path = NULL;
 	int r;
 
 	path = shl_strcat("/org/freedesktop/miracle/link/", l->name);
@@ -619,7 +619,7 @@ void link_dbus_added(struct link *l)
 
 void link_dbus_removed(struct link *l)
 {
-	_cleanup_free_ char *path = NULL;
+	_shl_free_ char *path = NULL;
 	int r;
 
 	path = shl_strcat("/org/freedesktop/miracle/link/", l->name);
@@ -675,7 +675,7 @@ static int manager_dbus_add_link(sd_bus *bus, sd_bus_message *msg,
 static int manager_dbus_remove_link(sd_bus *bus, sd_bus_message *msg,
 				    void *data, sd_bus_error *err)
 {
-	_cleanup_free_ char *link = NULL;
+	_shl_free_ char *link = NULL;
 	struct manager *m = data;
 	struct link *l;
 	const char *name;

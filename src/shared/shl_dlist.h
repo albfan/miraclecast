@@ -74,9 +74,11 @@ static inline void shl_dlist__unlink(struct shl_dlist *prev,
 
 static inline void shl_dlist_unlink(struct shl_dlist *e)
 {
-	shl_dlist__unlink(e->prev, e->next);
-	e->prev = NULL;
-	e->next = NULL;
+	if (e->prev && e->next) {
+		shl_dlist__unlink(e->prev, e->next);
+		e->prev = NULL;
+		e->next = NULL;
+	}
 }
 
 static inline bool shl_dlist_empty(struct shl_dlist *head)
