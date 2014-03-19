@@ -161,11 +161,7 @@ bin_PROGRAMS += miracled
 
 miracled_SOURCES = \
 	src/miracled.h \
-	src/miracled.c \
-	src/miracled-dbus.c \
-	src/miracled-link.c \
-	src/miracled-peer.c \
-	src/miracled-wifi.c
+	src/miracled.c
 miracled_CPPFLAGS = \
 	$(AM_CPPFLAGS) \
 	$(DEPS_CFLAGS)
