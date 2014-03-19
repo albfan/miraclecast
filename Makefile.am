@@ -154,7 +154,8 @@ miracled_LDFLAGS = $(AM_LDFLAGS)
 # Tests
 #
 
-tests =
+tests = \
+	test_wpas
 
 if BUILD_HAVE_CHECK
 check_PROGRAMS += $(tests)
@@ -173,6 +174,11 @@ test_cflags = \
 	$(CHECK_CFLAGS)
 test_lflags = \
 	$(AM_LDFLAGS)
+
+test_wpas_SOURCES = test/test_wpas.c $(test_sources)
+test_wpas_CPPFLAGS = $(test_cflags)
+test_wpas_LDADD = $(test_libs)
+test_wpas_LDFLAGS = $(test_lflags)
 
 #
 # Phony targets
