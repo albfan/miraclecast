@@ -22,6 +22,7 @@ configure
 libtool
 m4/
 miracle-dhcp
+miracle-wifid
 miraclectl
 miracled
 stamp-h1
