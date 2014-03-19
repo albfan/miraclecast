@@ -78,7 +78,10 @@ libmiracle_shared_la_SOURCES = \
 	src/shared/shl_log.c \
 	src/shared/shl_macro.h \
 	src/shared/shl_util.h \
-	src/shared/shl_util.c
+	src/shared/shl_util.c \
+	src/shared/util.h \
+	src/shared/wpas.h \
+	src/shared/wpas.c
 libmiracle_shared_la_CPPFLAGS = $(AM_CPPFLAGS)
 libmiracle_shared_la_LDFLAGS = $(AM_LDFLAGS)
 libmiracle_shared_la_LIBADD = $(AM_LIBADD)
