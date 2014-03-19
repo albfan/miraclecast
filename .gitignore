@@ -26,3 +26,5 @@ miraclectl
 miracled
 stamp-h1
 test-suite.log
+wpa_cli
+wpa_supplicant
