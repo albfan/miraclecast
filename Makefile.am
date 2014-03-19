@@ -108,6 +108,26 @@ miracle_wifid_LDADD = \
 miracle_wifid_LDFLAGS = $(AM_LDFLAGS)
 
 #
+# miracle-wifictl
+#
+
+bin_PROGRAMS += miracle-wifictl
+
+miracle_wifictl_SOURCES = \
+	src/ctl/ctl.h \
+	src/ctl/ctl-cli.c \
+	src/ctl/ctl-wifi.c \
+	src/ctl/wifictl.c
+miracle_wifictl_CPPFLAGS = \
+	$(AM_CPPFLAGS) \
+	$(DEPS_CFLAGS)
+miracle_wifictl_LDADD = \
+	libmiracle-shared.la \
+	-lreadline \
+	$(DEPS_LIBS)
+miracle_wifictl_LDFLAGS = $(AM_LDFLAGS)
+
+#
 # miraclectl
 #
 
