@@ -81,6 +81,11 @@ static inline void shl_dlist_unlink(struct shl_dlist *e)
 	}
 }
 
+static inline bool shl_dlist_linked(struct shl_dlist *e)
+{
+	return e->next && e->prev;
+}
+
 static inline bool shl_dlist_empty(struct shl_dlist *head)
 {
 	return head->next == head;
