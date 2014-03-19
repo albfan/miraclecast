@@ -128,23 +128,6 @@ miracle_wifictl_LDADD = \
 miracle_wifictl_LDFLAGS = $(AM_LDFLAGS)
 
 #
-# miraclectl
-#
-
-bin_PROGRAMS += miraclectl
-
-miraclectl_SOURCES = \
-	src/miraclectl.c
-miraclectl_CPPFLAGS = \
-	$(AM_CPPFLAGS) \
-	$(DEPS_CFLAGS)
-miraclectl_LDADD = \
-	libmiracle-shared.la \
-	-lreadline \
-	$(DEPS_LIBS)
-miraclectl_LDFLAGS = $(AM_LDFLAGS)
-
-#
 # miracle-dhcp
 #
 
