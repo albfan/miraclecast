@@ -20,13 +20,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdlib.h>
-
-/* miscellaneous */
-
-#define shl_dlist_offsetof(pointer, type, member) ({ \
-		const typeof(((type*)0)->member) *__ptr = (pointer); \
-		(type*)(((char*)__ptr) - offsetof(type, member)); \
-	})
+#include "shl_macro.h"
 
 /* double linked list */
 
@@ -102,7 +96,7 @@ static inline struct shl_dlist *shl_dlist_last(struct shl_dlist *head)
 }
 
 #define shl_dlist_entry(ptr, type, member) \
-	shl_dlist_offsetof((ptr), type, member)
+	shl_container_of((ptr), type, member)
 
 #define shl_dlist_first_entry(head, type, member) \
 	shl_dlist_entry(shl_dlist_first(head), type, member)

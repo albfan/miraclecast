@@ -74,7 +74,7 @@ struct peer {
 };
 
 #define peer_from_htable(_p) \
-	shl_htable_offsetof((_p), struct peer, p2p_mac)
+	shl_htable_entry((_p), struct peer, p2p_mac)
 
 int peer_new(struct link *l,
 	     const char *p2p_mac,
@@ -125,7 +125,7 @@ struct link {
 };
 
 #define link_from_htable(_l) \
-	shl_htable_offsetof((_l), struct link, ifindex)
+	shl_htable_entry((_l), struct link, ifindex)
 #define LINK_FIRST_PEER(_l) \
 	SHL_HTABLE_FIRST_MACRO(&(_l)->peers, peer_from_htable)
 #define LINK_FOREACH_PEER(_i, _l) \

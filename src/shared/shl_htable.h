@@ -24,13 +24,12 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdlib.h>
+#include "shl_macro.h"
 
 /* miscellaneous */
 
-#define shl_htable_offsetof(pointer, type, member) ({ \
-		const typeof(((type*)0)->member) *__ptr = (pointer); \
-		(type*)(((char*)__ptr) - offsetof(type, member)); \
-	})
+#define shl_htable_entry(pointer, type, member) \
+	shl_container_of((pointer), type, member)
 
 /* htable */
 
