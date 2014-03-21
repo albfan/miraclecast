@@ -77,6 +77,8 @@ libmiracle_shared_la_SOURCES = \
 	src/shared/shl_log.h \
 	src/shared/shl_log.c \
 	src/shared/shl_macro.h \
+	src/shared/shl_ring.h \
+	src/shared/shl_ring.c \
 	src/shared/shl_util.h \
 	src/shared/shl_util.c \
 	src/shared/util.h \
