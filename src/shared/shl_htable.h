@@ -19,10 +19,10 @@
 #ifndef SHL_HTABLE_H
 #define SHL_HTABLE_H
 
+#include <inttypes.h>
 #include <limits.h>
 #include <stdbool.h>
 #include <stddef.h>
-#include <stdint.h>
 #include <stdlib.h>
 
 /* miscellaneous */
@@ -221,6 +221,71 @@ static inline bool shl_htable_remove_ulong(struct shl_htable *htable,
 					   unsigned long **out)
 {
 	return shl_htable_remove(htable, (const void*)&key, (size_t)key,
+				 (void**)out);
+}
+
+/* uint64 htables */
+
+bool shl_htable_compare_u64(const void *a, const void *b);
+size_t shl_htable_rehash_u64(const void *elem, void *priv);
+
+static inline size_t shl__htable_rehash_u64(const uint64_t *p)
+{
+#if SIZE_MAX < UINT64_MAX
+	return (size_t)((*p ^ (*p >> 32)) & 0xffffffff);
+#else
+	return (size_t)*p;
+#endif
+}
+
+#define SHL_HTABLE_INIT_U64(_obj)					\
+	SHL_HTABLE_INIT((_obj), shl_htable_compare_u64,			\
+				shl_htable_rehash_u64,			\
+				NULL)
+
+static inline void shl_htable_init_u64(struct shl_htable *htable)
+{
+	shl_htable_init(htable, shl_htable_compare_u64,
+			shl_htable_rehash_u64, NULL);
+}
+
+static inline void shl_htable_clear_u64(struct shl_htable *htable,
+					void (*cb) (uint64_t *elem, void *ctx),
+					void *ctx)
+{
+	shl_htable_clear(htable, (void (*) (void*, void*))cb, ctx);
+}
+
+static inline void shl_htable_visit_u64(struct shl_htable *htable,
+					void (*cb) (uint64_t *elem, void *ctx),
+					void *ctx)
+{
+	shl_htable_visit(htable, (void (*) (void*, void*))cb, ctx);
+}
+
+static inline bool shl_htable_lookup_u64(struct shl_htable *htable,
+					 uint64_t key,
+					 uint64_t **out)
+{
+	return shl_htable_lookup(htable, (const void*)&key,
+				 shl__htable_rehash_u64(&key),
+				 (void**)out);
+}
+
+static inline int shl_htable_insert_u64(struct shl_htable *htable,
+					const uint64_t *key)
+{
+	return shl_htable_insert(htable,
+				 (const void*)key,
+				 shl__htable_rehash_u64(key));
+}
+
+static inline bool shl_htable_remove_u64(struct shl_htable *htable,
+					 uint64_t key,
+					 uint64_t **out)
+{
+	return shl_htable_remove(htable, (const void*)&key,
+				 shl__htable_rehash_u64(&key),
 				 (void**)out);
 }
 

@@ -18,9 +18,9 @@
 
 #include <assert.h>
 #include <errno.h>
+#include <inttypes.h>
 #include <limits.h>
 #include <stdbool.h>
-#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 #include "shl_htable.h"
@@ -441,6 +441,16 @@ bool shl_htable_compare_ulong(const void *a, const void *b)
 size_t shl_htable_rehash_ulong(const void *elem, void *priv)
 {
 	return (size_t)*(const unsigned long*)elem;
+}
+
+bool shl_htable_compare_u64(const void *a, const void *b)
+{
+	return *(const uint64_t*)a == *(const uint64_t*)b;
+}
+
+size_t shl_htable_rehash_u64(const void *elem, void *priv)
+{
+	return shl__htable_rehash_u64((const uint64_t*)elem);
 }
 
 bool shl_htable_compare_str(const void *a, const void *b)
