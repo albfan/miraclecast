@@ -1411,18 +1411,27 @@ static int wpas__read(struct wpas *w)
 static int wpas_io_fn(sd_event_source *source, int fd, uint32_t mask, void *d)
 {
 	struct wpas *w = d;
-	int r;
+	int r, write_r;
 
 	/* make sure WPAS stays around during any user-callbacks */
 	wpas_ref(w);
 
+	/*
+	 * If writing fails, there might still be messages in the in-queue even
+	 * though EPOLLIN might not have been set, yet. So in any case, if
+	 * writing failed, try reading some left-overs from the queue. Only if
+	 * the queue is empty, we handle any possible write-errors.
+	 */
+
 	if (mask & EPOLLOUT) {
-		r = wpas__write(w);
-		if (r < 0 && r != -EAGAIN)
-			goto error;
+		write_r = wpas__write(w);
+		if (write_r == -EAGAIN)
+			write_r = 0;
+	} else {
+		write_r = 0;
 	}
 
-	if (mask & EPOLLIN) {
+	if (mask & EPOLLIN || write_r < 0) {
 		/* Read one packet from the FD and return. Don't block the
 		 * event loop by reading in a loop. We're called again if
 		 * there's still data so make sure higher priority tasks will
@@ -1431,7 +1440,7 @@ static int wpas_io_fn(sd_event_source *source, int fd, uint32_t mask, void *d)
 		if (r < 0 && r != -EAGAIN)
 			goto error;
 
-		/* Iff EPOLLIN was set, there definitely was data in the queue
+		/* If EPOLLIN was set, there definitely was data in the queue
 		 * and there *might* be more. So always return here instead of
 		 * falling back to EPOLLHUP below. The next iteration will read
 		 * remaining data and once EPOLLIN is no longer set, we will
@@ -1440,7 +1449,9 @@ static int wpas_io_fn(sd_event_source *source, int fd, uint32_t mask, void *d)
 			goto out;
 	}
 
-	if (mask & (EPOLLHUP | EPOLLERR))
+	/* If we got here with an error, there definitely is no data left in
+	 * the input-queue. We can finally handle the HUP and be done. */
+	if (mask & (EPOLLHUP | EPOLLERR) || write_r < 0)
 		goto error;
 
 	goto out;
