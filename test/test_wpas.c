@@ -52,6 +52,8 @@ static void stop_test_client(void)
 	client = NULL;
 	wpas_unref(server);
 	server = NULL;
+	sd_event_unref(event);
+	event = NULL;
 }
 
 START_TEST(bus_invalid_open)
