@@ -1,0 +1,15 @@
+#
+# Some suppression rules for our test-suite to work correctly.
+# libcheck has some weird errors, so lets ignore them.
+#
+
+{
+   libcheck timer_create warnings
+   Memcheck:Param
+   timer_create(evp)
+   fun:timer_create
+   obj:/usr/lib/libcheck.so.0.0.0
+   obj:/usr/lib/libcheck.so.0.0.0
+   fun:srunner_run
+   fun:main
+}

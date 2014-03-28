@@ -1,6 +1,7 @@
 *.la
 *.lo
 *.log
+*.memlog
 *.o
 *.swp
 *.tar.xz
@@ -28,6 +29,7 @@ miraclectl
 miracled
 stamp-h1
 test-suite.log
+test_valgrind
 test_wpas
 wpa_cli
 wpa_supplicant
