@@ -25,8 +25,10 @@ static sd_event *event;
 
 static struct wpas *start_test_client(void)
 {
-	const char *spath = "/tmp/miracle-test-sock";
+	char spath[128];
 	int r;
+
+	sprintf(spath, "/tmp/miracle-test-sock-%d", getpid());
 
 	r = sd_event_default(&event);
 	ck_assert_int_ge(r, 0);
@@ -54,9 +56,12 @@ static void stop_test_client(void)
 
 START_TEST(bus_invalid_open)
 {
-	const char *ipath = "/tmp/miracle/invalid-test-dir/invalid-test-path";
+	char ipath[128];
 	struct wpas *w;
 	int r;
+
+	sprintf(ipath, "/tmp/miracle/invalid-test-dir/invalid-test-path-%d",
+		getpid());
 
 	/* test invalid client */
 
@@ -79,9 +84,12 @@ END_TEST
 
 START_TEST(bus_invalid_create)
 {
-	const char *ipath = "/tmp/miracle/invalid-test-dir/invalid-test-path";
+	char ipath[128];
 	struct wpas *s;
 	int r;
+
+	sprintf(ipath, "/tmp/miracle/invalid-test-dir/invalid-test-path-%d",
+		getpid());
 
 	/* test invalid server */
 
@@ -100,9 +108,11 @@ END_TEST
 
 START_TEST(bus_create)
 {
-	const char *spath = "/tmp/miracle-test-sock";
+	char spath[128];
 	struct wpas *w, *s;
 	int r;
+
+	sprintf(spath, "/tmp/miracle-test-sock-%d", getpid());
 
 	/* test server creation */
 
@@ -150,9 +160,11 @@ END_TEST
 
 START_TEST(bus_open)
 {
-	const char *spath = "/tmp/miracle-test-sock";
+	char spath[128];
 	struct wpas *w, *s;
 	int r;
+
+	sprintf(spath, "/tmp/miracle-test-sock-%d", getpid());
 
 	/* test client connection */
 
