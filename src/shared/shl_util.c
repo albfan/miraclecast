@@ -617,9 +617,9 @@ int shl_qstr_tokenize_n(const char *str, size_t length, char ***out)
 				quoted = 0;
 			else if (str[i] == '\'' && quoted == '\'')
 				quoted = 0;
-		} else if (str[i] == '"' && quoted == '"') {
+		} else if (str[i] == '"') {
 			quoted = '"';
-		} else if (str[i] == '\'' && quoted == '\'') {
+		} else if (str[i] == '\'') {
 			quoted = '\'';
 		} else if (str[i] == ' ') {
 			/* ignore multiple separators */
