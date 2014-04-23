@@ -52,6 +52,13 @@ static void ctl_peer_free(struct ctl_peer *p)
 	free(p);
 }
 
+static void ctl_peer_free_p(struct ctl_peer **p)
+{
+	ctl_peer_free(*p);
+}
+
+#define _ctl_peer_free_ _shl_cleanup_(ctl_peer_free_p)
+
 static int ctl_peer_new(struct ctl_peer **out,
 			struct ctl_link *l,
 			const char *label)
@@ -74,8 +81,6 @@ static int ctl_peer_new(struct ctl_peer **out,
 		goto error;
 	}
 
-	shl_dlist_link_tail(&l->peers, &p->list);
-	ctl_fn_peer_new(p);
 	if (out)
 		*out = p;
 
@@ -84,6 +89,15 @@ static int ctl_peer_new(struct ctl_peer **out,
 error:
 	ctl_peer_free(p);
 	return r;
+}
+
+static void ctl_peer_link(struct ctl_peer *p)
+{
+	if (!p || shl_dlist_linked(&p->list))
+		return;
+
+	shl_dlist_link_tail(&p->l->peers, &p->list);
+	ctl_fn_peer_new(p);
 }
 
 static int ctl_peer_parse_properties(struct ctl_peer *p,
@@ -343,6 +357,13 @@ static void ctl_link_free(struct ctl_link *l)
 	free(l);
 }
 
+static void ctl_link_free_p(struct ctl_link **l)
+{
+	ctl_link_free(*l);
+}
+
+#define _ctl_link_free_ _shl_cleanup_(ctl_link_free_p)
+
 static int ctl_link_new(struct ctl_link **out,
 			struct ctl_wifi *w,
 			const char *label)
@@ -366,8 +387,6 @@ static int ctl_link_new(struct ctl_link **out,
 		goto error;
 	}
 
-	shl_dlist_link_tail(&w->links, &l->list);
-	ctl_fn_link_new(l);
 	if (out)
 		*out = l;
 
@@ -376,6 +395,15 @@ static int ctl_link_new(struct ctl_link **out,
 error:
 	ctl_link_free(l);
 	return r;
+}
+
+static void ctl_link_link(struct ctl_link *l)
+{
+	if (!l || shl_dlist_linked(&l->list))
+		return;
+
+	shl_dlist_link_tail(&l->w->links, &l->list);
+	ctl_fn_link_new(l);
 }
 
 static int ctl_link_parse_properties(struct ctl_link *l,
@@ -666,8 +694,8 @@ static int ctl_wifi_parse_link(struct ctl_wifi *w,
 			       const char *label,
 			       sd_bus_message *m)
 {
+	_ctl_link_free_ struct ctl_link *l = NULL;
 	const char *t;
-	struct ctl_link *l;
 	int r;
 
 	r = ctl_link_new(&l, w, label);
@@ -710,6 +738,9 @@ static int ctl_wifi_parse_link(struct ctl_wifi *w,
 	if (r < 0)
 		return cli_log_parser(r);
 
+	ctl_link_link(l);
+	l = NULL;
+
 	return 0;
 }
 
@@ -717,9 +748,9 @@ static int ctl_wifi_parse_peer(struct ctl_wifi *w,
 			       const char *label,
 			       sd_bus_message *m)
 {
+	_ctl_peer_free_ struct ctl_peer *p = NULL;
 	const char *t;
 	struct ctl_link *l;
-	struct ctl_peer *p;
 	int r;
 
 	l = ctl_wifi_find_link_by_peer(w, label);
@@ -765,6 +796,9 @@ static int ctl_wifi_parse_peer(struct ctl_wifi *w,
 	r = sd_bus_message_exit_container(m);
 	if (r < 0)
 		return cli_log_parser(r);
+
+	ctl_peer_link(p);
+	p = NULL;
 
 	return 0;
 }
