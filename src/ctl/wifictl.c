@@ -153,6 +153,8 @@ static int cmd_show(char **args, unsigned int n)
 		if (l->friendly_name && *l->friendly_name)
 			cli_printf("FriendlyName=%s\n", l->friendly_name);
 		cli_printf("P2PScanning=%d\n", l->p2p_scanning);
+		if (l->wfd_subelements && *l->wfd_subelements)
+			cli_printf("WfdSubelements=%s\n", l->wfd_subelements);
 	} else if (p) {
 		cli_printf("Peer=%s\n", p->label);
 		if (p->p2p_mac && *p->p2p_mac)
@@ -166,6 +168,8 @@ static int cmd_show(char **args, unsigned int n)
 			cli_printf("LocalAddress=%s\n", p->local_address);
 		if (p->remote_address && *p->remote_address)
 			cli_printf("RemoteAddress=%s\n", p->remote_address);
+		if (p->wfd_subelements && *p->wfd_subelements)
+			cli_printf("WfdSubelements=%s\n", p->wfd_subelements);
 	} else {
 		cli_printf("Show what?\n");
 		return 0;

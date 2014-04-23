@@ -46,6 +46,7 @@ struct ctl_peer {
 	char *interface;
 	char *local_address;
 	char *remote_address;
+	char *wfd_subelements;
 };
 
 #define peer_from_dlist(_p) shl_dlist_entry((_p), struct ctl_peer, list);
@@ -66,12 +67,14 @@ struct ctl_link {
 	unsigned int ifindex;
 	char *ifname;
 	char *friendly_name;
+	char *wfd_subelements;
 	bool p2p_scanning;
 };
 
 #define link_from_dlist(_l) shl_dlist_entry((_l), struct ctl_link, list);
 
 int ctl_link_set_friendly_name(struct ctl_link *l, const char *name);
+int ctl_link_set_wfd_subelements(struct ctl_link *l, const char *val);
 int ctl_link_set_p2p_scanning(struct ctl_link *l, bool val);
 
 struct ctl_wifi {

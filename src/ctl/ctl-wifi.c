@@ -40,6 +40,10 @@ static void ctl_peer_free(struct ctl_peer *p)
 	if (shl_dlist_linked(&p->list))
 		ctl_fn_peer_free(p);
 
+	free(p->wfd_subelements);
+	free(p->remote_address);
+	free(p->local_address);
+	free(p->interface);
 	free(p->friendly_name);
 	free(p->p2p_mac);
 
@@ -87,7 +91,7 @@ static int ctl_peer_parse_properties(struct ctl_peer *p,
 {
 	const char *t, *p2p_mac = NULL, *friendly_name = NULL;
 	const char *interface = NULL, *local_address = NULL;
-	const char *remote_address = NULL;
+	const char *remote_address = NULL, *wfd_subelements = NULL;
 	bool connected, connected_set = false;
 	char *tmp;
 	int r;
@@ -135,6 +139,11 @@ static int ctl_peer_parse_properties(struct ctl_peer *p,
 		} else if (!strcmp(t, "RemoteAddress")) {
 			r = bus_message_read_basic_variant(m, "s",
 							   &remote_address);
+			if (r < 0)
+				return cli_log_parser(r);
+		} else if (!strcmp(t, "WfdSubelements")) {
+			r = bus_message_read_basic_variant(m, "s",
+							   &wfd_subelements);
 			if (r < 0)
 				return cli_log_parser(r);
 		} else {
@@ -205,6 +214,16 @@ static int ctl_peer_parse_properties(struct ctl_peer *p,
 		if (tmp) {
 			free(p->remote_address);
 			p->remote_address = tmp;
+		} else {
+			cli_ENOMEM();
+		}
+	}
+
+	if (wfd_subelements) {
+		tmp = strdup(wfd_subelements);
+		if (tmp) {
+			free(p->wfd_subelements);
+			p->wfd_subelements = tmp;
 		} else {
 			cli_ENOMEM();
 		}
@@ -315,6 +334,7 @@ static void ctl_link_free(struct ctl_link *l)
 	if (shl_dlist_linked(&l->list))
 		ctl_fn_link_free(l);
 
+	free(l->wfd_subelements);
 	free(l->friendly_name);
 	free(l->ifname);
 
@@ -362,6 +382,7 @@ static int ctl_link_parse_properties(struct ctl_link *l,
 				     sd_bus_message *m)
 {
 	const char *t, *interface_name = NULL, *friendly_name = NULL;
+	const char *wfd_subelements = NULL;
 	unsigned int interface_index = 0;
 	bool p2p_scanning, p2p_scanning_set = false;
 	char *tmp;
@@ -403,6 +424,11 @@ static int ctl_link_parse_properties(struct ctl_link *l,
 				return cli_log_parser(r);
 
 			p2p_scanning_set = true;
+		} else if (!strcmp(t, "WfdSubelements")) {
+			r = bus_message_read_basic_variant(m, "s",
+						&wfd_subelements);
+			if (r < 0)
+				return cli_log_parser(r);
 		} else {
 			sd_bus_message_skip(m, "v");
 		}
@@ -443,6 +469,16 @@ static int ctl_link_parse_properties(struct ctl_link *l,
 
 	if (p2p_scanning_set)
 		l->p2p_scanning = p2p_scanning;
+
+	if (wfd_subelements) {
+		tmp = strdup(wfd_subelements);
+		if (tmp) {
+			free(l->wfd_subelements);
+			l->wfd_subelements = tmp;
+		} else {
+			cli_ENOMEM();
+		}
+	}
 
 	return 0;
 }
@@ -496,6 +532,61 @@ int ctl_link_set_friendly_name(struct ctl_link *l, const char *name)
 	if (r < 0) {
 		cli_error("cannot change friendly-name on link %s to %s: %s",
 			  l->label, name, bus_error_message(&err, r));
+		return r;
+	}
+
+	return 0;
+}
+
+int ctl_link_set_wfd_subelements(struct ctl_link *l, const char *val)
+{
+	_sd_bus_message_unref_ sd_bus_message *m = NULL;
+	_sd_bus_error_free_ sd_bus_error err = SD_BUS_ERROR_NULL;
+	_shl_free_ char *node = NULL;
+	int r;
+
+	if (!l)
+		return cli_EINVAL();
+	if (!strcmp(l->wfd_subelements, val))
+		return 0;
+
+	r = sd_bus_path_encode("/org/freedesktop/miracle/wifi/link",
+			       l->label,
+			       &node);
+	if (r < 0)
+		return cli_ERR(r);
+
+	r = sd_bus_message_new_method_call(l->w->bus,
+					   &m,
+					   "org.freedesktop.miracle.wifi",
+					   node,
+					   "org.freedesktop.DBus.Properties",
+					   "Set");
+	if (r < 0)
+		return cli_log_create(r);
+
+	r = sd_bus_message_append(m, "ss",
+				  "org.freedesktop.miracle.wifi.Link",
+				  "WfdSubelements");
+	if (r < 0)
+		return cli_log_create(r);
+
+	r = sd_bus_message_open_container(m, 'v', "s");
+	if (r < 0)
+		return cli_log_create(r);
+
+	r = sd_bus_message_append(m, "s", val);
+	if (r < 0)
+		return cli_log_create(r);
+
+	r = sd_bus_message_close_container(m);
+	if (r < 0)
+		return cli_log_create(r);
+
+	r = sd_bus_call(l->w->bus, m, 0, &err, NULL);
+	if (r < 0) {
+		cli_error("cannot change WfdSubelements on link %s to %s: %s",
+			  l->label, val, bus_error_message(&err, r));
 		return r;
 	}
 
