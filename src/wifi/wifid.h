@@ -57,6 +57,7 @@ const char *supplicant_peer_get_friendly_name(struct supplicant_peer *sp);
 const char *supplicant_peer_get_interface(struct supplicant_peer *sp);
 const char *supplicant_peer_get_local_address(struct supplicant_peer *sp);
 const char *supplicant_peer_get_remote_address(struct supplicant_peer *sp);
+const char *supplicant_peer_get_wfd_subelements(struct supplicant_peer *sp);
 int supplicant_peer_connect(struct supplicant_peer *sp,
 			    const char *prov_type,
 			    const char *pin);
@@ -85,6 +86,7 @@ const char *peer_get_friendly_name(struct peer *p);
 const char *peer_get_interface(struct peer *p);
 const char *peer_get_local_address(struct peer *p);
 const char *peer_get_remote_address(struct peer *p);
+const char *peer_get_wfd_subelements(struct peer *p);
 int peer_connect(struct peer *p, const char *prov, const char *pin);
 void peer_disconnect(struct peer *p);
 
@@ -94,6 +96,7 @@ void peer_reject(struct peer *p);
 void peer_supplicant_started(struct peer *p);
 void peer_supplicant_stopped(struct peer *p);
 void peer_supplicant_friendly_name_changed(struct peer *p);
+void peer_supplicant_wfd_subelements_changed(struct peer *p);
 void peer_supplicant_provision_discovery(struct peer *p,
 					 const char *prov,
 					 const char *pin);
@@ -116,6 +119,7 @@ struct link {
 
 	char *ifname;
 	char *friendly_name;
+	char *wfd_subelements;
 
 	size_t peer_cnt;
 	struct shl_htable peers;
@@ -145,6 +149,8 @@ int link_renamed(struct link *l, const char *ifname);
 
 int link_set_friendly_name(struct link *l, const char *name);
 const char *link_get_friendly_name(struct link *l);
+int link_set_wfd_subelements(struct link *l, const char *val);
+const char *link_get_wfd_subelements(struct link *l);
 int link_set_p2p_scanning(struct link *l, bool set);
 bool link_get_p2p_scanning(struct link *l);
 

@@ -238,6 +238,24 @@ static int peer_dbus_get_remote_address(sd_bus *bus,
 	return 1;
 }
 
+static int peer_dbus_get_wfd_subelements(sd_bus *bus,
+					 const char *path,
+					 const char *interface,
+					 const char *property,
+					 sd_bus_message *reply,
+					void *data,
+					sd_bus_error *err)
+{
+	struct peer *p = data;
+	int r;
+
+	r = sd_bus_message_append(reply, "s", peer_get_wfd_subelements(p));
+	if (r < 0)
+		return r;
+
+	return 1;
+}
+
 static const sd_bus_vtable peer_dbus_vtable[] = {
 	SD_BUS_VTABLE_START(0),
 	SD_BUS_METHOD("Connect",
@@ -283,6 +301,11 @@ static const sd_bus_vtable peer_dbus_vtable[] = {
 	SD_BUS_PROPERTY("RemoteAddress",
 			"s",
 			peer_dbus_get_remote_address,
+			0,
+			SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
+	SD_BUS_PROPERTY("WfdSubelements",
+			"s",
+			peer_dbus_get_wfd_subelements,
 			0,
 			SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
 	SD_BUS_SIGNAL("ProvisionDiscovery", "ss", 0),
@@ -545,6 +568,43 @@ static int link_dbus_set_p2p_scanning(sd_bus *bus,
 	return link_set_p2p_scanning(l, val);
 }
 
+static int link_dbus_get_wfd_subelements(sd_bus *bus,
+					 const char *path,
+					 const char *interface,
+					 const char *property,
+					 sd_bus_message *reply,
+					 void *data,
+					 sd_bus_error *err)
+{
+	struct link *l = data;
+	int r;
+
+	r = sd_bus_message_append(reply, "s", link_get_wfd_subelements(l));
+	if (r < 0)
+		return r;
+
+	return 1;
+}
+
+static int link_dbus_set_wfd_subelements(sd_bus *bus,
+					 const char *path,
+					 const char *interface,
+					 const char *property,
+					 sd_bus_message *value,
+					 void *data,
+					 sd_bus_error *err)
+{
+	struct link *l = data;
+	const char *val;
+	int r;
+
+	r = sd_bus_message_read(value, "s", &val);
+	if (r < 0)
+		return r;
+
+	return link_set_wfd_subelements(l, val);
+}
+
 static const sd_bus_vtable link_dbus_vtable[] = {
 	SD_BUS_VTABLE_START(0),
 	SD_BUS_PROPERTY("InterfaceIndex",
@@ -567,6 +627,12 @@ static const sd_bus_vtable link_dbus_vtable[] = {
 				 "b",
 				 link_dbus_get_p2p_scanning,
 				 link_dbus_set_p2p_scanning,
+				 0,
+				 SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
+	SD_BUS_WRITABLE_PROPERTY("WfdSubelements",
+				 "s",
+				 link_dbus_get_wfd_subelements,
+				 link_dbus_set_wfd_subelements,
 				 0,
 				 SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
 	SD_BUS_VTABLE_END

@@ -60,6 +60,7 @@ struct supplicant_peer {
 
 	char *friendly_name;
 	char *remote_addr;
+	char *wfd_subelements;
 	char *prov;
 	char *pin;
 	char *sta_mac;
@@ -647,6 +648,7 @@ static void supplicant_peer_free(struct supplicant_peer *sp)
 	free(sp->pin);
 	free(sp->prov);
 	free(sp->friendly_name);
+	free(sp->wfd_subelements);
 	free(sp);
 }
 
@@ -680,6 +682,14 @@ const char *supplicant_peer_get_remote_address(struct supplicant_peer *sp)
 		return NULL;
 
 	return sp->remote_addr;
+}
+
+const char *supplicant_peer_get_wfd_subelements(struct supplicant_peer *sp)
+{
+	if (!sp)
+		return NULL;
+
+	return sp->wfd_subelements;
 }
 
 int supplicant_peer_connect(struct supplicant_peer *sp,
@@ -779,7 +789,7 @@ static void supplicant_parse_peer(struct supplicant *s,
 				  struct wpas_message *m)
 {
 	struct supplicant_peer *sp;
-	const char *mac, *name;
+	const char *mac, *name, *val;
 	char *t;
 	int r;
 
@@ -810,6 +820,18 @@ static void supplicant_parse_peer(struct supplicant *s,
 	} else {
 		log_debug("no device_name in P2P_PEER information: %s",
 			  wpas_message_get_raw(m));
+	}
+
+	r = wpas_message_dict_read(m, "wfd_subelems", 's', &val);
+	if (r >= 0) {
+		t = strdup(val);
+		if (!t) {
+			log_vENOMEM();
+		} else {
+			free(sp->wfd_subelements);
+			sp->wfd_subelements = t;
+			peer_supplicant_wfd_subelements_changed(sp->p);
+		}
 	}
 
 	if (s->running)
@@ -1454,7 +1476,9 @@ static int supplicant_set_wifi_display_fn(struct wpas *w,
 					  struct wpas_message *reply,
 					  void *data)
 {
+	_wpas_message_unref_ struct wpas_message *m = NULL;
 	struct supplicant *s = data;
+	int r;
 
 	/* SET received */
 	--s->setup_cnt;
@@ -1464,7 +1488,48 @@ static int supplicant_set_wifi_display_fn(struct wpas *w,
 		s->has_wfd = false;
 	}
 
+	if (s->has_wfd) {
+		/* update subelements */
+
+		r = wpas_message_new_request(s->bus_global,
+					     "WFD_SUBELEM_SET",
+					     &m);
+		if (r < 0) {
+			log_vERR(r);
+			goto error;
+		}
+
+		r = wpas_message_append(m, "s", "0");
+		if (r < 0) {
+			log_vERR(r);
+			goto error;
+		}
+
+		if (!shl_isempty(s->l->wfd_subelements)) {
+			r = wpas_message_append(m, "s", s->l->wfd_subelements);
+			if (r < 0) {
+				log_vERR(r);
+				goto error;
+			}
+		}
+
+		r = wpas_call_async(s->bus_global,
+				    m,
+				    NULL,
+				    NULL,
+				    0,
+				    NULL);
+		if (r < 0) {
+			log_vERR(r);
+			goto error;
+		}
+	}
+
 	supplicant_try_ready(s);
+	return 0;
+
+error:
+	supplicant_failed(s);
 	return 0;
 }
 
@@ -1718,7 +1783,7 @@ int supplicant_set_friendly_name(struct supplicant *s, const char *name)
 	int r;
 
 	if (!s->running || !name || !*name)
-		return log_EINVAL();;
+		return log_EINVAL();
 
 	r = wpas_message_new_request(s->bus_global,
 				     "SET",
@@ -1741,6 +1806,45 @@ int supplicant_set_friendly_name(struct supplicant *s, const char *name)
 
 	log_debug("send 'SET device_name %s' to wpas on %s",
 		  name, s->l->ifname);
+
+	return 0;
+}
+
+int supplicant_set_wfd_subelements(struct supplicant *s, const char *val)
+{
+	_wpas_message_unref_ struct wpas_message *m = NULL;
+	int r;
+
+	if (!s->running || !val)
+		return log_EINVAL();
+
+	r = wpas_message_new_request(s->bus_global,
+				     "WFD_SUBELEM_SET",
+				     &m);
+	if (r < 0)
+		return log_ERR(r);
+
+	r = wpas_message_append(m, "s", "0");
+	if (r < 0)
+		return log_ERR(r);
+
+	if (!shl_isempty(val)) {
+		r = wpas_message_append(m, "s", val);
+		if (r < 0)
+			return log_ERR(r);
+	}
+
+	r = wpas_call_async(s->bus_global,
+			    m,
+			    NULL,
+			    NULL,
+			    0,
+			    NULL);
+	if (r < 0)
+		return log_ERR(r);
+
+	log_debug("send 'WFD_SUBELEM_SET 0 %s' to wpas on %s",
+		  val, s->l->ifname);
 
 	return 0;
 }

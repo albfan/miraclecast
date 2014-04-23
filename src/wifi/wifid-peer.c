@@ -130,6 +130,14 @@ const char *peer_get_remote_address(struct peer *p)
 	return supplicant_peer_get_remote_address(p->sp);
 }
 
+const char *peer_get_wfd_subelements(struct peer *p)
+{
+	if (!p)
+		return NULL;
+
+	return supplicant_peer_get_wfd_subelements(p->sp);
+}
+
 int peer_connect(struct peer *p, const char *prov, const char *pin)
 {
 	if (!p)
@@ -172,6 +180,14 @@ void peer_supplicant_friendly_name_changed(struct peer *p)
 		return;
 
 	peer_dbus_properties_changed(p, "FriendlyName", NULL);
+}
+
+void peer_supplicant_wfd_subelements_changed(struct peer *p)
+{
+	if (!p || !p->public)
+		return;
+
+	peer_dbus_properties_changed(p, "WfdSubelements", NULL);
 }
 
 void peer_supplicant_provision_discovery(struct peer *p,

@@ -126,6 +126,7 @@ void link_free(struct link *l)
 	/* link_set_managed(l, false) already removed all peers */
 	shl_htable_clear_str(&l->peers, NULL, NULL);
 
+	free(l->wfd_subelements);
 	free(l->friendly_name);
 	free(l->ifname);
 	free(l);
@@ -213,6 +214,41 @@ const char *link_get_friendly_name(struct link *l)
 		return NULL;
 
 	return l->friendly_name;
+}
+
+int link_set_wfd_subelements(struct link *l, const char *val)
+{
+	char *t;
+	int r;
+
+	if (!l || !val)
+		return log_EINVAL();
+
+	t = strdup(val);
+	if (!t)
+		return log_ENOMEM();
+
+	if (supplicant_is_ready(l->s)) {
+		r = supplicant_set_wfd_subelements(l->s, val);
+		if (r < 0) {
+			free(t);
+			return r;
+		}
+	}
+
+	free(l->wfd_subelements);
+	l->wfd_subelements = t;
+	link_dbus_properties_changed(l, "WfdSubelements", NULL);
+
+	return 0;
+}
+
+const char *link_get_wfd_subelements(struct link *l)
+{
+	if (!l)
+		return NULL;
+
+	return l->wfd_subelements;
 }
 
 int link_set_p2p_scanning(struct link *l, bool set)
