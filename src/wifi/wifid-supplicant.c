@@ -1679,7 +1679,7 @@ static int supplicant_status_fn(struct wpas *w,
 		log_debug("local p2p-address is: %s", p2p_mac);
 		t = strdup(p2p_mac);
 		if (!t) {
-			log_ENOMEM();
+			log_vENOMEM();
 		} else {
 			free(s->p2p_mac);
 			s->p2p_mac = t;
