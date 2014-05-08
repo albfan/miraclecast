@@ -22,6 +22,8 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/socket.h>
+#include <sys/types.h>
 #include <systemd/sd-bus.h>
 #include "shl_dlist.h"
 
@@ -99,6 +101,20 @@ struct ctl_peer *ctl_wifi_find_peer(struct ctl_wifi *w,
 				    const char *label);
 struct ctl_peer *ctl_wifi_search_peer(struct ctl_wifi *w,
 				      const char *real_label);
+
+/* sink handling */
+
+struct ctl_sink;
+
+int ctl_sink_new(struct ctl_sink **out,
+		 sd_event *event);
+void ctl_sink_free(struct ctl_sink *s);
+
+int ctl_sink_connect(struct ctl_sink *s, const char *target);
+void ctl_sink_close(struct ctl_sink *s);
+bool ctl_sink_is_connecting(struct ctl_sink *s);
+bool ctl_sink_is_connected(struct ctl_sink *s);
+bool ctl_sink_is_closed(struct ctl_sink *s);
 
 /* CLI handling */
 
@@ -239,6 +255,9 @@ void ctl_fn_peer_connected(struct ctl_peer *p);
 void ctl_fn_peer_disconnected(struct ctl_peer *p);
 void ctl_fn_link_new(struct ctl_link *l);
 void ctl_fn_link_free(struct ctl_link *l);
+
+void ctl_fn_sink_connected(struct ctl_sink *s);
+void ctl_fn_sink_disconnected(struct ctl_sink *s);
 
 void cli_fn_help(void);
 

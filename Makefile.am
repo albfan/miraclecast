@@ -133,6 +133,27 @@ miracle_wifictl_LDADD = \
 miracle_wifictl_LDFLAGS = $(AM_LDFLAGS)
 
 #
+# miracle-sinkctl
+#
+
+bin_PROGRAMS += miracle-sinkctl
+
+miracle_sinkctl_SOURCES = \
+	src/ctl/ctl.h \
+	src/ctl/ctl-cli.c \
+	src/ctl/ctl-sink.c \
+	src/ctl/ctl-wifi.c \
+	src/ctl/sinkctl.c
+miracle_sinkctl_CPPFLAGS = \
+	$(AM_CPPFLAGS) \
+	$(DEPS_CFLAGS)
+miracle_sinkctl_LDADD = \
+	libmiracle-shared.la \
+	-lreadline \
+	$(DEPS_LIBS)
+miracle_sinkctl_LDFLAGS = $(AM_LDFLAGS)
+
+#
 # miracle-dhcp
 #
 

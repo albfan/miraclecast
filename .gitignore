@@ -23,6 +23,7 @@ configure
 libtool
 m4/
 miracle-dhcp
+miracle-sinkctl
 miracle-wifictl
 miracle-wifid
 miraclectl
