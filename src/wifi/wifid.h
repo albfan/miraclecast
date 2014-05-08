@@ -47,6 +47,7 @@ bool supplicant_is_running(struct supplicant *s);
 bool supplicant_is_ready(struct supplicant *s);
 
 int supplicant_set_friendly_name(struct supplicant *s, const char *name);
+int supplicant_set_wfd_subelements(struct supplicant *s, const char *val);
 int supplicant_p2p_start_scan(struct supplicant *s);
 void supplicant_p2p_stop_scan(struct supplicant *s);
 bool supplicant_p2p_scanning(struct supplicant *s);
