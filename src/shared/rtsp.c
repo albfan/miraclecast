@@ -2586,7 +2586,9 @@ static int rtsp_call_reply(struct rtsp *bus, struct rtsp_message *reply)
 	uint64_t *elem;
 	int r;
 
-	if (!shl_htable_lookup_u64(&bus->waiting, reply->cookie, &elem))
+	if (!shl_htable_lookup_u64(&bus->waiting,
+				   reply->cookie & ~RTSP_FLAG_REMOTE_COOKIE,
+				   &elem))
 		return 0;
 
 	m = rtsp_message_from_htable(elem);
