@@ -1864,11 +1864,13 @@ int supplicant_p2p_start_scan(struct supplicant *s)
 	 *
 	 * Note that we could make this synchronous, but there's no real gain.
 	 * You still don't get any meaningful errors from wpa_supplicant, so
-	 * there's really no use to it.
+	 * there's really no use to it. Moreover, wpas' state tracking is quite
+	 * unreliable so we can never know whether we're really still scanning.
+	 * Therefore, we send the P2P_FIND on _each_ start_scan() request. It's
+	 * the callers responsibility to send it in proper intervals or after
+	 * they issues other wpas calls. Yes, this is ugly but currently the
+	 * only way to make this work reliably.
 	 */
-
-	if (s->p2p_scanning)
-		return 0;
 
 	r = wpas_message_new_request(s->bus_global,
 				     "P2P_FIND",
