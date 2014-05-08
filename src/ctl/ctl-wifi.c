@@ -195,14 +195,6 @@ static int ctl_peer_parse_properties(struct ctl_peer *p,
 		}
 	}
 
-	if (connected_set && p->connected != connected) {
-		p->connected = connected;
-		if (p->connected)
-			ctl_fn_peer_connected(p);
-		else
-			ctl_fn_peer_disconnected(p);
-	}
-
 	if (interface) {
 		tmp = strdup(interface);
 		if (tmp) {
@@ -241,6 +233,15 @@ static int ctl_peer_parse_properties(struct ctl_peer *p,
 		} else {
 			cli_vENOMEM();
 		}
+	}
+
+	/* do notifications last */
+	if (connected_set && p->connected != connected) {
+		p->connected = connected;
+		if (p->connected)
+			ctl_fn_peer_connected(p);
+		else
+			ctl_fn_peer_disconnected(p);
 	}
 
 	return 0;
