@@ -40,8 +40,8 @@
  * Helpers for interactive commands
  */
 
-static sd_event *cli_event;
-static sd_bus *cli_bus;
+sd_event *cli_event;
+sd_bus *cli_bus;
 static sd_event_source *cli_sigs[_NSIG];
 static sd_event_source *cli_stdin;
 static bool cli_rl;

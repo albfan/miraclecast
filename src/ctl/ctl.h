@@ -216,6 +216,9 @@ struct cli_cmd {
 	const char *desc;
 };
 
+extern sd_event *cli_event;
+extern sd_bus *cli_bus;
+
 int cli_init(sd_bus *bus, const struct cli_cmd *cmds);
 void cli_destroy(void);
 int cli_run(void);
