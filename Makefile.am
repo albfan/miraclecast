@@ -72,6 +72,8 @@ AM_LIBADD = \
 noinst_LTLIBRARIES += libmiracle-shared.la
 
 libmiracle_shared_la_SOURCES = \
+	src/shared/rtsp.h \
+	src/shared/rtsp.c \
 	src/shared/shl_dlist.h \
 	src/shared/shl_htable.h \
 	src/shared/shl_htable.c \
@@ -178,6 +180,7 @@ miracled_LDFLAGS = $(AM_LDFLAGS)
 #
 
 tests = \
+	test_rtsp \
 	test_wpas
 
 if BUILD_HAVE_CHECK
