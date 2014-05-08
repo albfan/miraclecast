@@ -832,6 +832,23 @@ static void supplicant_parse_peer(struct supplicant *s,
 			sp->wfd_subelements = t;
 			peer_supplicant_wfd_subelements_changed(sp->p);
 		}
+	} else {
+		/* TODO: wfd_dev_info only contains the dev-info sub-elem,
+		 * while wfd_sublemens contains all. Fix that! The user has no
+		 * chance to distinguish both.
+		 * We currently use it only as boolen (set/unset) but once we
+		 * parse it we _definitely_ have to provide proper data. */
+		r = wpas_message_dict_read(m, "wfd_dev_info", 's', &val);
+		if (r >= 0) {
+			t = strdup(val);
+			if (!t) {
+				log_vENOMEM();
+			} else {
+				free(sp->wfd_subelements);
+				sp->wfd_subelements = t;
+				peer_supplicant_wfd_subelements_changed(sp->p);
+			}
+		}
 	}
 
 	if (s->running)
@@ -871,7 +888,7 @@ static void supplicant_event_p2p_device_found(struct supplicant *s,
 
 	/*
 	 * The P2P-DEVICE-FOUND event is quite small. Request a full
-	 * peer-report and only use the peer once it returns.
+	 * peer-report.
 	 */
 
 	r = wpas_message_dict_read(ev, "p2p_dev_addr", 's', &mac);
@@ -880,6 +897,8 @@ static void supplicant_event_p2p_device_found(struct supplicant *s,
 			  wpas_message_get_raw(ev));
 		return;
 	}
+
+	supplicant_parse_peer(s, ev);
 
 	r = wpas_message_new_request(s->bus_global,
 				     "P2P_PEER",
