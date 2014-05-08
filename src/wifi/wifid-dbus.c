@@ -864,7 +864,7 @@ int manager_dbus_connect(struct manager *m)
 	return 0;
 
 error:
-	log_ERR(r);
+	log_vERR(r);
 error_silent:
 	manager_dbus_disconnect(m);
 	return r;

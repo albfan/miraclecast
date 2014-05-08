@@ -181,7 +181,7 @@ static int ctl_peer_parse_properties(struct ctl_peer *p,
 			free(p->p2p_mac);
 			p->p2p_mac = tmp;
 		} else {
-			cli_ENOMEM();
+			cli_vENOMEM();
 		}
 	}
 
@@ -191,7 +191,7 @@ static int ctl_peer_parse_properties(struct ctl_peer *p,
 			free(p->friendly_name);
 			p->friendly_name = tmp;
 		} else {
-			cli_ENOMEM();
+			cli_vENOMEM();
 		}
 	}
 
@@ -209,7 +209,7 @@ static int ctl_peer_parse_properties(struct ctl_peer *p,
 			free(p->interface);
 			p->interface = tmp;
 		} else {
-			cli_ENOMEM();
+			cli_vENOMEM();
 		}
 	}
 
@@ -219,7 +219,7 @@ static int ctl_peer_parse_properties(struct ctl_peer *p,
 			free(p->local_address);
 			p->local_address = tmp;
 		} else {
-			cli_ENOMEM();
+			cli_vENOMEM();
 		}
 	}
 
@@ -229,7 +229,7 @@ static int ctl_peer_parse_properties(struct ctl_peer *p,
 			free(p->remote_address);
 			p->remote_address = tmp;
 		} else {
-			cli_ENOMEM();
+			cli_vENOMEM();
 		}
 	}
 
@@ -239,7 +239,7 @@ static int ctl_peer_parse_properties(struct ctl_peer *p,
 			free(p->wfd_subelements);
 			p->wfd_subelements = tmp;
 		} else {
-			cli_ENOMEM();
+			cli_vENOMEM();
 		}
 	}
 
@@ -481,7 +481,7 @@ static int ctl_link_parse_properties(struct ctl_link *l,
 			free(l->ifname);
 			l->ifname = tmp;
 		} else {
-			cli_ENOMEM();
+			cli_vENOMEM();
 		}
 	}
 
@@ -491,7 +491,7 @@ static int ctl_link_parse_properties(struct ctl_link *l,
 			free(l->friendly_name);
 			l->friendly_name = tmp;
 		} else {
-			cli_ENOMEM();
+			cli_vENOMEM();
 		}
 	}
 
@@ -504,7 +504,7 @@ static int ctl_link_parse_properties(struct ctl_link *l,
 			free(l->wfd_subelements);
 			l->wfd_subelements = tmp;
 		} else {
-			cli_ENOMEM();
+			cli_vENOMEM();
 		}
 	}
 
