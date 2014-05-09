@@ -2478,12 +2478,13 @@ int supplicant_start(struct supplicant *s)
 		goto error;
 
 	/* add initial 200ms startup timer */
-	r = sd_event_add_monotonic(s->l->m->event,
-				   &s->timer_source,
-				   shl_now(CLOCK_MONOTONIC) + 200 * 1000ULL,
-				   0,
-				   supplicant_timer_fn,
-				   s);
+	r = sd_event_add_time(s->l->m->event,
+			      &s->timer_source,
+			      CLOCK_MONOTONIC,
+			      shl_now(CLOCK_MONOTONIC) + 200 * 1000ULL,
+			      0,
+			      supplicant_timer_fn,
+			      s);
 	if (r < 0) {
 		log_vERR(r);
 		goto error;

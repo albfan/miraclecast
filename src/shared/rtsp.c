@@ -2671,12 +2671,13 @@ static int rtsp_link_waiting(struct rtsp_message *m)
 
 	/* no need to wait for timeout if no-body listens */
 	if (m->bus->event && m->cb_fn) {
-		r = sd_event_add_monotonic(m->bus->event,
-					   &m->timer_source,
-					   m->timeout,
-					   0,
-					   rtsp_timer_fn,
-					   m);
+		r = sd_event_add_time(m->bus->event,
+				      &m->timer_source,
+				      CLOCK_MONOTONIC,
+				      m->timeout,
+				      0,
+				      rtsp_timer_fn,
+				      m);
 		if (r < 0)
 			goto error;
 
@@ -3046,12 +3047,13 @@ int rtsp_attach_event(struct rtsp *bus, sd_event *event, int priority)
 		if (!m->cb_fn)
 			continue;
 
-		r = sd_event_add_monotonic(bus->event,
-					   &m->timer_source,
-					   m->timeout,
-					   0,
-					   rtsp_timer_fn,
-					   m);
+		r = sd_event_add_time(bus->event,
+				      &m->timer_source,
+				      CLOCK_MONOTONIC,
+				      m->timeout,
+				      0,
+				      rtsp_timer_fn,
+				      m);
 		if (r < 0)
 			goto error;
 

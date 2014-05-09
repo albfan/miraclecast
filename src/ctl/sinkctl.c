@@ -252,12 +252,13 @@ static void schedule_timeout(sd_event_source **out,
 		if (r < 0)
 			cli_vERR(r);
 	} else {
-		r = sd_event_add_monotonic(cli_event,
-					   out,
-					   rel_usec,
-					   0,
-					   timeout_fn,
-					   data);
+		r = sd_event_add_time(cli_event,
+				      out,
+				      CLOCK_MONOTONIC,
+				      rel_usec,
+				      0,
+				      timeout_fn,
+				      data);
 		if (r < 0)
 			cli_vERR(r);
 	}

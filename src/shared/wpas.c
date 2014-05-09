@@ -1565,12 +1565,17 @@ int wpas_attach_event(struct wpas *w, sd_event *event, int priority)
 	if (r < 0)
 		goto error;
 
-	r = sd_event_add_monotonic(w->event,
-				   &w->timer_source,
-				   0,
-				   0,
-				   wpas_timer_fn,
-				   w);
+	r = sd_event_add_time(w->event,
+			      &w->timer_source,
+			      CLOCK_MONOTONIC,
+			      0,
+			      0,
+			      wpas_timer_fn,
+			      w);
+	if (r < 0)
+		goto error;
+
+	r = sd_event_source_set_enabled(w->timer_source, SD_EVENT_OFF);
 	if (r < 0)
 		goto error;
 
