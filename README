@@ -18,13 +18,11 @@ Website:
 == Requirements ==
 
   The MiracleCast projects requires the following software to be installed:
-    - libwfd: A stand-alone library implementing the Wifi-Display protocol.
-              http://www.freedesktop.org/wiki/Software/miracle/libwfd
-      required: >=libwfd-1
-
     - systemd: A system management daemon. It is used for device-management
                (udev), dbus management (sd-bus) and service management.
-      required: >=systemd-209
+               Systemd must be compiled with --enable-kdbus, even though kdbus
+               isn't used, but only the independent, experimental sd-libraries.
+      required: >=systemd-212
 
     - glib: A utility library. Used by the current DHCP implementation. Will
             be removed once sd-dns gains DHCP-server capabilities.
@@ -33,10 +31,6 @@ Website:
     - check: Test-suite for C programs. Used for optional tests of the
              MiracleCast code base.
       optional: ~=check-0.9.11 (might work with older releases, untested..)
-
-  Note that systemd-209 is not released, yet. However, several unreleased
-  interfaces of it are used. Please see the MiracleCast website for hints how
-  you can use it right now.
 
 == Download ==
 
@@ -59,7 +53,7 @@ Website:
 
 == License ==
 
-  This software is licensed under the terms of an MIT-like license. Please see
+  This software is licensed under the terms of the GNU-LGPL license. Please see
   ./COPYING for further information.
 
 == Contact ==
