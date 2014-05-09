@@ -30,7 +30,9 @@
 #include <sys/time.h>
 #include <systemd/sd-bus.h>
 #include <systemd/sd-event.h>
+#include <systemd/sd-journal.h>
 #include <time.h>
+#include <unistd.h>
 #include "ctl.h"
 #include "shl_macro.h"
 #include "shl_util.h"
@@ -42,6 +44,7 @@ static sd_event_source *scan_timeout;
 static sd_event_source *sink_timeout;
 static unsigned int sink_timeout_time;
 static bool sink_connected;
+static pid_t sink_pid;
 
 static char *bound_link;
 static struct ctl_link *running_link;
@@ -314,10 +317,82 @@ static const struct cli_cmd cli_cmds[] = {
 	{ },
 };
 
+static void spawn_gst(void)
+{
+	char *argv[64];
+	pid_t pid;
+	int fd_journal, i;
+	sigset_t mask;
+
+	if (sink_pid > 0)
+		return;
+
+	pid = fork();
+	if (pid < 0) {
+		return cli_vERRNO();
+	} else if (!pid) {
+		/* child */
+
+		sigemptyset(&mask);
+		sigprocmask(SIG_SETMASK, &mask, NULL);
+
+		/* redirect stdout/stderr to journal */
+		fd_journal = sd_journal_stream_fd("miracle-sinkctl-gst",
+						  LOG_INFO,
+						  false);
+		if (fd_journal >= 0) {
+			/* dup journal-fd to stdout and stderr */
+			dup2(fd_journal, 1);
+			dup2(fd_journal, 2);
+		} else {
+			/* no journal? redirect stdout to parent's stderr */
+			dup2(2, 1);
+		}
+
+		i = 0;
+		argv[i++] = (char*) "/usr/bin/gst-launch-1.0";
+		argv[i++] = "-v";
+		if (cli_max_sev >= 7)
+			argv[i++] = "--gst-debug=3";
+		argv[i++] = "udpsrc";
+		argv[i++] = "port=1991";
+		argv[i++] = "caps=\"application/x-rtp, media=video\"";
+		argv[i++] = "!";
+		argv[i++] = "rtpjitterbuffer";
+		argv[i++] = "!";
+		argv[i++] = "rtpmp2tdepay";
+		argv[i++] = "!";
+		argv[i++] = "tsdemux";
+		argv[i++] = "!";
+		argv[i++] = "h264parse";
+		argv[i++] = "!";
+		argv[i++] = "avdec_h264";
+		argv[i++] = "!";
+		argv[i++] = "autovideosink";
+		argv[i++] = "sync=false";
+		argv[i] = NULL;
+
+		execve(argv[0], argv, environ);
+		_exit(1);
+	} else {
+		sink_pid = pid;
+	}
+}
+
+static void kill_gst(void)
+{
+	if (sink_pid <= 0)
+		return;
+
+	kill(sink_pid, SIGTERM);
+	sink_pid = 0;
+}
+
 void ctl_fn_sink_connected(struct ctl_sink *s)
 {
 	cli_notice("SINK connected");
 	sink_connected = true;
+	spawn_gst();
 }
 
 void ctl_fn_sink_disconnected(struct ctl_sink *s)
@@ -350,6 +425,7 @@ void ctl_fn_peer_free(struct ctl_peer *p)
 		cli_printf("no longer running on peer %s\n",
 			   running_peer->label);
 		stop_timeout(&sink_timeout);
+		kill_gst();
 		ctl_sink_close(sink);
 		running_peer = NULL;
 		stop_timeout(&scan_timeout);
@@ -419,6 +495,7 @@ void ctl_fn_peer_disconnected(struct ctl_peer *p)
 		cli_printf("no longer running on peer %s\n",
 			   running_peer->label);
 		stop_timeout(&sink_timeout);
+		kill_gst();
 		ctl_sink_close(sink);
 		running_peer = NULL;
 		stop_timeout(&scan_timeout);

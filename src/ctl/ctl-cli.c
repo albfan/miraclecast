@@ -27,6 +27,7 @@
 #include <string.h>
 #include <strings.h>
 #include <sys/signalfd.h>
+#include <sys/wait.h>
 #include <systemd/sd-bus.h>
 #include "ctl.h"
 #include "shl_macro.h"
@@ -228,6 +229,7 @@ static int cli_signal_fn(sd_event_source *source,
 {
 	if (ssi->ssi_signo == SIGCHLD) {
 		cli_debug("caught SIGCHLD for %d", (int)ssi->ssi_pid);
+		waitid(P_PID, ssi->ssi_pid, NULL, WNOHANG|WEXITED);
 	} else if (ssi->ssi_signo == SIGINT) {
 		rl_replace_line("", 0);
 		rl_crlf();
