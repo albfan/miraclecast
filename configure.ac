@@ -40,7 +40,7 @@ LT_INIT
 # Mandatory dependencies
 #
 
-PKG_CHECK_MODULES([DEPS], [libwfd libudev libsystemd-daemon >= 208])
+PKG_CHECK_MODULES([DEPS], [libudev libsystemd-daemon >= 208])
 PKG_CHECK_MODULES([GDHCP], [glib-2.0])
 
 AC_CHECK_HEADERS(readline/readline.h,, AC_MSG_ERROR(GNU readline not found))
