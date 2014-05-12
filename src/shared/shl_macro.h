@@ -1,7 +1,7 @@
 /*
  * SHL - Macros
  *
- * Copyright (c) 2011-2013 David Herrmann <dh.herrmann@gmail.com>
+ * Copyright (c) 2011-2014 David Herrmann <dh.herrmann@gmail.com>
  * Dedicated to the Public Domain
  */
 
@@ -18,6 +18,7 @@
 #include <limits.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 /* sanity checks required for some macros */
 #if __SIZEOF_POINTER__ != 4 && __SIZEOF_POINTER__ != 8
@@ -49,6 +50,14 @@ static inline void shl_freep(void *p)
 }
 
 #define _shl_free_ _shl_cleanup_(shl_freep)
+
+static inline void shl_closep(int *p)
+{
+	if (*p >= 0)
+		close(*p);
+}
+
+#define _shl_close_ _shl_cleanup_(shl_closep)
 
 static inline void shl_set_errno(int *r)
 {
@@ -127,7 +136,14 @@ static inline void shl_set_errno(int *r)
 /* align to next higher power-of-2 (except for: 0 => 0, overflow => 0) */
 static inline size_t SHL_ALIGN_POWER2(size_t u)
 {
-	return 1ULL << ((sizeof(u) * 8ULL) - __builtin_clzll(u - 1ULL));
+	unsigned int shift;
+
+	/* clz(0) is undefined */
+	if (u == 1)
+		return 1;
+
+	shift = sizeof(unsigned long long) * 8ULL - __builtin_clzll(u - 1ULL);
+	return 1ULL << shift;
 }
 
 /* zero memory or type */
