@@ -106,9 +106,9 @@ static int ctl_peer_parse_properties(struct ctl_peer *p,
 	const char *t, *p2p_mac = NULL, *friendly_name = NULL;
 	const char *interface = NULL, *local_address = NULL;
 	const char *remote_address = NULL, *wfd_subelements = NULL;
-	bool connected, connected_set = false;
+	bool connected_set = false;
 	char *tmp;
-	int r;
+	int connected, r;
 
 	if (!p || !m)
 		return cli_EINVAL();
@@ -413,9 +413,9 @@ static int ctl_link_parse_properties(struct ctl_link *l,
 	const char *t, *interface_name = NULL, *friendly_name = NULL;
 	const char *wfd_subelements = NULL;
 	unsigned int interface_index = 0;
-	bool p2p_scanning, p2p_scanning_set = false;
+	bool p2p_scanning_set = false;
 	char *tmp;
-	int r;
+	int p2p_scanning, r;
 
 	if (!l || !m)
 		return cli_EINVAL();

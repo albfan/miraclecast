@@ -20,7 +20,6 @@
 #define LOG_SUBSYSTEM "dbus"
 
 #include <errno.h>
-#include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
 #include <systemd/sd-bus.h>
@@ -558,8 +557,7 @@ static int link_dbus_set_p2p_scanning(sd_bus *bus,
 				      sd_bus_error *err)
 {
 	struct link *l = data;
-	bool val;
-	int r;
+	int val, r;
 
 	r = sd_bus_message_read(value, "b", &val);
 	if (r < 0)
