@@ -982,7 +982,7 @@ static int ctl_wifi_init(struct ctl_wifi *w)
 {
 	int r;
 
-	r = sd_bus_add_match(w->bus,
+	r = sd_bus_add_match(w->bus, NULL,
 			     "type='signal',"
 			     "sender='org.freedesktop.miracle.wifi',"
 			     "interface='org.freedesktop.DBus.ObjectManager'",
@@ -991,7 +991,7 @@ static int ctl_wifi_init(struct ctl_wifi *w)
 	if (r < 0)
 		return r;
 
-	r = sd_bus_add_match(w->bus,
+	r = sd_bus_add_match(w->bus, NULL,
 			     "type='signal',"
 			     "sender='org.freedesktop.miracle.wifi',"
 			     "interface='org.freedesktop.DBus.Properties'",
@@ -1000,7 +1000,7 @@ static int ctl_wifi_init(struct ctl_wifi *w)
 	if (r < 0)
 		return r;
 
-	r = sd_bus_add_match(w->bus,
+	r = sd_bus_add_match(w->bus, NULL,
 			     "type='signal',"
 			     "sender='org.freedesktop.miracle.wifi',"
 			     "interface='org.freedesktop.miracle.wifi.Peer'",
@@ -1014,24 +1014,7 @@ static int ctl_wifi_init(struct ctl_wifi *w)
 
 static void ctl_wifi_destroy(struct ctl_wifi *w)
 {
-	sd_bus_remove_match(w->bus,
-			    "type='signal',"
-			    "sender='org.freedesktop.miracle.wifi',"
-			    "interface='org.freedesktop.miracle.wifi.Peer'",
-			    ctl_wifi_peer_fn,
-			    w);
-	sd_bus_remove_match(w->bus,
-			    "type='signal',"
-			    "sender='org.freedesktop.miracle.wifi',"
-			    "interface='org.freedesktop.DBus.Properties'",
-			    ctl_wifi_properties_fn,
-			    w);
-	sd_bus_remove_match(w->bus,
-			    "type='signal',"
-			    "sender='org.freedesktop.miracle.wifi',"
-			    "interface='org.freedesktop.DBus.ObjectManager'",
-			    ctl_wifi_object_fn,
-			    w);
+
 }
 
 int ctl_wifi_new(struct ctl_wifi **out, sd_bus *bus)

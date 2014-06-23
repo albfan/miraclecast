@@ -817,7 +817,7 @@ int manager_dbus_connect(struct manager *m)
 {
 	int r;
 
-	r = sd_bus_add_object_vtable(m->bus,
+	r = sd_bus_add_object_vtable(m->bus, NULL,
 				     "/org/freedesktop/miracle/wifi",
 				     "org.freedesktop.miracle.wifi.Manager",
 				     manager_dbus_vtable,
@@ -825,14 +825,14 @@ int manager_dbus_connect(struct manager *m)
 	if (r < 0)
 		goto error;
 
-	r = sd_bus_add_node_enumerator(m->bus,
+	r = sd_bus_add_node_enumerator(m->bus, NULL,
 				       "/org/freedesktop/miracle/wifi",
 				       manager_dbus_enumerate,
 				       m);
 	if (r < 0)
 		goto error;
 
-	r = sd_bus_add_fallback_vtable(m->bus,
+	r = sd_bus_add_fallback_vtable(m->bus, NULL,
 				       "/org/freedesktop/miracle/wifi/link",
 				       "org.freedesktop.miracle.wifi.Link",
 				       link_dbus_vtable,
@@ -841,7 +841,7 @@ int manager_dbus_connect(struct manager *m)
 	if (r < 0)
 		goto error;
 
-	r = sd_bus_add_fallback_vtable(m->bus,
+	r = sd_bus_add_fallback_vtable(m->bus, NULL,
 				       "/org/freedesktop/miracle/wifi/peer",
 				       "org.freedesktop.miracle.wifi.Peer",
 				       peer_dbus_vtable,
@@ -850,7 +850,7 @@ int manager_dbus_connect(struct manager *m)
 	if (r < 0)
 		goto error;
 
-	r = sd_bus_add_object_manager(m->bus, "/org/freedesktop/miracle/wifi");
+	r = sd_bus_add_object_manager(m->bus, NULL, "/org/freedesktop/miracle/wifi");
 	if (r < 0)
 		goto error;
 
@@ -876,26 +876,4 @@ void manager_dbus_disconnect(struct manager *m)
 		return;
 
 	sd_bus_release_name(m->bus, "org.freedesktop.miracle.wifi");
-	sd_bus_remove_object_manager(m->bus, "/org/freedesktop/miracle/wifi");
-	sd_bus_remove_fallback_vtable(m->bus,
-				      "/org/freedesktop/miracle/wifi/peer",
-				      "org.freedesktop.miracle.wifi.Peer",
-				      peer_dbus_vtable,
-				      peer_dbus_find,
-				      m);
-	sd_bus_remove_fallback_vtable(m->bus,
-				      "/org/freedesktop/miracle/wifi/link",
-				      "org.freedesktop.miracle.wifi.Link",
-				      link_dbus_vtable,
-				      link_dbus_find,
-				      m);
-	sd_bus_remove_node_enumerator(m->bus,
-				      "/org/freedesktop/miracle/wifi",
-				      manager_dbus_enumerate,
-				      m);
-	sd_bus_remove_object_vtable(m->bus,
-				    "/org/freedesktop/miracle/wifi",
-				    "org.freedesktop.miracle.wifi.Manager",
-				    manager_dbus_vtable,
-				    m);
 }
