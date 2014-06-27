@@ -40,6 +40,7 @@ struct ctl_sink {
 	sd_event *event;
 
 	char *target;
+	char *session;
 	struct sockaddr_storage addr;
 	size_t addr_size;
 	int fd;
@@ -134,6 +135,48 @@ static void sink_handle_get_parameter(struct ctl_sink *s,
 		return cli_vERR(r);
 }
 
+static int sink_setup_fn(struct rtsp *bus, struct rtsp_message *m, void *data)
+{
+	_rtsp_message_unref_ struct rtsp_message *rep = NULL;
+	struct ctl_sink *s = data;
+	const char *session;
+	char *ns;
+	int r;
+
+	cli_debug("INCOMING: %s\n", rtsp_message_get_raw(m));
+
+	r = rtsp_message_read(m, "<s>", "Session", &session);
+	if (r < 0)
+		return cli_ERR(r);
+
+	ns = strdup(session);
+	if (!ns)
+		return cli_ENOMEM();
+
+	free(s->session);
+	s->session = ns;
+
+	r = rtsp_message_new_request(s->rtsp,
+				     &rep,
+				     "PLAY",
+				     "rtsp://localhost/wfd1.0/streamid=0");
+	if (r < 0)
+		return cli_ERR(r);
+
+	r = rtsp_message_append(rep, "<s>", "Session", s->session);
+	if (r < 0)
+		return cli_ERR(r);
+
+	rtsp_message_seal(rep);
+	cli_debug("OUTGOING: %s\n", rtsp_message_get_raw(rep));
+
+	r = rtsp_call_async(s->rtsp, rep, sink_req_fn, NULL, 0, NULL);
+	if (r < 0)
+		return cli_ERR(r);
+
+	return 0;
+}
+
 static void sink_handle_set_parameter(struct ctl_sink *s,
 				      struct rtsp_message *m)
 {
@@ -176,24 +219,7 @@ static void sink_handle_set_parameter(struct ctl_sink *s,
 		rtsp_message_seal(rep);
 		cli_debug("OUTGOING: %s\n", rtsp_message_get_raw(rep));
 
-		r = rtsp_call_async(s->rtsp, rep, sink_req_fn, NULL, 0, NULL);
-		if (r < 0)
-			return cli_vERR(r);
-
-		rtsp_message_unref(rep);
-		rep = NULL;
-
-		r = rtsp_message_new_request(s->rtsp,
-					     &rep,
-					     "PLAY",
-					     "rtsp://localhost/wfd1.0/streamid=0");
-		if (r < 0)
-			return cli_vERR(r);
-
-		rtsp_message_seal(rep);
-		cli_debug("OUTGOING: %s\n", rtsp_message_get_raw(rep));
-
-		r = rtsp_call_async(s->rtsp, rep, sink_req_fn, NULL, 0, NULL);
+		r = rtsp_call_async(s->rtsp, rep, sink_setup_fn, s, 0, NULL);
 		if (r < 0)
 			return cli_vERR(r);
 	}
@@ -406,6 +432,7 @@ void ctl_sink_free(struct ctl_sink *s)
 
 	ctl_sink_close(s);
 	free(s->target);
+	free(s->session);
 	sd_event_unref(s->event);
 	free(s);
 }
