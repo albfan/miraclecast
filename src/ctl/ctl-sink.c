@@ -41,6 +41,7 @@ struct ctl_sink {
 
 	char *target;
 	char *session;
+	char *url;
 	struct sockaddr_storage addr;
 	size_t addr_size;
 	int fd;
@@ -159,7 +160,7 @@ static int sink_setup_fn(struct rtsp *bus, struct rtsp_message *m, void *data)
 	r = rtsp_message_new_request(s->rtsp,
 				     &rep,
 				     "PLAY",
-				     "rtsp://localhost/wfd1.0/streamid=0");
+				     s->url);
 	if (r < 0)
 		return cli_ERR(r);
 
@@ -182,6 +183,8 @@ static void sink_handle_set_parameter(struct ctl_sink *s,
 {
 	_rtsp_message_unref_ struct rtsp_message *rep = NULL;
 	const char *trigger;
+	const char *url;
+	char *nu;
 	int r;
 
 	r = rtsp_message_new_reply_for(m, &rep, 200, NULL);
@@ -198,15 +201,35 @@ static void sink_handle_set_parameter(struct ctl_sink *s,
 	rtsp_message_unref(rep);
 	rep = NULL;
 
+	/* M4 (or any other) can pass presentation URLs */
+	r = rtsp_message_read(m, "{<s>}", "wfd_presentation_URL", &url);
+	if (r >= 0) {
+		if (!s->url || strcmp(s->url, url)) {
+			nu = strdup(url);
+			if (!nu)
+				return cli_vENOMEM();
+
+			free(s->url);
+			s->url = nu;
+			cli_debug("Got URL: %s\n", s->url);
+		}
+	}
+
+	/* M5 */
 	r = rtsp_message_read(m, "{<s>}", "wfd_trigger_method", &trigger);
 	if (r < 0)
 		return;
 
 	if (!strcmp(trigger, "SETUP")) {
+		if (!s->url) {
+			cli_error("No valid wfd_presentation_URL\n");
+			return;
+		}
+
 		r = rtsp_message_new_request(s->rtsp,
 					     &rep,
 					     "SETUP",
-					     "rtsp://localhost/wfd1.0/streamid=0");
+					     s->url);
 		if (r < 0)
 			return cli_vERR(r);
 
@@ -433,6 +456,7 @@ void ctl_sink_free(struct ctl_sink *s)
 	ctl_sink_close(s);
 	free(s->target);
 	free(s->session);
+	free(s->url);
 	sd_event_unref(s->event);
 	free(s);
 }
