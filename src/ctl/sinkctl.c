@@ -464,6 +464,21 @@ void ctl_fn_peer_provision_discovery(struct ctl_peer *p,
 	}
 }
 
+void ctl_fn_peer_formation_failure(struct ctl_peer *p, const char *reason)
+{
+	if (p->l != running_link || shl_isempty(p->wfd_subelements))
+		return;
+
+	if (cli_running())
+		cli_printf("[" CLI_YELLOW "FAIL" CLI_DEFAULT "] Peer: %s Reason: %s\n",
+			   p->label, reason);
+
+	if (!running_peer) {
+		stop_timeout(&scan_timeout);
+		ctl_link_set_p2p_scanning(p->l, true);
+	}
+}
+
 void ctl_fn_peer_connected(struct ctl_peer *p)
 {
 	if (p->l != running_link || shl_isempty(p->wfd_subelements))

@@ -946,13 +946,8 @@ static int ctl_wifi_peer_fn(sd_bus *bus,
 	_shl_free_ char *label = NULL;
 	struct ctl_wifi *w = data;
 	struct ctl_peer *p;
-	const char *t, *prov, *pin;
+	const char *t;
 	int r;
-
-	if (!sd_bus_message_is_signal(m,
-				      "org.freedesktop.miracle.wifi.Peer",
-				      "ProvisionDiscovery"))
-		return 0;
 
 	t = sd_bus_message_get_path(m);
 	if (!t)
@@ -963,16 +958,36 @@ static int ctl_wifi_peer_fn(sd_bus *bus,
 			       &label);
 	if (r < 0) {
 		return cli_ERR(r);
+	} else if (r == 0) {
+		return 0;
 	} else if (r > 0) {
 		p = ctl_wifi_find_peer(w, label);
 		if (!p)
 			return 0;
+	}
+
+	if (sd_bus_message_is_signal(m,
+				     "org.freedesktop.miracle.wifi.Peer",
+				     "ProvisionDiscovery")) {
+		/* provision discovery */
+		const char *prov, *pin;
 
 		r = sd_bus_message_read(m, "ss", &prov, &pin);
 		if (r < 0)
 			return cli_log_parser(r);
 
 		ctl_fn_peer_provision_discovery(p, prov, pin);
+	} else if (sd_bus_message_is_signal(m,
+					    "org.freedesktop.miracle.wifi.Peer",
+					    "FormationFailure")) {
+		/* group formation failure */
+		const char *reason;
+
+		r = sd_bus_message_read(m, "s", &reason);
+		if (r < 0)
+			return cli_log_parser(r);
+
+		ctl_fn_peer_formation_failure(p, reason);
 	}
 
 	return 0;

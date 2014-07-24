@@ -408,6 +408,24 @@ void peer_dbus_provision_discovery(struct peer *p,
 		log_vERR(r);
 }
 
+void peer_dbus_formation_failure(struct peer *p, const char *reason)
+{
+	_shl_free_ char *node = NULL;
+	int r;
+
+	node = peer_dbus_get_path(p);
+	if (!node)
+		return;
+
+	r = sd_bus_emit_signal(p->l->m->bus,
+			       node,
+			       "org.freedesktop.miracle.wifi.Peer",
+			       "FormationFailure",
+			       "s", reason);
+	if (r < 0)
+		log_vERR(r);
+}
+
 void peer_dbus_added(struct peer *p)
 {
 	_shl_free_ char *node = NULL;

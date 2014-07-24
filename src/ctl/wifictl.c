@@ -364,6 +364,13 @@ void ctl_fn_peer_provision_discovery(struct ctl_peer *p,
 			   p->label, prov, pin);
 }
 
+void ctl_fn_peer_formation_failure(struct ctl_peer *p, const char *reason)
+{
+	if (cli_running())
+		cli_printf("[" CLI_YELLOW "FAIL" CLI_DEFAULT "] Peer: %s Reason: %s\n",
+			   p->label, reason);
+}
+
 void ctl_fn_peer_connected(struct ctl_peer *p)
 {
 	if (cli_running())

@@ -747,6 +747,8 @@ int supplicant_peer_connect(struct supplicant_peer *sp,
 	if (r < 0)
 		return log_ERR(r);
 
+	sp->s->pending = sp;
+
 	return 0;
 }
 
@@ -1220,6 +1222,23 @@ static void supplicant_event_p2p_group_removed(struct supplicant *s,
 	supplicant_group_free(g);
 }
 
+static void supplicant_event_p2p_group_formation_failure(struct supplicant *s,
+					       struct wpas_message *ev)
+{
+	struct peer *p;
+
+	/* There is no useful information in this event at all. Why would
+	 * anyone want to know to which group formation (or even peer?) this
+	 * event belongs to? No, we have to track all that ourselves, sigh.. */
+	if (s->pending) {
+		log_debug("peer %s connection failed",
+			  s->pending->friendly_name);
+		p = s->pending->p;
+		s->pending = NULL;
+		peer_supplicant_formation_failure(p, "unknown");
+	}
+}
+
 static void supplicant_event_ap_sta_connected(struct supplicant *s,
 					      struct wpas_message *ev)
 {
@@ -1365,6 +1384,8 @@ static void supplicant_event(struct supplicant *s, struct wpas_message *m)
 			supplicant_event_p2p_group_started(s, m);
 		else if (!strcmp(name, "P2P-GROUP-REMOVED"))
 			supplicant_event_p2p_group_removed(s, m);
+		else if (!strcmp(name, "P2P-GROUP-FORMATION-FAILURE"))
+			supplicant_event_p2p_group_formation_failure(s, m);
 		else if (!strcmp(name, "AP-STA-CONNECTED"))
 			supplicant_event_ap_sta_connected(s, m);
 		else if (!strcmp(name, "AP-STA-DISCONNECTED"))

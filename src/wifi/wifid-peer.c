@@ -200,6 +200,15 @@ void peer_supplicant_provision_discovery(struct peer *p,
 	peer_dbus_provision_discovery(p, prov, pin);
 }
 
+void peer_supplicant_formation_failure(struct peer *p,
+					 const char *reason)
+{
+	if (!p || !p->public)
+		return;
+
+	peer_dbus_formation_failure(p, reason);
+}
+
 void peer_supplicant_connected_changed(struct peer *p, bool connected)
 {
 	if (!p || p->connected == connected)
