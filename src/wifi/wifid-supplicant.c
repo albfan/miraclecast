@@ -644,6 +644,9 @@ static void supplicant_peer_free(struct supplicant_peer *sp)
 	supplicant_peer_drop_group(sp);
 	peer_supplicant_stopped(sp->p);
 	peer_free(sp->p);
+	/* free pending */
+	if (sp->s->pending == sp)
+		sp->s->pending = NULL;
 
 	free(sp->sta_mac);
 	free(sp->remote_addr);
@@ -705,6 +708,9 @@ int supplicant_peer_connect(struct supplicant_peer *sp,
 		return log_EINVAL();
 	if (sp->g)
 		return 0;
+
+	if (sp->s->pending && sp->s->pending != sp)
+		return log_ERR(-EALREADY);
 
 	if (!prov_type && !(prov_type = sp->prov))
 		prov_type = "pbc";
@@ -1902,6 +1908,8 @@ int supplicant_p2p_start_scan(struct supplicant *s)
 
 	if (!s->running || !s->has_p2p)
 		return log_EINVAL();
+
+	s->pending = NULL;
 
 	/*
 	 * This call is asynchronous. You can safely issue multiple of these
