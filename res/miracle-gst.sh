@@ -4,7 +4,7 @@ DEBUG='0'
 AUDIO='0'
 SCALE='0'
 
-while getopts "d:as" optname
+while getopts "d:as:" optname
   do
     case "$optname" in
       "d")
@@ -15,6 +15,8 @@ while getopts "d:as" optname
         ;;
       "s")
         SCALE='1'
+        WIDTH=`echo ${OPTARG} | tr -d ' ' | cut -dx -f 1`
+        HEIGHT=`echo ${OPTARG} | tr -d ' ' | cut -dx -f 2`
         ;;
       "?")
         echo "Unknown option $OPTARG"
@@ -43,7 +45,7 @@ RUN+="! queue max-size-buffers=0 max-size-time=0 ! h264parse ! avdec_h264 ! vide
 
 if [ $SCALE == '1' ]
 then
-  RUN+="videoscale method=1 ! video/x-raw,width=1280,height=800 ! "
+  RUN+="videoscale method=1 ! video/x-raw,width=${WIDTH},height=${HEIGHT} ! "
 fi
 
 RUN+="autovideosink "

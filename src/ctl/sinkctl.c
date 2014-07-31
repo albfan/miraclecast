@@ -50,6 +50,9 @@ static char *bound_link;
 static struct ctl_link *running_link;
 static struct ctl_peer *running_peer;
 
+char *gst_scale_res;
+int gst_audio_en = 1;
+
 /*
  * cmd list
  */
@@ -354,6 +357,12 @@ static void spawn_gst(void)
 		argv[i++] = (char*) BUILD_BINDIR "/miracle-gst.sh";
 		if (cli_max_sev >= 7)
 			argv[i++] = "-d 3";
+		if (gst_audio_en)
+			argv[i++] = "-a";
+		if (gst_scale_res) {
+			argv[i++] = "-s";
+			argv[i++] = gst_scale_res;
+		}
 		argv[i] = NULL;
 
 		execve(argv[0], argv, environ);
@@ -546,9 +555,11 @@ void cli_fn_help()
 	       "  -h --help             Show this help\n"
 	       "     --version          Show package version\n"
 	       "     --log-level <lvl>  Maximum level for log messages\n"
+	       "     --audio <0/1>      Enable audio support (default %d)\n"
+	       "     --scale WxH        Scale to resolution\n"
 	       "\n"
 	       "Commands:\n"
-	       , program_invocation_short_name);
+	       , program_invocation_short_name, gst_audio_en);
 	/*
 	 * 80-char barrier:
 	 *      01234567890123456789012345678901234567890123456789012345678901234567890123456789
@@ -614,11 +625,15 @@ static int parse_argv(int argc, char *argv[])
 	enum {
 		ARG_VERSION = 0x100,
 		ARG_LOG_LEVEL,
+		ARG_AUDIO,
+		ARG_SCALE,
 	};
 	static const struct option options[] = {
 		{ "help",	no_argument,		NULL,	'h' },
 		{ "version",	no_argument,		NULL,	ARG_VERSION },
 		{ "log-level",	required_argument,	NULL,	ARG_LOG_LEVEL },
+		{ "audio",	required_argument,	NULL,	ARG_AUDIO },
+		{ "scale",	required_argument,	NULL,	ARG_SCALE },
 		{}
 	};
 	int c;
@@ -632,6 +647,12 @@ static int parse_argv(int argc, char *argv[])
 			return 0;
 		case ARG_LOG_LEVEL:
 			cli_max_sev = atoi(optarg);
+			break;
+		case ARG_AUDIO:
+			gst_audio_en = atoi(optarg);
+			break;
+		case ARG_SCALE:
+			gst_scale_res = optarg;
 			break;
 		case '?':
 			return -EINVAL;
