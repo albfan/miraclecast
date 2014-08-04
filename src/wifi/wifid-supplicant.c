@@ -94,6 +94,17 @@ struct supplicant {
 	bool p2p_scanning : 1;
 };
 
+/* Device Password ID */
+enum wps_dev_password_id {
+	DEV_PW_DEFAULT = 0x0000,
+	DEV_PW_USER_SPECIFIED = 0x0001,
+	DEV_PW_MACHINE_SPECIFIED = 0x0002,
+	DEV_PW_REKEY = 0x0003,
+	DEV_PW_PUSHBUTTON = 0x0004,
+	DEV_PW_REGISTRAR_SPECIFIED = 0x0005,
+	DEV_PW_NFC_CONNECTION_HANDOVER = 0x0007
+};
+
 static void supplicant_failed(struct supplicant *s);
 static void supplicant_peer_drop_group(struct supplicant_peer *sp);
 
@@ -1007,6 +1018,50 @@ static void supplicant_event_p2p_prov_disc_pbc_req(struct supplicant *s,
 	}
 }
 
+static void supplicant_event_p2p_go_neg_request(struct supplicant *s,
+					       struct wpas_message *ev)
+{
+	struct supplicant_peer *sp;
+	const char *mac;
+	char *t;
+	int r;
+
+
+	r = wpas_message_read(ev, "s", &mac);
+	if (r < 0) {
+		log_debug("no p2p-mac in P2P-GO-NEG-REQUEST information: %s",
+			  wpas_message_get_raw(ev));
+		return;
+	}
+
+	sp = find_peer_by_p2p_mac(s, mac);
+	if (!sp) {
+		log_debug("stale P2P-GO-NEG-REQUEST: %s",
+			  wpas_message_get_raw(ev));
+		return;
+	}
+
+	/*
+	 * assume dev_passwd_id == 4 == DEV_PW_PUSHBUTTON
+	 */
+	t = strdup("pbc");
+	if (!t)
+		return log_vENOMEM();
+
+	free(sp->prov);
+	sp->prov = t;
+	free(sp->pin);
+	sp->pin = NULL;
+
+	if (!sp->g) {
+		log_debug("GO Negotiation Request from %s", mac);
+		peer_supplicant_provision_discovery(sp->p, sp->prov, sp->pin);
+	} else {
+		log_debug("GO Negotiation Request from already connected peer %s",
+			  mac);
+	}
+}
+
 static void supplicant_event_p2p_prov_disc_show_pin(struct supplicant *s,
 						    struct wpas_message *ev)
 {
@@ -1394,6 +1449,8 @@ static void supplicant_event(struct supplicant *s, struct wpas_message *m)
 			supplicant_event_p2p_prov_disc_enter_pin(s, m);
 		else if (!strcmp(name, "P2P-GO-NEG-SUCCESS"))
 			supplicant_event_p2p_go_neg_success(s, m);
+		else if (!strcmp(name, "P2P-GO-NEG-REQUEST"))
+			supplicant_event_p2p_go_neg_request(s, m);
 		else if (!strcmp(name, "P2P-GROUP-STARTED"))
 			supplicant_event_p2p_group_started(s, m);
 		else if (!strcmp(name, "P2P-GROUP-REMOVED"))
