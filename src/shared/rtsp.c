@@ -1028,7 +1028,7 @@ int rtsp_message_append_basic(struct rtsp_message *m,
 	int r;
 
 	va_start(args, type);
-	r = rtsp_message_appendv_basic(m, type, args);
+	r = rtsp_message_appendv_basic(m, type, &args);
 	va_end(args);
 
 	return r;
@@ -1036,7 +1036,7 @@ int rtsp_message_append_basic(struct rtsp_message *m,
 
 int rtsp_message_appendv_basic(struct rtsp_message *m,
 			       char type,
-			       va_list args)
+			       va_list *args)
 {
 	char buf[128] = { };
 	const char *orig;
@@ -1050,7 +1050,7 @@ int rtsp_message_appendv_basic(struct rtsp_message *m,
 
 	switch (type) {
 	case RTSP_TYPE_RAW:
-		orig = va_arg(args, const char*);
+		orig = va_arg(*args, const char*);
 		if (!orig)
 			orig = "";
 
@@ -1062,7 +1062,7 @@ int rtsp_message_appendv_basic(struct rtsp_message *m,
 		else
 			return rtsp_message_append_line(m, orig);
 	case RTSP_TYPE_HEADER_START:
-		orig = va_arg(args, const char*);
+		orig = va_arg(*args, const char*);
 
 		return rtsp_message_open_header(m, orig);
 	case RTSP_TYPE_HEADER_END:
@@ -1078,18 +1078,18 @@ int rtsp_message_appendv_basic(struct rtsp_message *m,
 
 	switch (type) {
 	case RTSP_TYPE_STRING:
-		orig = va_arg(args, const char*);
+		orig = va_arg(*args, const char*);
 		if (!orig)
 			orig = "";
 
 		break;
 	case RTSP_TYPE_INT32:
-		i32 = va_arg(args, int32_t);
+		i32 = va_arg(*args, int32_t);
 		sprintf(buf, "%" PRId32, i32);
 		orig = buf;
 		break;
 	case RTSP_TYPE_UINT32:
-		u32 = va_arg(args, uint32_t);
+		u32 = va_arg(*args, uint32_t);
 		sprintf(buf, "%" PRIu32, u32);
 		orig = buf;
 		break;
@@ -1108,7 +1108,7 @@ int rtsp_message_append(struct rtsp_message *m,
 	int r;
 
 	va_start(args, types);
-	r = rtsp_message_appendv(m, types, args);
+	r = rtsp_message_appendv(m, types, &args);
 	va_end(args);
 
 	return r;
@@ -1116,7 +1116,7 @@ int rtsp_message_append(struct rtsp_message *m,
 
 int rtsp_message_appendv(struct rtsp_message *m,
 			 const char *types,
-			 va_list args)
+			 va_list *args)
 {
 	int r;
 
@@ -1474,7 +1474,7 @@ int rtsp_message_read_basic(struct rtsp_message *m,
 	int r;
 
 	va_start(args, type);
-	r = rtsp_message_readv_basic(m, type, args);
+	r = rtsp_message_readv_basic(m, type, &args);
 	va_end(args);
 
 	return r;
@@ -1482,7 +1482,7 @@ int rtsp_message_read_basic(struct rtsp_message *m,
 
 int rtsp_message_readv_basic(struct rtsp_message *m,
 			     char type,
-			     va_list args)
+			     va_list *args)
 {
 	const char *key;
 	const char **out_str, *entry;
@@ -1499,13 +1499,13 @@ int rtsp_message_readv_basic(struct rtsp_message *m,
 		if (!m->iter_header)
 			return -EINVAL;
 
-		out_str = va_arg(args, const char**);
+		out_str = va_arg(*args, const char**);
 		if (out_str)
 			*out_str = m->iter_header->value ? : "";
 
 		return 0;
 	case RTSP_TYPE_HEADER_START:
-		key = va_arg(args, const char*);
+		key = va_arg(*args, const char*);
 
 		return rtsp_message_enter_header(m, key);
 	case RTSP_TYPE_HEADER_END:
@@ -1527,7 +1527,7 @@ int rtsp_message_readv_basic(struct rtsp_message *m,
 
 	switch (type) {
 	case RTSP_TYPE_STRING:
-		out_str = va_arg(args, const char**);
+		out_str = va_arg(*args, const char**);
 		if (out_str)
 			*out_str = entry;
 
@@ -1536,7 +1536,7 @@ int rtsp_message_readv_basic(struct rtsp_message *m,
 		if (sscanf(entry, "%" SCNd32, &i32) != 1)
 			return -EINVAL;
 
-		out_i32 = va_arg(args, int32_t*);
+		out_i32 = va_arg(*args, int32_t*);
 		if (out_i32)
 			*out_i32 = i32;
 
@@ -1545,7 +1545,7 @@ int rtsp_message_readv_basic(struct rtsp_message *m,
 		if (sscanf(entry, "%" SCNu32, &u32) != 1)
 			return -EINVAL;
 
-		out_u32 = va_arg(args, uint32_t*);
+		out_u32 = va_arg(*args, uint32_t*);
 		if (out_u32)
 			*out_u32 = u32;
 
@@ -1567,7 +1567,7 @@ int rtsp_message_read(struct rtsp_message *m,
 	int r;
 
 	va_start(args, types);
-	r = rtsp_message_readv(m, types, args);
+	r = rtsp_message_readv(m, types, &args);
 	va_end(args);
 
 	return r;
@@ -1575,7 +1575,7 @@ int rtsp_message_read(struct rtsp_message *m,
 
 int rtsp_message_readv(struct rtsp_message *m,
 		       const char *types,
-		       va_list args)
+		       va_list *args)
 {
 	int r;
 

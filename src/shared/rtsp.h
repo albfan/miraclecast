@@ -217,13 +217,13 @@ int rtsp_message_append_basic(struct rtsp_message *m,
 			      ...);
 int rtsp_message_appendv_basic(struct rtsp_message *m,
 			       char type,
-			       va_list args);
+			       va_list *args);
 int rtsp_message_append(struct rtsp_message *m,
 			const char *types,
 			...);
 int rtsp_message_appendv(struct rtsp_message *m,
 			 const char *types,
-			 va_list args);
+			 va_list *args);
 
 int rtsp_message_set_cookie(struct rtsp_message *m, uint64_t cookie);
 int rtsp_message_seal(struct rtsp_message *m);
@@ -240,13 +240,13 @@ int rtsp_message_read_basic(struct rtsp_message *m,
 			    ...);
 int rtsp_message_readv_basic(struct rtsp_message *m,
 			     char type,
-			     va_list args);
+			     va_list *args);
 int rtsp_message_read(struct rtsp_message *m,
 		      const char *types,
 		      ...);
 int rtsp_message_readv(struct rtsp_message *m,
 		       const char *types,
-		       va_list args);
+		       va_list *args);
 
 int rtsp_message_skip_basic(struct rtsp_message *m, char type);
 int rtsp_message_skip(struct rtsp_message *m, const char *types);

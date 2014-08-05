@@ -131,11 +131,11 @@ void wpas_message_set_peer(struct wpas_message *msg, const char *peer);
 int wpas_message_append_basic(struct wpas_message *m, char type, ...);
 int wpas_message_appendv_basic(struct wpas_message *m,
 			       char type,
-			       va_list args);
+			       va_list *args);
 int wpas_message_append(struct wpas_message *m, const char *types, ...);
 int wpas_message_appendv(struct wpas_message *m,
 			 const char *types,
-			 va_list args);
+			 va_list *args);
 int wpas_message_seal(struct wpas_message *m);
 
 int wpas_message_read_basic(struct wpas_message *m, char type, void *out);

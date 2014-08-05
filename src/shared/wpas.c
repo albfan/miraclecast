@@ -374,7 +374,7 @@ int wpas_message_append_basic(struct wpas_message *m, char type, ...)
 	int r;
 
 	va_start(args, type);
-	r = wpas_message_appendv_basic(m, type, args);
+	r = wpas_message_appendv_basic(m, type, &args);
 	va_end(args);
 
 	return r;
@@ -382,7 +382,7 @@ int wpas_message_append_basic(struct wpas_message *m, char type, ...)
 
 int wpas_message_appendv_basic(struct wpas_message *m,
 			       char type,
-			       va_list args)
+			       va_list *args)
 {
 	_shl_free_ char *str = NULL;
 	char buf[128] = { };
@@ -401,27 +401,27 @@ int wpas_message_appendv_basic(struct wpas_message *m,
 
 	switch (type) {
 	case WPAS_TYPE_STRING:
-		orig = va_arg(args, const char*);
+		orig = va_arg(*args, const char*);
 		if (!orig)
 			return -EINVAL;
 
 		break;
 	case WPAS_TYPE_INT32:
-		i32 = va_arg(args, int32_t);
+		i32 = va_arg(*args, int32_t);
 		sprintf(buf, "%" PRId32, i32);
 		orig = buf;
 		break;
 	case WPAS_TYPE_UINT32:
-		u32 = va_arg(args, uint32_t);
+		u32 = va_arg(*args, uint32_t);
 		sprintf(buf, "%" PRIu32, u32);
 		orig = buf;
 		break;
 	case WPAS_TYPE_DICT:
-		s = va_arg(args, const char*);
+		s = va_arg(*args, const char*);
 		if (!s)
 			return -EINVAL;
 
-		t = va_arg(args, const char*);
+		t = va_arg(*args, const char*);
 		if (!t)
 			return -EINVAL;
 
@@ -451,7 +451,7 @@ int wpas_message_append(struct wpas_message *m, const char *types, ...)
 	int r;
 
 	va_start(args, types);
-	r = wpas_message_appendv(m, types, args);
+	r = wpas_message_appendv(m, types, &args);
 	va_end(args);
 
 	return r;
@@ -459,7 +459,7 @@ int wpas_message_append(struct wpas_message *m, const char *types, ...)
 
 int wpas_message_appendv(struct wpas_message *m,
 			 const char *types,
-			 va_list args)
+			 va_list *args)
 {
 	int r;
 
