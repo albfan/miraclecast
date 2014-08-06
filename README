@@ -22,7 +22,7 @@ Website:
                (udev), dbus management (sd-bus) and service management.
                Systemd must be compiled with --enable-kdbus, even though kdbus
                isn't used, but only the independent, experimental sd-libraries.
-      required: >=systemd-212
+      required: >=systemd-213
 
     - glib: A utility library. Used by the current DHCP implementation. Will
             be removed once sd-dns gains DHCP-server capabilities.
