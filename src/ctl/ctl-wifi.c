@@ -249,7 +249,6 @@ static int ctl_peer_parse_properties(struct ctl_peer *p,
 
 int ctl_peer_connect(struct ctl_peer *p, const char *prov, const char *pin)
 {
-	_sd_bus_message_unref_ sd_bus_message *m = NULL;
 	_sd_bus_error_free_ sd_bus_error err = SD_BUS_ERROR_NULL;
 	_shl_free_ char *node = NULL;
 	int r;
@@ -284,7 +283,6 @@ int ctl_peer_connect(struct ctl_peer *p, const char *prov, const char *pin)
 
 int ctl_peer_disconnect(struct ctl_peer *p)
 {
-	_sd_bus_message_unref_ sd_bus_message *m = NULL;
 	_sd_bus_error_free_ sd_bus_error err = SD_BUS_ERROR_NULL;
 	_shl_free_ char *node = NULL;
 	int r;
