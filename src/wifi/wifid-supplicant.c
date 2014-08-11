@@ -115,7 +115,7 @@ static struct supplicant_peer *find_peer_by_any_mac(struct supplicant *s,
 	struct peer *p;
 
 	LINK_FOREACH_PEER(p, s->l) {
-		if (!strcmp(p->p2p_mac, mac) || !strcmp(p->sp->sta_mac, mac))
+		if (!strcmp(p->p2p_mac, mac) || (p->sp->sta_mac && !strcmp(p->sp->sta_mac, mac)))
 			return p->sp;
 	}
 
