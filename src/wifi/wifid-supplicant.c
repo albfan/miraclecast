@@ -811,7 +811,11 @@ static void supplicant_parse_peer(struct supplicant *s,
 			return;
 	}
 
+	/* P2P-PEER reports the device name as 'device_name', P2P-DEVICE-FOUND
+	 * uses 'name. Allow either here.. */
 	r = wpas_message_dict_read(m, "device_name", 's', &name);
+	if (r < 0)
+		r = wpas_message_dict_read(m, "name", 's', &name);
 	if (r >= 0) {
 		t = strdup(name);
 		if (!t) {
@@ -822,7 +826,7 @@ static void supplicant_parse_peer(struct supplicant *s,
 			peer_supplicant_friendly_name_changed(sp->p);
 		}
 	} else {
-		log_debug("no device_name in P2P_PEER information: %s",
+		log_debug("no device-name in P2P_PEER information: %s",
 			  wpas_message_get_raw(m));
 	}
 
