@@ -724,7 +724,7 @@ int supplicant_peer_connect(struct supplicant_peer *sp,
 		return log_ERR(r);
 
 	if (!strcmp(prov_type, "pbc")) {
-		r = wpas_message_append(m, "ss", "pbc", "display");
+		r = wpas_message_append(m, "s", "pbc");
 		if (r < 0)
 			return log_ERR(r);
 	} else if (!strcmp(prov_type, "display")) {
