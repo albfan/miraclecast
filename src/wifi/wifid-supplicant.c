@@ -220,6 +220,7 @@ static int supplicant_group_comm_fn(sd_event_source *source,
 	struct peer *p;
 	char buf[512], *t, *ip;
 	ssize_t l;
+	char mac[MAC_STRLEN];
 
 	l = recv(fd, buf, sizeof(buf) - 1, MSG_DONTWAIT);
 	if (l < 0) {
@@ -271,7 +272,8 @@ static int supplicant_group_comm_fn(sd_event_source *source,
 		}
 
 		*ip++ = 0;
-		sp = find_peer_by_any_mac(g->s, t);
+		reformat_mac(mac, t);
+		sp = find_peer_by_any_mac(g->s, mac);
 		if (sp) {
 			ip = strdup(ip);
 			if (!ip) {
