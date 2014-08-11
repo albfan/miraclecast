@@ -107,7 +107,7 @@ static inline void reformat_mac(char *dst, const char *src)
 
 	sscanf(src, "%2hhx:%2hhx:%2hhx:%2hhx:%2hhx:%2hhx",
 	       &x1, &x2, &x3, &x4, &x5, &x6);
-	sprintf(dst, "%2hhx:%2hhx:%2hhx:%2hhx:%2hhx:%2hhx",
+	sprintf(dst, "%02hhx:%02hhx:%02hhx:%02hhx:%02hhx:%02hhx",
 		x1, x2, x3, x4, x5, x6);
 }
 
