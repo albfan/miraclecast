@@ -2,7 +2,7 @@
  *
  *  DHCP library with GLib integration
  *
- *  Copyright (C) 2009-2012  Intel Corporation. All rights reserved.
+ *  Copyright (C) 2009-2013  Intel Corporation. All rights reserved.
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License version 2 as

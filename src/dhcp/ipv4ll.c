@@ -122,9 +122,12 @@ int ipv4ll_arp_socket(int ifindex)
 {
 	int fd;
 	struct sockaddr_ll sock;
+
 	fd = socket(PF_PACKET, SOCK_DGRAM | SOCK_CLOEXEC, htons(ETH_P_ARP));
 	if (fd < 0)
 		return fd;
+
+	memset(&sock, 0, sizeof(sock));
 
 	sock.sll_family = AF_PACKET;
 	sock.sll_protocol = htons(ETH_P_ARP);
