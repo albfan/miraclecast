@@ -122,23 +122,43 @@ static void sink_handle_get_parameter(struct ctl_sink *s,
 				      struct rtsp_message *m)
 {
 	_rtsp_message_unref_ struct rtsp_message *rep = NULL;
-	char wfd_video_formats[128];
 	int r;
 
 	r = rtsp_message_new_reply_for(m, &rep, RTSP_CODE_OK, NULL);
 	if (r < 0)
 		return cli_vERR(r);
 
-	sprintf(wfd_video_formats,
-		"wfd_video_formats: 00 00 03 10 %08x %08x %08x 00 0000 0000 10 none none",
-		s->resolutions_cea, s->resolutions_vesa, s->resolutions_hh);
-	r = rtsp_message_append(rep, "{&&&&}",
-				"wfd_content_protection: none",
-				wfd_video_formats,
-				"wfd_audio_codecs: AAC 00000007 00",
-				"wfd_client_rtp_ports: RTP/AVP/UDP;unicast 1991 0 mode=play");
-	if (r < 0)
-		return cli_vERR(r);
+	/* wfd_content_protection */
+	if (rtsp_message_read(m, "{<>}", "wfd_content_protection") >= 0) {
+		r = rtsp_message_append(rep, "{&}",
+					"wfd_content_protection: none");
+		if (r < 0)
+			return cli_vERR(r);
+	}
+	/* wfd_video_formats */
+	if (rtsp_message_read(m, "{<>}", "wfd_video_formats") >= 0) {
+		char wfd_video_formats[128];
+		sprintf(wfd_video_formats,
+			"wfd_video_formats: 00 00 03 10 %08x %08x %08x 00 0000 0000 10 none none",
+			s->resolutions_cea, s->resolutions_vesa, s->resolutions_hh);
+		r = rtsp_message_append(rep, "{&}", wfd_video_formats);
+		if (r < 0)
+			return cli_vERR(r);
+	}
+	/* wfd_audio_codecs */
+	if (rtsp_message_read(m, "{<>}", "wfd_audio_codecs") >= 0) {
+		r = rtsp_message_append(rep, "{&}",
+					"wfd_audio_codecs: AAC 00000007 00");
+		if (r < 0)
+			return cli_vERR(r);
+	}
+	/* wfd_client_rtp_ports */
+	if (rtsp_message_read(m, "{<>}", "wfd_client_rtp_ports") >= 0) {
+		r = rtsp_message_append(rep, "{&}",
+					"wfd_client_rtp_ports: RTP/AVP/UDP;unicast 1991 0 mode=play");
+		if (r < 0)
+			return cli_vERR(r);
+	}
 
 	rtsp_message_seal(rep);
 	cli_debug("OUTGOING: %s\n", rtsp_message_get_raw(rep));
