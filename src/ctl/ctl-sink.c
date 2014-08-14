@@ -69,7 +69,7 @@ static void sink_handle_options(struct ctl_sink *s,
 	_rtsp_message_unref_ struct rtsp_message *rep = NULL;
 	int r;
 
-	r = rtsp_message_new_reply_for(m, &rep, 200, NULL);
+	r = rtsp_message_new_reply_for(m, &rep, RTSP_CODE_OK, NULL);
 	if (r < 0)
 		return cli_vERR(r);
 
@@ -116,7 +116,7 @@ static void sink_handle_get_parameter(struct ctl_sink *s,
 	_rtsp_message_unref_ struct rtsp_message *rep = NULL;
 	int r;
 
-	r = rtsp_message_new_reply_for(m, &rep, 200, NULL);
+	r = rtsp_message_new_reply_for(m, &rep, RTSP_CODE_OK, NULL);
 	if (r < 0)
 		return cli_vERR(r);
 
@@ -187,7 +187,7 @@ static void sink_handle_set_parameter(struct ctl_sink *s,
 	char *nu;
 	int r;
 
-	r = rtsp_message_new_reply_for(m, &rep, 200, NULL);
+	r = rtsp_message_new_reply_for(m, &rep, RTSP_CODE_OK, NULL);
 	if (r < 0)
 		return cli_vERR(r);
 
