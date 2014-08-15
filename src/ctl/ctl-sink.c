@@ -141,7 +141,7 @@ static int sink_setup_fn(struct rtsp *bus, struct rtsp_message *m, void *data)
 	_rtsp_message_unref_ struct rtsp_message *rep = NULL;
 	struct ctl_sink *s = data;
 	const char *session;
-	char *ns;
+	char *ns, *next;
 	int r;
 
 	cli_debug("INCOMING: %s\n", rtsp_message_get_raw(m));
@@ -153,6 +153,10 @@ static int sink_setup_fn(struct rtsp *bus, struct rtsp_message *m, void *data)
 	ns = strdup(session);
 	if (!ns)
 		return cli_ENOMEM();
+
+	next = strchr(ns, ';');
+	if (next)
+		*next = '\0';
 
 	free(s->session);
 	s->session = ns;
