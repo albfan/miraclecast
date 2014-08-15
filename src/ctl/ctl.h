@@ -235,6 +235,10 @@ struct cli_cmd {
 extern sd_event *cli_event;
 extern sd_bus *cli_bus;
 
+extern unsigned int wfd_supported_res_cea;
+extern unsigned int wfd_supported_res_vesa;
+extern unsigned int wfd_supported_res_hh;
+
 int cli_init(sd_bus *bus, const struct cli_cmd *cmds);
 void cli_destroy(void);
 int cli_run(void);

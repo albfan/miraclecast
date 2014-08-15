@@ -51,6 +51,10 @@ struct ctl_sink {
 
 	bool connected : 1;
 	bool hup : 1;
+
+	uint32_t resolutions_cea;
+	uint32_t resolutions_vesa;
+	uint32_t resolutions_hh;
 };
 
 /*
@@ -114,15 +118,19 @@ static void sink_handle_get_parameter(struct ctl_sink *s,
 				      struct rtsp_message *m)
 {
 	_rtsp_message_unref_ struct rtsp_message *rep = NULL;
+	char wfd_video_formats[128];
 	int r;
 
 	r = rtsp_message_new_reply_for(m, &rep, RTSP_CODE_OK, NULL);
 	if (r < 0)
 		return cli_vERR(r);
 
+	sprintf(wfd_video_formats,
+		"wfd_video_formats: 00 00 03 10 %08x %08x %08x 00 0000 0000 10 none none",
+		s->resolutions_cea, s->resolutions_vesa, s->resolutions_hh);
 	r = rtsp_message_append(rep, "{&&&&}",
 				"wfd_content_protection: none",
-				"wfd_video_formats: 00 00 01 01 0000007f 003fffff 00000000 00 0000 0000 00 none none",
+				wfd_video_formats,
 				"wfd_audio_codecs: AAC 00000007 00",
 				"wfd_client_rtp_ports: RTP/AVP/UDP;unicast 1991 0 mode=play");
 	if (r < 0)
@@ -447,6 +455,9 @@ int ctl_sink_new(struct ctl_sink **out,
 
 	s->event = sd_event_ref(event);
 	s->fd = -1;
+	s->resolutions_cea = wfd_supported_res_cea;
+	s->resolutions_vesa = wfd_supported_res_vesa;
+	s->resolutions_hh = wfd_supported_res_hh;
 
 	*out = s;
 	return 0;

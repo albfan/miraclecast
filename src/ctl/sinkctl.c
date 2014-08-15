@@ -34,6 +34,7 @@
 #include <time.h>
 #include <unistd.h>
 #include "ctl.h"
+#include "wfd.h"
 #include "shl_macro.h"
 #include "shl_util.h"
 
@@ -52,6 +53,9 @@ static struct ctl_peer *running_peer;
 
 char *gst_scale_res;
 int gst_audio_en = 1;
+unsigned int wfd_supported_res_cea  = 0x0000001f;	/* up to 720x576 */
+unsigned int wfd_supported_res_vesa = 0x00000003;	/* up to 800x600 */
+unsigned int wfd_supported_res_hh   = 0x00000000;	/* not supported */
 
 /*
  * cmd list
@@ -569,9 +573,15 @@ void cli_fn_help()
 	       "     --log-level <lvl>  Maximum level for log messages\n"
 	       "     --audio <0/1>      Enable audio support (default %d)\n"
 	       "     --scale WxH        Scale to resolution\n"
+	       "     --res <n,n,n>      Supported resolutions masks (CEA, VESA, HH)\n"
+	       "                        default CEA  %08X\n"
+	       "                        default VESA %08X\n"
+	       "                        default HH   %08X\n"
 	       "\n"
-	       "Commands:\n"
-	       , program_invocation_short_name, gst_audio_en);
+	       , program_invocation_short_name, gst_audio_en,
+		   wfd_supported_res_cea, wfd_supported_res_vesa, wfd_supported_res_hh
+	       );
+	wfd_print_resolutions();
 	/*
 	 * 80-char barrier:
 	 *      01234567890123456789012345678901234567890123456789012345678901234567890123456789
@@ -639,6 +649,7 @@ static int parse_argv(int argc, char *argv[])
 		ARG_LOG_LEVEL,
 		ARG_AUDIO,
 		ARG_SCALE,
+		ARG_RES,
 	};
 	static const struct option options[] = {
 		{ "help",	no_argument,		NULL,	'h' },
@@ -646,6 +657,7 @@ static int parse_argv(int argc, char *argv[])
 		{ "log-level",	required_argument,	NULL,	ARG_LOG_LEVEL },
 		{ "audio",	required_argument,	NULL,	ARG_AUDIO },
 		{ "scale",	required_argument,	NULL,	ARG_SCALE },
+		{ "res",	required_argument,	NULL,	ARG_RES },
 		{}
 	};
 	int c;
@@ -665,6 +677,12 @@ static int parse_argv(int argc, char *argv[])
 			break;
 		case ARG_SCALE:
 			gst_scale_res = optarg;
+			break;
+		case ARG_RES:
+			sscanf(optarg, "%x,%x,%x",
+				&wfd_supported_res_cea,
+				&wfd_supported_res_vesa,
+				&wfd_supported_res_hh);
 			break;
 		case '?':
 			return -EINVAL;
