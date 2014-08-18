@@ -45,6 +45,8 @@ enum {
 #define RTSP_TYPE_STRING			's'
 #define RTSP_TYPE_INT32				'i'
 #define RTSP_TYPE_UINT32			'u'
+#define RTSP_TYPE_HEX32				'h'
+#define RTSP_TYPE_SKIP				'*'
 #define RTSP_TYPE_RAW				'&'
 #define RTSP_TYPE_HEADER_START			'<'
 #define RTSP_TYPE_HEADER_END			'>'

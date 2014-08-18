@@ -1550,6 +1550,18 @@ int rtsp_message_readv_basic(struct rtsp_message *m,
 			*out_u32 = u32;
 
 		break;
+	case RTSP_TYPE_HEX32:
+		if (sscanf(entry, "%" SCNx32, &u32) != 1)
+			return -EINVAL;
+
+		out_u32 = va_arg(*args, uint32_t*);
+		if (out_u32)
+			*out_u32 = u32;
+
+		break;
+	case RTSP_TYPE_SKIP:
+		/* just increment token */
+		break;
 	default:
 		return -EINVAL;
 	}
