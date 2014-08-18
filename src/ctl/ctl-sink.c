@@ -35,6 +35,7 @@
 #include "rtsp.h"
 #include "shl_macro.h"
 #include "shl_util.h"
+#include "wfd.h"
 
 struct ctl_sink {
 	sd_event *event;
@@ -55,6 +56,9 @@ struct ctl_sink {
 	uint32_t resolutions_cea;
 	uint32_t resolutions_vesa;
 	uint32_t resolutions_hh;
+
+	int hres;
+	int vres;
 };
 
 /*
@@ -190,6 +194,27 @@ static int sink_setup_fn(struct rtsp *bus, struct rtsp_message *m, void *data)
 	return 0;
 }
 
+static int sink_set_format(struct ctl_sink *s,
+					  unsigned int cea_res,
+					  unsigned int vesa_res,
+					  unsigned int hh_res)
+{
+	int hres, vres;
+
+	if ((vfd_get_cea_resolution(cea_res, &hres, &vres) == 0) ||
+		(vfd_get_vesa_resolution(vesa_res, &hres, &vres) == 0) ||
+		(vfd_get_hh_resolution(hh_res, &hres, &vres) == 0)) {
+		if (hres && vres) {
+			s->hres = hres;
+			s->vres = vres;
+			ctl_fn_sink_resolution_set(s, hres, vres);
+			return 0;
+		}
+	}
+
+	return -EINVAL;
+}
+
 static void sink_handle_set_parameter(struct ctl_sink *s,
 				      struct rtsp_message *m)
 {
@@ -197,6 +222,7 @@ static void sink_handle_set_parameter(struct ctl_sink *s,
 	const char *trigger;
 	const char *url;
 	char *nu;
+	unsigned int cea_res, vesa_res, hh_res;
 	int r;
 
 	r = rtsp_message_new_reply_for(m, &rep, RTSP_CODE_OK, NULL);
@@ -225,6 +251,15 @@ static void sink_handle_set_parameter(struct ctl_sink *s,
 			s->url = nu;
 			cli_debug("Got URL: %s\n", s->url);
 		}
+	}
+
+	/* M4 again */
+	r = rtsp_message_read(m, "{<****hhh>}", "wfd_video_formats",
+							&cea_res, &vesa_res, &hh_res);
+	if (r == 0) {
+		r = sink_set_format(s, cea_res, vesa_res, hh_res);
+		if (r)
+			return cli_vERR(r);
 	}
 
 	/* M5 */

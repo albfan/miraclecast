@@ -325,9 +325,10 @@ static const struct cli_cmd cli_cmds[] = {
 	{ },
 };
 
-static void spawn_gst(void)
+static void spawn_gst(int hres, int vres)
 {
 	char *argv[64];
+	char resolution[64];
 	pid_t pid;
 	int fd_journal, i;
 	sigset_t mask;
@@ -367,6 +368,11 @@ static void spawn_gst(void)
 			argv[i++] = "-s";
 			argv[i++] = gst_scale_res;
 		}
+		if (hres && vres) {
+			sprintf(resolution, "%dx%d", hres, vres);
+			argv[i++] = "-r";
+			argv[i++] = resolution;
+		}
 		argv[i] = NULL;
 
 		execve(argv[0], argv, environ);
@@ -389,7 +395,6 @@ void ctl_fn_sink_connected(struct ctl_sink *s)
 {
 	cli_notice("SINK connected");
 	sink_connected = true;
-	spawn_gst();
 }
 
 void ctl_fn_sink_disconnected(struct ctl_sink *s)
@@ -401,6 +406,13 @@ void ctl_fn_sink_disconnected(struct ctl_sink *s)
 		cli_notice("SINK disconnected");
 		sink_connected = false;
 	}
+}
+
+void ctl_fn_sink_resolution_set(struct ctl_sink *s, int hres, int vres)
+{
+	cli_printf("SINK set resolution %dx%d\n", hres, vres);
+	if (sink_connected)
+		spawn_gst(hres, vres);
 }
 
 void ctl_fn_peer_new(struct ctl_peer *p)
