@@ -4,11 +4,14 @@ DEBUG='0'
 AUDIO='0'
 SCALE='0'
 
-while getopts "d:as:" optname
+while getopts "r:d:as:" optname
   do
     case "$optname" in
       "d")
         DEBUG=`echo ${OPTARG} | tr -d ' '`
+        ;;
+      "r")
+        RESOLUTION=`echo ${OPTARG} | tr -d ' '`
         ;;
       "a")
         AUDIO='1'
