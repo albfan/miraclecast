@@ -641,12 +641,14 @@ static void supplicant_peer_free(struct supplicant_peer *sp)
 	if (!sp)
 		return;
 
+	if (sp->s->pending == sp) {
+		sp->s->pending = NULL;
+		peer_supplicant_formation_failure(sp->p, "lost");
+	}
+
 	supplicant_peer_drop_group(sp);
 	peer_supplicant_stopped(sp->p);
 	peer_free(sp->p);
-	/* free pending */
-	if (sp->s->pending == sp)
-		sp->s->pending = NULL;
 
 	free(sp->sta_mac);
 	free(sp->remote_addr);
