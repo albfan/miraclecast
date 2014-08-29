@@ -339,7 +339,7 @@ static void manager_read_name(struct manager *m)
 
 	r = sd_bus_message_read(rep, "s", &name);
 	if (r < 0)
-		goto error;
+		name = "undefined";
 
 	if (shl_isempty(name)) {
 		log_warning("no hostname set on systemd.hostname1, using: %s",
