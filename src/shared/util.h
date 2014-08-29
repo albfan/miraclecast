@@ -22,6 +22,7 @@
 
 #include <alloca.h>
 #include <errno.h>
+#include <stdio.h>
 #include <libudev.h>
 #include <stdbool.h>
 #include <stdlib.h>
