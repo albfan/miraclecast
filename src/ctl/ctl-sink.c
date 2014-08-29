@@ -219,16 +219,10 @@ static void sink_handle_set_parameter(struct ctl_sink *s,
 		}
 	}
 
-	rtsp_message_exit_header(m);
-	rtsp_message_exit_body(m);
-
 	/* M5 */
 	r = rtsp_message_read(m, "{<s>}", "wfd_trigger_method", &trigger);
-	if (r < 0) {
-		rtsp_message_exit_header(m);
-		rtsp_message_exit_body(m);
+	if (r < 0)
 		return;
-	}
 
 	if (!strcmp(trigger, "SETUP")) {
 		if (!s->url) {
