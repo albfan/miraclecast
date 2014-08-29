@@ -97,7 +97,9 @@ static void manager_add_udev_link(struct manager *m,
 
 	link_set_friendly_name(l, m->friendly_name);
 
+        #if 0
 	if (udev_device_has_tag(d, "miracle"))
+        #endif
 		link_set_managed(l, true);
 }
 
