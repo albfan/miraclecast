@@ -1621,7 +1621,7 @@ static int supplicant_status_fn(struct wpas *w,
 
 		r = wpas_message_append(m, "ss",
 					"device_name",
-					s->l->friendly_name ? : "unknown");
+					s->l->friendly_name ? : "Miracle");
 		if (r < 0) {
 			log_vERR(r);
 			goto error;
