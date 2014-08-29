@@ -54,7 +54,6 @@ AM_CPPFLAGS = \
 	-include $(top_builddir)/config.h \
 	-I $(srcdir)/src \
 	-I $(srcdir)/src/shared \
-	-I /usr/local/include \
 	-DBUILD_ENABLE_DEBUG \
 	'-DBUILD_BINDIR="$(bindir)"'
 AM_LDFLAGS = \
