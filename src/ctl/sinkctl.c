@@ -351,26 +351,9 @@ static void spawn_gst(void)
 		}
 
 		i = 0;
-		argv[i++] = (char*) "/usr/bin/gst-launch-1.0";
-		argv[i++] = "-v";
+		argv[i++] = (char*) BUILD_BINDIR "/miracle-gst.sh";
 		if (cli_max_sev >= 7)
-			argv[i++] = "--gst-debug=3";
-		argv[i++] = "udpsrc";
-		argv[i++] = "port=1991";
-		argv[i++] = "caps=\"application/x-rtp, media=video\"";
-		argv[i++] = "!";
-		argv[i++] = "rtpjitterbuffer";
-		argv[i++] = "!";
-		argv[i++] = "rtpmp2tdepay";
-		argv[i++] = "!";
-		argv[i++] = "tsdemux";
-		argv[i++] = "!";
-		argv[i++] = "h264parse";
-		argv[i++] = "!";
-		argv[i++] = "avdec_h264";
-		argv[i++] = "!";
-		argv[i++] = "autovideosink";
-		argv[i++] = "sync=false";
+			argv[i++] = "-d 3";
 		argv[i] = NULL;
 
 		execve(argv[0], argv, environ);

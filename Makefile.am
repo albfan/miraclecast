@@ -196,6 +196,12 @@ miracled_LDADD = \
 miracled_LDFLAGS = $(AM_LDFLAGS)
 
 #
+# miracle-gst.sh
+#
+
+bin_SCRIPTS = res/miracle-gst.sh
+
+#
 # Tests
 #
 

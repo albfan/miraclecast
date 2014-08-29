@@ -123,7 +123,7 @@ static void sink_handle_get_parameter(struct ctl_sink *s,
 	r = rtsp_message_append(rep, "{&&&&}",
 				"wfd_content_protection: none",
 				"wfd_video_formats: 00 00 01 01 0000007f 003fffff 00000000 00 0000 0000 00 none none",
-				"wfd_audio_codecs: LPCM 00000003 00",
+				"wfd_audio_codecs: AAC 00000007 00",
 				"wfd_client_rtp_ports: RTP/AVP/UDP;unicast 1991 0 mode=play");
 	if (r < 0)
 		return cli_vERR(r);
