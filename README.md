@@ -1,4 +1,4 @@
-= MiracleCast - Wifi-Display/Miracast Implementation =
+# MiracleCast - Wifi-Display/Miracast Implementation
 
 The MiracleCast project provides software to connect external monitors to your
 system via Wifi. It is compatible to the Wifi-Display specification also known
@@ -8,6 +8,7 @@ side.
 The Display-Source side allows you to connect external displays to your system
 and stream local content to the device. A lot of effort is put into making this
 as easy as connecting external displays via HDMI.
+
 On the other hand, the Display-Sink side allows you to create wifi-capable
 external displays yourself. You can use it on your embedded devices or even on
 full desktops to allow other systems to use your device as external display.
@@ -15,49 +16,57 @@ full desktops to allow other systems to use your device as external display.
 Website:
   http://www.freedesktop.org/wiki/Software/miracle
 
-== Requirements ==
+## Requirements
 
-  The MiracleCast projects requires the following software to be installed:
-    - systemd: A system management daemon. It is used for device-management
-               (udev), dbus management (sd-bus) and service management.
-               Systemd must be compiled with --enable-kdbus, even though kdbus
-               isn't used, but only the independent, experimental sd-libraries.
-      required: >=systemd-213
+The MiracleCast projects requires the following software to be installed:
+-   **systemd**: A system management daemon. It is used for device-management (udev), 
+dbus management (sd-bus) and service management.
 
-    - glib: A utility library. Used by the current DHCP implementation. Will
-            be removed once sd-dns gains DHCP-server capabilities.
-      required: ~=glib2-2.38 (might work with older releases, untested..)
+    Systemd must be compiled with --enable-kdbus, even though kdbus isn't used, 
+but only the independent, experimental sd-libraries.
 
-    - check: Test-suite for C programs. Used for optional tests of the
-             MiracleCast code base.
-      optional: ~=check-0.9.11 (might work with older releases, untested..)
+    *required*: >=systemd-213
 
-== Download ==
+-   **glib**: A utility library. Used by the current DHCP implementation. Will be 
+removed once sd-dns gains DHCP-server capabilities.
+
+    *required*: ~=glib2-2.38 (might work with older releases, untested..)
+
+-   **check**: Test-suite for C programs. Used for optional tests of the MiracleCast 
+code base.
+
+    *optional*: ~=check-0.9.11 (might work with older releases, untested..)
+
+## Download
 
   Released tarballs can be found at:
     http://www.freedesktop.org/software/miracle/releases
 
-== Install ==
+## Install
 
   To compile MiracleCast, run the standard autotools commands:
+
+```bash
     $ test -f ./configure || NOCONFIGURE=1 ./autogen.sh
     $ ./configure --prefix=/usr/local
     $ make
     $ sudo make install
   To compile and run the test applications, use:
     $ make check
+```
 
-== Documentation ==
+## Documentation
 
   WIP - Please see the MiracleCast website
 
-== License ==
+## License
 
   This software is licensed under the terms of the GNU-LGPL license. Please see
   ./COPYING for further information.
 
-== Contact ==
+## Contact
 
   This software is maintained by:
     David Herrmann <dh.herrmann@gmail.com>
   If you have any questions, do not hesitate to contact one of the maintainers.
+
