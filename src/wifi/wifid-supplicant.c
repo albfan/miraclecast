@@ -1008,14 +1008,6 @@ static void supplicant_event_p2p_prov_disc_pbc_req(struct supplicant *s,
 	sp->prov = t;
 	free(sp->pin);
 	sp->pin = NULL;
-
-	if (!sp->g) {
-		log_debug("PBC provision discovery for %s", mac);
-		peer_supplicant_provision_discovery(sp->p, sp->prov, sp->pin);
-	} else {
-		log_debug("PBC provision discovery for already connected peer %s",
-			  mac);
-	}
 }
 
 static void supplicant_event_p2p_go_neg_request(struct supplicant *s,
@@ -1023,7 +1015,6 @@ static void supplicant_event_p2p_go_neg_request(struct supplicant *s,
 {
 	struct supplicant_peer *sp;
 	const char *mac;
-	char *t;
 	int r;
 
 
@@ -1042,16 +1033,18 @@ static void supplicant_event_p2p_go_neg_request(struct supplicant *s,
 	}
 
 	/*
-	 * assume dev_passwd_id == 4 == DEV_PW_PUSHBUTTON
+	 * prov should be set by previous
+	 * P2P-PROV-DISC-PBC-REQ
+	 * P2P-PROV-DISC-SHOW-PIN
+	 * or P2P-PROV-DISC-ENTER-PIN
+	 * if not set pbc mode
 	 */
-	t = strdup("pbc");
-	if (!t)
-		return log_vENOMEM();
 
-	free(sp->prov);
-	sp->prov = t;
-	free(sp->pin);
-	sp->pin = NULL;
+	if (!sp->prov) {
+		sp->prov = strdup("pbc");
+		free(sp->pin);
+		sp->pin = NULL;
+	}
 
 	if (!sp->g) {
 		log_debug("GO Negotiation Request from %s", mac);
@@ -1105,14 +1098,6 @@ static void supplicant_event_p2p_prov_disc_show_pin(struct supplicant *s,
 	sp->prov = t;
 	free(sp->pin);
 	sp->pin = u;
-
-	if (!sp->g) {
-		log_debug("DISPLAY provision discovery for %s", mac);
-		peer_supplicant_provision_discovery(sp->p, sp->prov, sp->pin);
-	} else {
-		log_debug("DISPLAY provision discovery for already connected peer %s",
-			  mac);
-	}
 }
 
 static void supplicant_event_p2p_prov_disc_enter_pin(struct supplicant *s,
@@ -1145,14 +1130,6 @@ static void supplicant_event_p2p_prov_disc_enter_pin(struct supplicant *s,
 	sp->prov = t;
 	free(sp->pin);
 	sp->pin = NULL;
-
-	if (!sp->g) {
-		log_debug("PIN provision discovery for %s", mac);
-		peer_supplicant_provision_discovery(sp->p, sp->prov, sp->pin);
-	} else {
-		log_debug("PIN provision discovery for already connected peer %s",
-			  mac);
-	}
 }
 
 static void supplicant_event_p2p_go_neg_success(struct supplicant *s,
