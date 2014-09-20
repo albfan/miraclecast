@@ -1008,6 +1008,8 @@ static void supplicant_event_p2p_prov_disc_pbc_req(struct supplicant *s,
 	sp->prov = t;
 	free(sp->pin);
 	sp->pin = NULL;
+
+	peer_supplicant_provision_discovery(sp->p, sp->prov, sp->pin);
 }
 
 static void supplicant_event_p2p_go_neg_request(struct supplicant *s,
@@ -1048,7 +1050,7 @@ static void supplicant_event_p2p_go_neg_request(struct supplicant *s,
 
 	if (!sp->g) {
 		log_debug("GO Negotiation Request from %s", mac);
-		peer_supplicant_provision_discovery(sp->p, sp->prov, sp->pin);
+		peer_supplicant_go_neg_request(sp->p, sp->prov, sp->pin);
 	} else {
 		log_debug("GO Negotiation Request from already connected peer %s",
 			  mac);
@@ -1098,6 +1100,8 @@ static void supplicant_event_p2p_prov_disc_show_pin(struct supplicant *s,
 	sp->prov = t;
 	free(sp->pin);
 	sp->pin = u;
+
+	peer_supplicant_provision_discovery(sp->p, sp->prov, sp->pin);
 }
 
 static void supplicant_event_p2p_prov_disc_enter_pin(struct supplicant *s,
@@ -1130,6 +1134,8 @@ static void supplicant_event_p2p_prov_disc_enter_pin(struct supplicant *s,
 	sp->prov = t;
 	free(sp->pin);
 	sp->pin = NULL;
+
+	peer_supplicant_provision_discovery(sp->p, sp->prov, sp->pin);
 }
 
 static void supplicant_event_p2p_go_neg_success(struct supplicant *s,

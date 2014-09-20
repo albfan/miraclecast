@@ -200,6 +200,16 @@ void peer_supplicant_provision_discovery(struct peer *p,
 	peer_dbus_provision_discovery(p, prov, pin);
 }
 
+void peer_supplicant_go_neg_request(struct peer *p,
+					 const char *prov,
+					 const char *pin)
+{
+	if (!p || !p->public)
+		return;
+
+	peer_dbus_go_neg_request(p, prov, pin);
+}
+
 void peer_supplicant_formation_failure(struct peer *p,
 					 const char *reason)
 {

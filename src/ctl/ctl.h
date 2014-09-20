@@ -251,6 +251,9 @@ void ctl_fn_peer_free(struct ctl_peer *p);
 void ctl_fn_peer_provision_discovery(struct ctl_peer *p,
 				     const char *prov,
 				     const char *pin);
+void ctl_fn_peer_go_neg_request(struct ctl_peer *p,
+				     const char *prov,
+				     const char *pin);
 void ctl_fn_peer_formation_failure(struct ctl_peer *p, const char *reason);
 void ctl_fn_peer_connected(struct ctl_peer *p);
 void ctl_fn_peer_disconnected(struct ctl_peer *p);

@@ -440,6 +440,18 @@ void ctl_fn_peer_provision_discovery(struct ctl_peer *p,
 	if (cli_running())
 		cli_printf("[" CLI_YELLOW "PROV" CLI_DEFAULT "] Peer: %s Type: %s PIN: %s\n",
 			   p->label, prov, pin);
+}
+
+void ctl_fn_peer_go_neg_request(struct ctl_peer *p,
+				     const char *prov,
+				     const char *pin)
+{
+	if (p->l != running_link || shl_isempty(p->wfd_subelements))
+		return;
+
+	if (cli_running())
+		cli_printf("[" CLI_YELLOW "GO NEG" CLI_DEFAULT "] Peer: %s Type: %s PIN: %s\n",
+			   p->label, prov, pin);
 
 	if (!running_peer) {
 		/* auto accept any incoming connection attempt */
