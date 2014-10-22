@@ -50,6 +50,7 @@ static pid_t sink_pid;
 static char *bound_link;
 static struct ctl_link *running_link;
 static struct ctl_peer *running_peer;
+static struct ctl_peer *pending_peer;
 
 char *gst_scale_res;
 int gst_audio_en = 1;
@@ -284,6 +285,14 @@ static int scan_timeout_fn(sd_event_source *s, uint64_t usec, void *data)
 {
 	stop_timeout(&scan_timeout);
 
+	if (pending_peer) {
+		if (cli_running()) {
+			cli_printf("[" CLI_RED "TIMEOUT" CLI_DEFAULT "] waiting for %s\n",
+				pending_peer->friendly_name);
+		}
+		pending_peer = NULL;
+	}
+
 	if (running_link)
 		ctl_link_set_p2p_scanning(running_link, true);
 
@@ -430,6 +439,14 @@ void ctl_fn_peer_free(struct ctl_peer *p)
 	if (p->l != running_link || shl_isempty(p->wfd_subelements))
 		return;
 
+	if (p == pending_peer) {
+		cli_printf("no longer waiting for peer %s (%s)\n",
+			   p->friendly_name, p->label);
+		pending_peer = NULL;
+		stop_timeout(&scan_timeout);
+		ctl_link_set_p2p_scanning(p->l, true);
+	}
+
 	if (p == running_peer) {
 		cli_printf("no longer running on peer %s\n",
 			   running_peer->label);
@@ -472,6 +489,7 @@ void ctl_fn_peer_go_neg_request(struct ctl_peer *p,
 	if (!running_peer) {
 		/* auto accept any incoming connection attempt */
 		ctl_peer_connect(p, "auto", "");
+		pending_peer = p;
 
 		/* 60s timeout in case the connect fails. Yes, stupid wpas does
 		 * not catch this and notify us.. and as it turns out, DHCP
@@ -507,6 +525,8 @@ void ctl_fn_peer_connected(struct ctl_peer *p)
 	if (cli_running())
 		cli_printf("[" CLI_GREEN "CONNECT" CLI_DEFAULT "] Peer: %s\n",
 			   p->label);
+
+	pending_peer = NULL;
 
 	if (!running_peer) {
 		running_peer = p;
