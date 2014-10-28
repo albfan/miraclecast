@@ -1378,6 +1378,14 @@ static void supplicant_event_ap_sta_disconnected(struct supplicant *s,
 		return;
 	}
 
+	if (sp->s->pending == sp) {
+		sp->s->pending = NULL;
+		if (sp->p->connected)
+			peer_supplicant_connected_changed(sp->p, false);
+		else
+			peer_supplicant_formation_failure(sp->p, "disconnected");
+	}
+
 	log_debug("unbind peer %s from its group", p2p_mac);
 	supplicant_peer_drop_group(sp);
 }
