@@ -37,6 +37,9 @@ code base.
 
     *optional*: ~=check-0.9.11 (might work with older releases, untested..)
 
+-   **gstreamer**: MiracleCast relay on gstreamer to show cast its output. You can test if
+all needed is installed launching `res/test_viewer.sh`
+
 ## Download
 
   Released tarballs can be found at:
