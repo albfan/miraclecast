@@ -60,7 +60,44 @@ all needed is installed launching `res/test_viewer.sh`
 
 ## Documentation
 
-  WIP - Please see the MiracleCast website
+Steps to use it as sink:
+
+ 1. shutdown wpa_supplicant
+
+        $ sudo kill -9 $(ps -ef | grep wpa_supplicant | awk "{print $1}")
+
+ 2. launch wifi daemon
+
+        $ sudo miracle-wifid &
+
+ 3. launch sink control
+
+        $ sudo miracle-sinkctl
+        [ADD]  Link: 3
+
+ 4. run WiFi Display on link: 
+
+        > run 3
+
+ 5. Discover your machine with other miracast device (mirroring)
+
+ 6. See your device on this machine
+
+Steps to use it as peer:
+
+ 1. Repeat steps 1 and 2 from "use as sink"
+
+ 2. launch wifi control
+
+        $ sudo miracle-wifictl
+
+ 3. Enable visibility for other devices
+
+ 4. Locate them using scanning
+
+        > psp-scan
+
+ 5. Apart from list, or show info with peer <mac> there's nothing useful here by now.
 
 ## License
 
