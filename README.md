@@ -24,10 +24,6 @@ The MiracleCast projects requires the following software to be installed:
 
  - copy the dbus policy **res/org.freedesktop.miracle.conf** to `/etc/dbus-1/system.d/`
 
-## Download
-
-  Released tarballs can be found at: http://www.freedesktop.org/software/miracle/releases
-
 ## Install
 
   To compile MiracleCast, run the standard autotools commands:
