@@ -1,0 +1,20 @@
+AM_CFLAGS = -Wall \
+	-pipe \
+	-fno-common \
+	-ffast-math \
+	-fdiagnostics-show-option \
+	-fno-strict-aliasing \
+	-fvisibility=hidden \
+	-ffunction-sections \
+	-fdata-sections
+
+AM_CPPFLAGS = -include $(top_builddir)/config.h \
+	-I $(top_srcdir)/src \
+	-I $(top_srcdir)/src/shared \
+	-DBUILD_ENABLE_DEBUG \
+	'-DBUILD_BINDIR="$(bindir)"'
+
+AM_LDFLAGS = -Wl,--as-needed \
+	-Wl,--gc-sections \
+	-Wl,-z,relro \
+	-Wl,-z,now

@@ -59,7 +59,14 @@ AM_CONDITIONAL([BUILD_HAVE_CHECK], [test "x$have_check" = "xyes"])
 # After everything is configured, we create all makefiles.
 #
 
-AC_CONFIG_FILES([Makefile])
+AC_CONFIG_FILES([Makefile
+                 res/Makefile
+                 src/Makefile
+                 src/ctl/Makefile
+                 src/dhcp/Makefile
+                 src/shared/Makefile
+                 src/wifi/Makefile
+                 test/Makefile])
 AC_OUTPUT
 
 #
@@ -68,15 +75,34 @@ AC_OUTPUT
 # configured as expected.
 #
 
+if test "x$have_check" = "xyes"
+then
 AC_MSG_NOTICE([Build configuration:
+       prefix: $prefix
+       exec-prefix: $exec_prefix
+       bindir: $bindir
+       libdir: $libdir
+       includedir: $includedir
 
-               prefix: $prefix
-          exec-prefix: $exec_prefix
-               bindir: $bindir
-               libdir: $libdir
-           includedir: $includedir
-
-  Miscellaneous Options:
+Miscellaneous Options:
        building tests: $have_check
 
-        Run "${MAKE-make}" to start compilation process])
+Compilation
+       mkdir build && cd build
+       "${MAKE-make}" to start compilation process
+       "${MAKE-make}" check to pass test])
+else
+AC_MSG_NOTICE([Build configuration:
+       prefix: $prefix
+       exec-prefix: $exec_prefix
+       bindir: $bindir
+       libdir: $libdir
+       includedir: $includedir
+
+Miscellaneous Options:
+       building tests: $have_check
+
+Compilation
+       mkdir build && cd build
+       "${MAKE-make}" to start compilation process])
+fi
