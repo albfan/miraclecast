@@ -302,7 +302,7 @@ static void verify_recipe(struct recipe *rec, struct rtsp_message *m)
 				  rec->data.payload,
 				  rec->data.size));
 		break;
-	defualt:
+	default:
 		ck_assert(false);
 		abort();
 	}
