@@ -1,6 +1,6 @@
 project(Miraclecast)
 set(CMAKE_C_FLAGS "-std=c99") 
-cmake_minimum_required(VERSION 3.1)
+cmake_minimum_required(VERSION 3.0)
 
 add_subdirectory(src)
 add_subdirectory(res)
