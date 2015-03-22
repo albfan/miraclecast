@@ -1,15 +1,15 @@
 
 ########### next target ###############
 
-set(miracle-dhcp_SRCS ${CMAKE_CURRENT_BINARY_DIR}/dhcp.c 
-                      ${CMAKE_CURRENT_BINARY_DIR}/gdhcp.h 
-                      ${CMAKE_CURRENT_BINARY_DIR}/unaligned.h 
-                      ${CMAKE_CURRENT_BINARY_DIR}/common.h 
-                      ${CMAKE_CURRENT_BINARY_DIR}/common.c 
-                      ${CMAKE_CURRENT_BINARY_DIR}/ipv4ll.h 
-                      ${CMAKE_CURRENT_BINARY_DIR}/ipv4ll.c 
-                      ${CMAKE_CURRENT_BINARY_DIR}/client.c 
-                      ${CMAKE_CURRENT_BINARY_DIR}/server.c)
+set(miracle-dhcp_SRCS dhcp.c 
+                      gdhcp.h 
+                      unaligned.h 
+                      common.h 
+                      common.c 
+                      ipv4ll.h 
+                      ipv4ll.c 
+                      client.c 
+                      server.c)
 
 add_executable(miracle-dhcp ${miracle-dhcp_SRCS})
 

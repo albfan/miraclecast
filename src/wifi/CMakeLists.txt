@@ -1,12 +1,12 @@
 
 ########### next target ###############
 
-set(miracle-wifid_SRCS ${CMAKE_CURRENT_BINARY_DIR}/wifid.h 
-                       ${CMAKE_CURRENT_BINARY_DIR}/wifid.c 
-                       ${CMAKE_CURRENT_BINARY_DIR}/wifid-dbus.c 
-                       ${CMAKE_CURRENT_BINARY_DIR}/wifid-link.c 
-                       ${CMAKE_CURRENT_BINARY_DIR}/wifid-peer.c 
-                       ${CMAKE_CURRENT_BINARY_DIR}/wifid-supplicant.c)
+set(miracle-wifid_SRCS wifid.h 
+                       wifid.c 
+                       wifid-dbus.c 
+                       wifid-link.c 
+                       wifid-peer.c 
+                       wifid-supplicant.c)
 
 add_executable(miracle-wifid ${miracle-wifid_SRCS})
 

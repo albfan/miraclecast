@@ -1,10 +1,10 @@
 
 ########### next target ###############
 
-set(miracle-wifictl_SRCS ${CMAKE_CURRENT_BINARY_DIR}/ctl.h 
-                         ${CMAKE_CURRENT_BINARY_DIR}/ctl-cli.c 
-                         ${CMAKE_CURRENT_BINARY_DIR}/ctl-wifi.c 
-                         ${CMAKE_CURRENT_BINARY_DIR}/wifictl.c)
+set(miracle-wifictl_SRCS ctl.h 
+                         ctl-cli.c 
+                         ctl-wifi.c 
+                         wifictl.c)
 
 add_executable(miracle-wifictl ${miracle-wifictl_SRCS})
 
@@ -15,11 +15,11 @@ install(TARGETS miracle-wifictl DESTINATION bin)
 
 ########### next target ###############
 
-set(miracle-sinkctl_SRCS ${CMAKE_CURRENT_BINARY_DIR}/ctl.h 
-                         ${CMAKE_CURRENT_BINARY_DIR}/ctl-cli.c 
-                         ${CMAKE_CURRENT_BINARY_DIR}/ctl-sink.c 
-                         ${CMAKE_CURRENT_BINARY_DIR}/ctl-wifi.c 
-                         ${CMAKE_CURRENT_BINARY_DIR}/sinkctl.c)
+set(miracle-sinkctl_SRCS ctl.h 
+                         ctl-cli.c 
+                         ctl-sink.c 
+                         ctl-wifi.c 
+                         sinkctl.c)
 
 add_executable(miracle-sinkctl ${miracle-sinkctl_SRCS})
 
