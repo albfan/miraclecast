@@ -36,6 +36,17 @@ The MiracleCast projects requires the following software to be installed:
     To compile and run the test applications, use:
     $ make check
 ```
+### Ubuntu
+
+This specific linux flavour is so hard to get miraclecast dependencies that an alternative repo was created to install systemd with dbus
+
+https://github.com/albfan/systemd-ubuntu-with-dbus
+
+> See specific instructions on that repo
+
+### Arch linux
+
+There is an AUR package to ease the install process. It's not complete at this time. See #6 to follow it's progress.
 
 ## Documentation
 
