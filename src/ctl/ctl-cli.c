@@ -97,11 +97,10 @@ int cli_help(const struct cli_cmd *cmds)
 {
 	unsigned int i;
 
-	if (is_cli()) {
-		cli_printf("Available commands:\n");
-	} else {
+	if (!is_cli()) {
 		cli_fn_help();
 	}
+	cli_printf("Available commands:\n");
 
 	for (i = 0; cmds[i].cmd; ++i) {
 		if (!cmds[i].desc)

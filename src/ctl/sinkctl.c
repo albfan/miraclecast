@@ -34,6 +34,7 @@
 #include <time.h>
 #include <unistd.h>
 #include "ctl.h"
+#include "wfd.h"
 #include "shl_macro.h"
 #include "shl_util.h"
 
@@ -49,9 +50,13 @@ static pid_t sink_pid;
 static char *bound_link;
 static struct ctl_link *running_link;
 static struct ctl_peer *running_peer;
+static struct ctl_peer *pending_peer;
 
 char *gst_scale_res;
 int gst_audio_en = 1;
+unsigned int wfd_supported_res_cea  = 0x0000001f;	/* up to 720x576 */
+unsigned int wfd_supported_res_vesa = 0x00000003;	/* up to 800x600 */
+unsigned int wfd_supported_res_hh   = 0x00000000;	/* not supported */
 
 /*
  * cmd list
@@ -280,6 +285,14 @@ static int scan_timeout_fn(sd_event_source *s, uint64_t usec, void *data)
 {
 	stop_timeout(&scan_timeout);
 
+	if (pending_peer) {
+		if (cli_running()) {
+			cli_printf("[" CLI_RED "TIMEOUT" CLI_DEFAULT "] waiting for %s\n",
+				pending_peer->friendly_name);
+		}
+		pending_peer = NULL;
+	}
+
 	if (running_link)
 		ctl_link_set_p2p_scanning(running_link, true);
 
@@ -321,9 +334,10 @@ static const struct cli_cmd cli_cmds[] = {
 	{ },
 };
 
-static void spawn_gst(void)
+static void spawn_gst(int hres, int vres)
 {
 	char *argv[64];
+	char resolution[64];
 	pid_t pid;
 	int fd_journal, i;
 	sigset_t mask;
@@ -363,6 +377,11 @@ static void spawn_gst(void)
 			argv[i++] = "-s";
 			argv[i++] = gst_scale_res;
 		}
+		if (hres && vres) {
+			sprintf(resolution, "%dx%d", hres, vres);
+			argv[i++] = "-r";
+			argv[i++] = resolution;
+		}
 		argv[i] = NULL;
 
 		execve(argv[0], argv, environ);
@@ -385,7 +404,6 @@ void ctl_fn_sink_connected(struct ctl_sink *s)
 {
 	cli_notice("SINK connected");
 	sink_connected = true;
-	spawn_gst();
 }
 
 void ctl_fn_sink_disconnected(struct ctl_sink *s)
@@ -397,6 +415,13 @@ void ctl_fn_sink_disconnected(struct ctl_sink *s)
 		cli_notice("SINK disconnected");
 		sink_connected = false;
 	}
+}
+
+void ctl_fn_sink_resolution_set(struct ctl_sink *s, int hres, int vres)
+{
+	cli_printf("SINK set resolution %dx%d\n", hres, vres);
+	if (sink_connected)
+		spawn_gst(hres, vres);
 }
 
 void ctl_fn_peer_new(struct ctl_peer *p)
@@ -413,6 +438,14 @@ void ctl_fn_peer_free(struct ctl_peer *p)
 {
 	if (p->l != running_link || shl_isempty(p->wfd_subelements))
 		return;
+
+	if (p == pending_peer) {
+		cli_printf("no longer waiting for peer %s (%s)\n",
+			   p->friendly_name, p->label);
+		pending_peer = NULL;
+		stop_timeout(&scan_timeout);
+		ctl_link_set_p2p_scanning(p->l, true);
+	}
 
 	if (p == running_peer) {
 		cli_printf("no longer running on peer %s\n",
@@ -440,10 +473,23 @@ void ctl_fn_peer_provision_discovery(struct ctl_peer *p,
 	if (cli_running())
 		cli_printf("[" CLI_YELLOW "PROV" CLI_DEFAULT "] Peer: %s Type: %s PIN: %s\n",
 			   p->label, prov, pin);
+}
+
+void ctl_fn_peer_go_neg_request(struct ctl_peer *p,
+				     const char *prov,
+				     const char *pin)
+{
+	if (p->l != running_link || shl_isempty(p->wfd_subelements))
+		return;
+
+	if (cli_running())
+		cli_printf("[" CLI_YELLOW "GO NEG" CLI_DEFAULT "] Peer: %s Type: %s PIN: %s\n",
+			   p->label, prov, pin);
 
 	if (!running_peer) {
 		/* auto accept any incoming connection attempt */
 		ctl_peer_connect(p, "auto", "");
+		pending_peer = p;
 
 		/* 60s timeout in case the connect fails. Yes, stupid wpas does
 		 * not catch this and notify us.. and as it turns out, DHCP
@@ -479,6 +525,8 @@ void ctl_fn_peer_connected(struct ctl_peer *p)
 	if (cli_running())
 		cli_printf("[" CLI_GREEN "CONNECT" CLI_DEFAULT "] Peer: %s\n",
 			   p->label);
+
+	pending_peer = NULL;
 
 	if (!running_peer) {
 		running_peer = p;
@@ -557,9 +605,15 @@ void cli_fn_help()
 	       "     --log-level <lvl>  Maximum level for log messages\n"
 	       "     --audio <0/1>      Enable audio support (default %d)\n"
 	       "     --scale WxH        Scale to resolution\n"
+	       "     --res <n,n,n>      Supported resolutions masks (CEA, VESA, HH)\n"
+	       "                        default CEA  %08X\n"
+	       "                        default VESA %08X\n"
+	       "                        default HH   %08X\n"
 	       "\n"
-	       "Commands:\n"
-	       , program_invocation_short_name, gst_audio_en);
+	       , program_invocation_short_name, gst_audio_en,
+		   wfd_supported_res_cea, wfd_supported_res_vesa, wfd_supported_res_hh
+	       );
+	wfd_print_resolutions();
 	/*
 	 * 80-char barrier:
 	 *      01234567890123456789012345678901234567890123456789012345678901234567890123456789
@@ -627,6 +681,7 @@ static int parse_argv(int argc, char *argv[])
 		ARG_LOG_LEVEL,
 		ARG_AUDIO,
 		ARG_SCALE,
+		ARG_RES,
 	};
 	static const struct option options[] = {
 		{ "help",	no_argument,		NULL,	'h' },
@@ -634,6 +689,7 @@ static int parse_argv(int argc, char *argv[])
 		{ "log-level",	required_argument,	NULL,	ARG_LOG_LEVEL },
 		{ "audio",	required_argument,	NULL,	ARG_AUDIO },
 		{ "scale",	required_argument,	NULL,	ARG_SCALE },
+		{ "res",	required_argument,	NULL,	ARG_RES },
 		{}
 	};
 	int c;
@@ -653,6 +709,12 @@ static int parse_argv(int argc, char *argv[])
 			break;
 		case ARG_SCALE:
 			gst_scale_res = optarg;
+			break;
+		case ARG_RES:
+			sscanf(optarg, "%x,%x,%x",
+				&wfd_supported_res_cea,
+				&wfd_supported_res_vesa,
+				&wfd_supported_res_hh);
 			break;
 		case '?':
 			return -EINVAL;

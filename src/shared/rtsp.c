@@ -1550,6 +1550,18 @@ int rtsp_message_readv_basic(struct rtsp_message *m,
 			*out_u32 = u32;
 
 		break;
+	case RTSP_TYPE_HEX32:
+		if (sscanf(entry, "%" SCNx32, &u32) != 1)
+			return -EINVAL;
+
+		out_u32 = va_arg(*args, uint32_t*);
+		if (out_u32)
+			*out_u32 = u32;
+
+		break;
+	case RTSP_TYPE_SKIP:
+		/* just increment token */
+		break;
 	default:
 		return -EINVAL;
 	}
@@ -1588,8 +1600,13 @@ int rtsp_message_readv(struct rtsp_message *m,
 
 	for ( ; *types; ++types) {
 		r = rtsp_message_readv_basic(m, *types, args);
-		if (r < 0)
+		if (r < 0) {
+			if (m->iter_body)
+				rtsp_message_exit_body(m);
+			if (m->iter_header)
+				rtsp_message_exit_header(m);
 			return r;
+		}
 	}
 
 	return 0;

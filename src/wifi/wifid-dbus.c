@@ -308,6 +308,7 @@ static const sd_bus_vtable peer_dbus_vtable[] = {
 			0,
 			SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
 	SD_BUS_SIGNAL("ProvisionDiscovery", "ss", 0),
+	SD_BUS_SIGNAL("GoNegRequest", "ss", 0),
 	SD_BUS_VTABLE_END
 };
 
@@ -403,6 +404,31 @@ void peer_dbus_provision_discovery(struct peer *p,
 			       node,
 			       "org.freedesktop.miracle.wifi.Peer",
 			       "ProvisionDiscovery",
+			       "ss", type, pin);
+	if (r < 0)
+		log_vERR(r);
+}
+
+void peer_dbus_go_neg_request(struct peer *p,
+				   const char *type,
+				   const char *pin)
+{
+	_shl_free_ char *node = NULL;
+	int r;
+
+	if (!type)
+		return;
+	if (!pin)
+		pin = "";
+
+	node = peer_dbus_get_path(p);
+	if (!node)
+		return;
+
+	r = sd_bus_emit_signal(p->l->m->bus,
+			       node,
+			       "org.freedesktop.miracle.wifi.Peer",
+			       "GoNegRequest",
 			       "ss", type, pin);
 	if (r < 0)
 		log_vERR(r);

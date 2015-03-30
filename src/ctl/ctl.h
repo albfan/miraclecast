@@ -236,6 +236,10 @@ struct cli_cmd {
 extern sd_event *cli_event;
 extern sd_bus *cli_bus;
 
+extern unsigned int wfd_supported_res_cea;
+extern unsigned int wfd_supported_res_vesa;
+extern unsigned int wfd_supported_res_hh;
+
 int cli_init(sd_bus *bus, const struct cli_cmd *cmds);
 void cli_destroy(void);
 int cli_run(void);
@@ -252,6 +256,9 @@ void ctl_fn_peer_free(struct ctl_peer *p);
 void ctl_fn_peer_provision_discovery(struct ctl_peer *p,
 				     const char *prov,
 				     const char *pin);
+void ctl_fn_peer_go_neg_request(struct ctl_peer *p,
+				     const char *prov,
+				     const char *pin);
 void ctl_fn_peer_formation_failure(struct ctl_peer *p, const char *reason);
 void ctl_fn_peer_connected(struct ctl_peer *p);
 void ctl_fn_peer_disconnected(struct ctl_peer *p);
@@ -260,6 +267,7 @@ void ctl_fn_link_free(struct ctl_link *l);
 
 void ctl_fn_sink_connected(struct ctl_sink *s);
 void ctl_fn_sink_disconnected(struct ctl_sink *s);
+void ctl_fn_sink_resolution_set(struct ctl_sink *s, int hres, int vres);
 
 void cli_fn_help(void);
 

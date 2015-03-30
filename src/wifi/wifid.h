@@ -101,6 +101,9 @@ void peer_supplicant_wfd_subelements_changed(struct peer *p);
 void peer_supplicant_provision_discovery(struct peer *p,
 					 const char *prov,
 					 const char *pin);
+void peer_supplicant_go_neg_request(struct peer *p,
+				    const char *prov,
+				    const char *pin);
 void peer_supplicant_formation_failure(struct peer *p, const char *reason);
 void peer_supplicant_connected_changed(struct peer *p, bool connected);
 
@@ -109,6 +112,9 @@ void peer_dbus_properties_changed(struct peer *p, const char *prop, ...);
 void peer_dbus_provision_discovery(struct peer *p,
 				   const char *prov,
 				   const char *pin);
+void peer_dbus_go_neg_request(struct peer *p,
+			      const char *type,
+			      const char *pin);
 void peer_dbus_formation_failure(struct peer *p, const char *reason);
 void peer_dbus_added(struct peer *p);
 void peer_dbus_removed(struct peer *p);

@@ -702,6 +702,12 @@ static gboolean listener_event(GIOChannel *channel, GIOCondition condition,
 				break;
 		}
 
+		if (!lease) {
+			/* check if requested address free */
+			lease = add_lease(dhcp_server, OFFER_TIME,
+						packet.chaddr, htonl(requested_nip));
+		}
+
 		if (lease && requested_nip == lease->lease_nip) {
 			debug(dhcp_server, "Sending ACK");
 			send_ACK(dhcp_server, &packet,

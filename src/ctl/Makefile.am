@@ -19,6 +19,7 @@ miracle_sinkctl_SOURCES = \
 	ctl-cli.c \
 	ctl-sink.c \
 	ctl-wifi.c \
+	wfd.c \
 	sinkctl.c
 miracle_sinkctl_CPPFLAGS = \
 	$(AM_CPPFLAGS) \

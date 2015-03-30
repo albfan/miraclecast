@@ -976,6 +976,17 @@ static int ctl_wifi_peer_fn(sd_bus *bus,
 
 		ctl_fn_peer_provision_discovery(p, prov, pin);
 	} else if (sd_bus_message_is_signal(m,
+				     "org.freedesktop.miracle.wifi.Peer",
+				     "GoNegRequest")) {
+		/* connection request */
+		const char *prov, *pin;
+
+		r = sd_bus_message_read(m, "ss", &prov, &pin);
+		if (r < 0)
+			return cli_log_parser(r);
+
+		ctl_fn_peer_go_neg_request(p, prov, pin);
+	} else if (sd_bus_message_is_signal(m,
 					    "org.freedesktop.miracle.wifi.Peer",
 					    "FormationFailure")) {
 		/* group formation failure */

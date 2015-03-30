@@ -363,7 +363,11 @@ void ctl_fn_peer_provision_discovery(struct ctl_peer *p,
 		cli_printf("[" CLI_YELLOW "PROV" CLI_DEFAULT "] Peer: %s Type: %s PIN: %s\n",
 			   p->label, prov, pin);
 }
-
+void ctl_fn_peer_go_neg_request(struct ctl_peer *p,
+				     const char *prov,
+				     const char *pin)
+{
+}
 void ctl_fn_peer_formation_failure(struct ctl_peer *p, const char *reason)
 {
 	if (cli_running())
