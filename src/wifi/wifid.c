@@ -39,7 +39,7 @@
 #include "util.h"
 #include "wifid.h"
 
-#define DO_NOT_RELY_UDEV	1
+#define DO_NOT_RELY_UDEV	0
 
 const char *arg_wpa_bindir = "/usr/bin";
 unsigned int arg_wpa_loglevel = LOG_NOTICE;
