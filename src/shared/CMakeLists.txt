@@ -1,3 +1,4 @@
+set(CMAKE_C_FLAGS "-std=gnu11") 
 
 ########### next target ###############
 find_package(PkgConfig)

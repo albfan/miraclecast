@@ -38,6 +38,7 @@
 #include "shl_util.h"
 #include "util.h"
 #include "wifid.h"
+#include "config.h"
 
 #define DO_NOT_RELY_UDEV	0
 
