@@ -65,6 +65,7 @@
 #include <unistd.h>
 #include "dhcp/gdhcp.h"
 #include "shl_log.h"
+#include "config.h"
 
 static const char *arg_netdev;
 static const char *arg_ip_binary = "/bin/ip";

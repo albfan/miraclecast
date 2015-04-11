@@ -37,6 +37,7 @@
 #include "wfd.h"
 #include "shl_macro.h"
 #include "shl_util.h"
+#include "config.h"
 
 static sd_bus *bus;
 static struct ctl_wifi *wifi;

@@ -1,4 +1,5 @@
 
+find_package(Readline)
 ########### next target ###############
 
 set(miracle-wifictl_SRCS ctl.h 
@@ -8,25 +9,42 @@ set(miracle-wifictl_SRCS ctl.h
 
 add_executable(miracle-wifictl ${miracle-wifictl_SRCS})
 
-target_link_libraries(miracle-wifictl ${KDE4_KDECORE_LIBS})
-
 install(TARGETS miracle-wifictl DESTINATION bin)
 
+if(READLINE_FOUND)
+	message(STATUS "Compiling with Readline support")
+	set_property(TARGET miracle-wifictl
+		APPEND
+		PROPERTY COMPILE_DEFINITIONS HAVE_READLINE)
+	target_link_libraries(miracle-wifictl ${READLINE_LIBRARY})
+endif(READLINE_FOUND)
 
+target_link_libraries(miracle-wifictl miracle-shared)
 ########### next target ###############
 
 set(miracle-sinkctl_SRCS ctl.h 
                          ctl-cli.c 
                          ctl-sink.c 
                          ctl-wifi.c 
-                         sinkctl.c)
+                         sinkctl.c
+                         wfd.c)
+                     
 
 add_executable(miracle-sinkctl ${miracle-sinkctl_SRCS})
 
-target_link_libraries(miracle-sinkctl ${KDE4_KDECORE_LIBS})
-
 install(TARGETS miracle-sinkctl DESTINATION bin)
 
+if(READLINE_FOUND)
+	message(STATUS "Compiling with Readline support")
+	set_property(TARGET miracle-sinkctl
+		APPEND
+		PROPERTY COMPILE_DEFINITIONS HAVE_READLINE)
+	target_link_libraries(miracle-sinkctl ${READLINE_LIBRARY})
+endif(READLINE_FOUND)
+
+target_link_libraries(miracle-sinkctl miracle-shared)
+
+INCLUDE_DIRECTORIES(${CMAKE_BINARY_DIR} ${CMAKE_SOURCE_DIR}/src ${CMAKE_SOURCE_DIR}/src/shared)
 
 ########### install files ###############
 

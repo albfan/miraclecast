@@ -12,10 +12,27 @@ add_executable(miracle-wifid ${miracle-wifid_SRCS})
 
 target_link_libraries(miracle-wifid ${KDE4_KDECORE_LIBS})
 
-install(TARGETS miracle-wifid DESTINATION bin)
+include_directories(shared)
+link_directories(shared)
+target_link_libraries(miracle-wifid miracle-shared)
 
+find_package(PkgConfig)
+pkg_check_modules (GLIB2 REQUIRED glib-2.0)
+pkg_check_modules (UDEV REQUIRED libudev)
+link_directories( ${UDEV_LIBRARY_DIRS})
+include_directories( ${UDEV_INCLUDE_DIRS})
+target_link_libraries(miracle-wifid ${UDEV_LIBRARIES})
+link_directories( ${GLIB2_LIBRARY_DIRS})
+include_directories( ${GLIB2_INCLUDE_DIRS})
+target_link_libraries(miracle-wifid ${GLIB2_LIBRARIES})
+
+install(TARGETS miracle-wifid DESTINATION bin)
+INCLUDE_DIRECTORIES(${CMAKE_BINARY_DIR} ${CMAKE_SOURCE_DIR}/src ${CMAKE_SOURCE_DIR}/src/shared)
 
 ########### install files ###############
+
+#set(CMAKE_MODULE_PATH  ${PROJECT_SOURCE_DIR}/cmake-extensions/ )
+
 
 
 

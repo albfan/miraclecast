@@ -34,6 +34,7 @@
 #include "shl_macro.h"
 #include "shl_log.h"
 #include "shl_util.h"
+#include "config.h"
 
 static void manager_free(struct manager *m)
 {
