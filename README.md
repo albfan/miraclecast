@@ -26,16 +26,34 @@ The MiracleCast projects requires the following software to be installed:
 
 ## Install
 
-  To compile MiracleCast, run the standard autotools commands:
+To compile MiracleCast, you can choose from [autotools](http://en.wikipedia.org/wiki/GNU_build_system) or [cmake](http://en.wikipedia.org/wiki/CMake):
 
-```bash
-    $ test -f ./configure || NOCONFIGURE=1 ./autogen.sh
-    $ ./configure --prefix=/usr/local
+
+Autotools:
+
+    $ ./autogen.sh
+    $ mkdir build
+    $ cd build
+    $ ../configure --prefix=/usr/local #avoid --prefix for a standard install
+
+Cmake:
+
+    $ mkdir build
+    $ cd build
+    $ cmake ..
+
+Compile
+
     $ make
+
+Test
+
+    $ make check #only with autotools by now
+
+Install 
+
     $ sudo make install
-    To compile and run the test applications, use:
-    $ make check
-```
+
 ### Ubuntu
 
 This specific linux flavour is so hard to get miraclecast dependencies that an alternative repo was created to install systemd with dbus
