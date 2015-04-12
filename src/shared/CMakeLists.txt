@@ -1,9 +1,8 @@
 set(CMAKE_C_FLAGS "-std=gnu11") 
 
-########### next target ###############
 find_package(PkgConfig)
 pkg_check_modules (SYSTEMD REQUIRED systemd>=213)
-set(miracle-shared_SRCS rtsp.h 
+set(miracle-shared_SOURCES rtsp.h
                              rtsp.c 
                              shl_dlist.h 
                              shl_htable.h 
@@ -18,9 +17,7 @@ set(miracle-shared_SRCS rtsp.h
                              util.h 
                              wpas.h 
                              wpas.c)
-include_directories(/usr/include)
-link_directories(/usr/lib)
-add_library(miracle-shared STATIC ${miracle-shared_SRCS})
+add_library(miracle-shared STATIC ${miracle-shared_SOURCES})
 target_link_libraries (miracle-shared systemd)
 
 

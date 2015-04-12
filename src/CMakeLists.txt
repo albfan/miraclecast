@@ -1,19 +1,15 @@
-set(CMAKE_C_FLAGS "-std=gnu11") 
-add_definitions(-D__USE_GNU)
-add_definitions(-D_GNU_SOURCE)
+set(CMAKE_C_FLAGS "-std=gnu11")
 
 add_subdirectory(shared)
 add_subdirectory(wifi)
 add_subdirectory(dhcp)
 add_subdirectory(ctl)
 
-
-########### next target ###############
-
 set(miracled_SRCS miracled.h miracled.c)
 add_executable(miracled ${miracled_SRCS})
 target_link_libraries(miracled miracle-shared)
 install(TARGETS miracled DESTINATION bin)
+
 INCLUDE_DIRECTORIES(${CMAKE_BINARY_DIR} ${CMAKE_SOURCE_DIR}/src ${CMAKE_SOURCE_DIR}/src/shared)
 
 

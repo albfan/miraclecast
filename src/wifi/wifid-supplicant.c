@@ -34,6 +34,7 @@
 #include "util.h"
 #include "wifid.h"
 #include "wpas.h"
+#include "config.h"
 
 struct supplicant_group {
 	unsigned long users;
