@@ -64,7 +64,11 @@ https://github.com/albfan/systemd-ubuntu-with-dbus
 
 ### Arch linux
 
-There is an AUR package to ease the install process. It's not complete at this time. See #6 to follow it's progress.
+Use existing [AUR package](https://aur.archlinux.org/packages/miraclecast-github/). Remember to enable kdus to systemd-git dependency
+
+    $ export _systemd_git_kdbus=--enable-kdbus
+
+You can achieve installation using [yaourt](https://wiki.archlinux.org/index.php/Yaourt)
 
 ## Documentation
 
