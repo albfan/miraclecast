@@ -20,7 +20,7 @@ The MiracleCast projects requires the following software to be installed:
  - **check**: Test-suite for C programs. Used for optional tests of the MiracleCast code base.
     *optional*: ~=check-0.9.11 (might work with older releases, untested..)
 
- - **gstreamer**: MiracleCast relay on gstreamer to show cast its output. You can test if all needed is installed launching `res/test_viewer.sh`
+ - **gstreamer**: MiracleCast relay on gstreamer to show cast its output. You can test if all needed is installed launching [res/test-viewer.sh](https://github.com/albfan/miraclecast/blob/master/res/test-viewer.sh)
 
  - copy the dbus policy **res/org.freedesktop.miracle.conf** to `/etc/dbus-1/system.d/`
 
