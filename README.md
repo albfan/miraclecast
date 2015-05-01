@@ -1,6 +1,6 @@
 # MiracleCast - Wifi-Display/Miracast Implementation
 
-The MiracleCast project provides software to connect external monitors to your system via Wifi. It is compatible to the Wifi-Display specification also known as Miracast. MiracleCast implements the Display-Source as well as Display-Sink side.
+The MiracleCast project provides software to connect external monitors to your system via Wi-Fi. It is compatible to the Wifi-Display specification also known as Miracast. MiracleCast implements the Display-Source as well as Display-Sink side.
 
 The Display-Source side allows you to connect external displays to your system and stream local content to the device. A lot of effort is put into making this as easy as connecting external displays via HDMI.
 
@@ -21,6 +21,8 @@ The MiracleCast projects requires the following software to be installed:
     *optional*: ~=check-0.9.11 (might work with older releases, untested..)
 
  - **gstreamer**: MiracleCast relay on gstreamer to show cast its output. You can test if all needed is installed launching [res/test-viewer.sh](https://github.com/albfan/miraclecast/blob/master/res/test-viewer.sh)
+
+ - **P2P Wi-Fi device** Although widespread this days, there are some devices not compatible with [Wi-Fi Direct](http://en.wikipedia.org/wiki/Wi-Fi_Direct) (prior know as Wi-Fi P2P). Test yours with [res/test-wifi-capabilities.sh](https://github.com/albfan/miraclecast/blob/master/res/test_wifi-capabilities.sh)
 
  - copy the dbus policy **res/org.freedesktop.miracle.conf** to `/etc/dbus-1/system.d/`
 
