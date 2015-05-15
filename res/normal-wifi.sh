@@ -1,3 +1,5 @@
+#!/bin/bash
+
 ./kill-wpa.sh
 
 . miracle-utils.sh
