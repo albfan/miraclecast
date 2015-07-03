@@ -11,5 +11,8 @@ then
    sudo kill -9 $WPA_PID
 else
    echo cannot find wpa_supplicant connection to kill
-   exit 1
+   if [[ $_ == $0 ]]
+   then
+      exit 1
+   fi
 fi

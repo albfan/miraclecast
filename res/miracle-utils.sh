@@ -78,7 +78,7 @@ function search_p2p_capabilities {
 # show wpa_supplicant command
 #
 function show_wpa_supplicant_process {
-   ps -ef | grep wpa_supplican[t] 
+   ps -ef | grep "wpa_supplican[t] "
 }
 
 #
