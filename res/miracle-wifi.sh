@@ -1,5 +1,19 @@
 #!/bin/bash
 
+# debug {{{
+eval SCRIPT_DEBUG="\$$(basename $0 | tr .- __ )_DEBUG"
+SCRIPT_DEBUG=${SCRIPT_DEBUG:--1}
+
+if [ "$SCRIPT_DEBUG" -ge 1 ]
+then
+   set -x
+fi
+if [ "$SCRIPT_DEBUG" -ge 10 ]
+then
+   set -v
+fi
+#}}}
+
 ./kill-wpa.sh
 
 . miracle-utils.sh
