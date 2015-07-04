@@ -19,14 +19,24 @@ fi
 . miracle-utils.sh
 
 WIFI_NAMES=$(find_wireless_connected_network_interfaces)
-WIFI_COUNT=$(echo "$WIFI_NAMES" | wc -l)
+if [ "$WIFI_NAMES" == "" ]
+then
+   WIFI_COUNT=0
+else
+   WIFI_COUNT=$(echo "$WIFI_NAMES" | wc -l)
+fi
 
 if [ 0 = $WIFI_COUNT ]
 then
    echo There is no wireless devices connected
    # choose from any existing wireless interface
    WIFI_NAMES=$(find_wireless_network_interfaces)
-   WIFI_COUNT=$(echo "$WIFI_NAMES" | wc -l)
+   if [ "$WIFI_NAMES" == "" ]
+   then
+      WIFI_COUNT=0
+   else
+      WIFI_COUNT=$(echo "$WIFI_NAMES" | wc -l)
+   fi
 fi
 
 if [ 0 = $WIFI_COUNT ]
