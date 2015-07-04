@@ -859,8 +859,7 @@ static int ctl_wifi_parse_object(struct ctl_wifi *w,
 	return 0;
 }
 
-static int ctl_wifi_object_fn(sd_bus *bus,
-			      sd_bus_message *m,
+static int ctl_wifi_object_fn(sd_bus_message *m,
 			      void *data,
 			      sd_bus_error *err)
 {
@@ -872,8 +871,7 @@ static int ctl_wifi_object_fn(sd_bus *bus,
 	return ctl_wifi_parse_object(w, m, added);
 }
 
-static int ctl_wifi_properties_fn(sd_bus *bus,
-				  sd_bus_message *m,
+static int ctl_wifi_properties_fn(sd_bus_message *m,
 				  void *data,
 				  sd_bus_error *err)
 {
@@ -936,8 +934,7 @@ static int ctl_wifi_properties_fn(sd_bus *bus,
 	return 0;
 }
 
-static int ctl_wifi_peer_fn(sd_bus *bus,
-			    sd_bus_message *m,
+static int ctl_wifi_peer_fn(sd_bus_message *m,
 			    void *data,
 			    sd_bus_error *err)
 {
