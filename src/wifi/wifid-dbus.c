@@ -69,7 +69,7 @@ static char *link_dbus_get_path(struct link *l)
  * Peer DBus
  */
 
-static int peer_dbus_connect(sd_bus *bus, sd_bus_message *msg,
+static int peer_dbus_connect(sd_bus_message *msg,
 			     void *data, sd_bus_error *err)
 {
 	struct peer *p = data;
@@ -92,7 +92,7 @@ static int peer_dbus_connect(sd_bus *bus, sd_bus_message *msg,
 	return sd_bus_reply_method_return(msg, NULL);
 }
 
-static int peer_dbus_disconnect(sd_bus *bus, sd_bus_message *msg,
+static int peer_dbus_disconnect(sd_bus_message *msg,
 				void *data, sd_bus_error *err)
 {
 	struct peer *p = data;
