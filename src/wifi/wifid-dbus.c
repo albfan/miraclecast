@@ -463,10 +463,6 @@ void peer_dbus_added(struct peer *p)
 
 	r = sd_bus_emit_interfaces_added(p->l->m->bus,
 					 node,
-					 /*
-					 "org.freedesktop.DBus.Properties",
-					 "org.freedesktop.DBus.Introspectable",
-					 */
 					 "org.freedesktop.miracle.wifi.Peer",
 					 NULL);
 	if (r < 0)
