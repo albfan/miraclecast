@@ -758,6 +758,13 @@ int supplicant_peer_connect(struct supplicant_peer *sp,
 		if (!pin || !*pin)
 			return -EINVAL;
 
+		r = wpas_message_append(m, "ss", pin, "pin");
+		if (r < 0)
+			return log_ERR(r);
+	} else if (!strcmp(prov_type, "keypad")) {
+		if (!pin || !*pin)
+			return -EINVAL;
+
 		r = wpas_message_append(m, "ss", pin, "keypad");
 		if (r < 0)
 			return log_ERR(r);
