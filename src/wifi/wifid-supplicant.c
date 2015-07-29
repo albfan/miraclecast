@@ -1423,6 +1423,13 @@ static void supplicant_event(struct supplicant *s, struct wpas_message *m)
 		    !strcmp(name, "WPS-PBC-ACTIVE") ||
 		    !strcmp(name, "WPS-PBC-DISABLE") ||
 		    !strcmp(name, "WPS-AP-AVAILABLE-PBC") ||
+		    !strcmp(name, "WPS-AP-AVAILABLE-AUTH") ||
+		    !strcmp(name, "WPS-AP-AVAILABLE-PIN") ||
+		    !strcmp(name, "CTRL-EVENT-EAP-STATUS") ||
+		    !strcmp(name, "CTRL-EVENT-EAP-METHOD") ||
+		    !strcmp(name, "CTRL-EVENT-EAP-STATUS") ||
+		    !strcmp(name, "WPS-CRED-RECEIVED") ||
+		    !strcmp(name, "WPS-AP-AVAILABLE") ||
 		    !strcmp(name, "WPS-REG-SUCCESS") ||
 		    !strcmp(name, "WPS-SUCCESS") ||
 		    !strcmp(name, "WPS-ENROLLEE-SEEN") ||
@@ -1431,6 +1438,7 @@ static void supplicant_event(struct supplicant *s, struct wpas_message *m)
 		    !strcmp(name, "SME:") ||
 		    !strcmp(name, "WPA:") ||
 		    !strcmp(name, "Trying") ||
+		    !strcmp(name, "No network configuration found for the current AP") ||
 		    !strcmp(name, "Associated"))
 			return;
 
