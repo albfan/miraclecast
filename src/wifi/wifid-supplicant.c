@@ -2521,7 +2521,7 @@ static int supplicant_write_config(struct supplicant *s)
 		    "# End of configuration\n",
 		    s->l->friendly_name ? : "unknown",
 		    "1-0050F204-1",
-		    "pbc",
+		    "pbc keypad pin display",
 		    "p2p_device=1",
 		    "1");
 	if (r < 0) {
