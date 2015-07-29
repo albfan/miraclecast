@@ -40,7 +40,7 @@
 #include "wifid.h"
 #include "config.h"
 
-#define DO_NOT_RELY_UDEV	0
+#define RELY_UDEV 0
 
 const char *arg_wpa_bindir = "/usr/bin";
 unsigned int arg_wpa_loglevel = LOG_NOTICE;
@@ -100,7 +100,7 @@ static void manager_add_udev_link(struct manager *m,
 
 	link_set_friendly_name(l, m->friendly_name);
 
-#if DO_NOT_RELY_UDEV
+#if RELY_UDEV
 	if (udev_device_has_tag(d, "miracle"))
 #endif
 		link_set_managed(l, true);
@@ -138,13 +138,13 @@ static int manager_udev_fn(sd_event_source *source,
 				link_renamed(l, ifname);
 		}
 
-#if DO_NOT_RELY_UDEV
-		link_set_managed(l, true);
-#else
+#if RELY_UDEV
 		if (udev_device_has_tag(d, "miracle"))
 			link_set_managed(l, true);
 		else
 			link_set_managed(l, false);
+#else
+		link_set_managed(l, true);
 #endif
 	} else {
 		manager_add_udev_link(m, d);
