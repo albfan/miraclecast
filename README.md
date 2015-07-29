@@ -81,10 +81,8 @@ Steps to use it as sink:
         $ sudo kill -9 $(ps -ef | grep wpa_supplican[t] | awk '{print $2}')
         # now you can use `res/kill-wpa.sh`
 
- 2. start wpa with config for miraclecast
-
-        $ sudo wpa_supplicant -dd -B -iwlp3s0 -Dnl80211 -c wpa.conf
-        # or `res/miracle-wifi.sh`
+        >Remember to save your config to use with `res/normal-wifi.sh`
+        >it will be easily located with `ps -ef | grep wpa_supplicant` on `-c` option.
 
  2. launch wifi daemon
 
