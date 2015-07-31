@@ -1,0 +1,35 @@
+function _miracle-wifid() {
+  local cur prev
+
+  _get_comp_words_by_ref cur
+  prev=${COMP_WORDS[COMP_CWORD-1]}
+
+  case "$prev" in
+    --log-level)
+    COMPREPLY=($(compgen -W '1 2 3 4 5 6 7' -- "$cur"))
+    return 0
+    ;;
+  esac
+
+  COMPREPLY=($(compgen -W "$(_parse_help miracle-wifid)" -- "$cur"))
+}
+
+complete -F _miracle-wifid miracle-wifid
+
+function _miracle-sinkctl() {
+  local cur prev
+
+  _get_comp_words_by_ref cur
+  prev=${COMP_WORDS[COMP_CWORD-1]}
+
+  case "$prev" in
+    --log-level)
+    COMPREPLY=($(compgen -W '1 2 3 4 5 6 7' -- "$cur"))
+    return 0
+    ;;
+  esac
+
+  COMPREPLY=($(compgen -W "$(_parse_help miracle-sinkctl)" -- "$cur"))
+}
+
+complete -F _miracle-sinkctl miracle-sinkctl
