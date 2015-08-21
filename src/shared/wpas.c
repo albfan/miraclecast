@@ -17,6 +17,8 @@
  * along with MiracleCast; If not, see <http://www.gnu.org/licenses/>.
  */
 
+#define LOG_SUBSYSTEM "wpa"
+
 #include <errno.h>
 #include <fcntl.h>
 #include <inttypes.h>
@@ -33,6 +35,7 @@
 #include "shl_dlist.h"
 #include "shl_util.h"
 #include "wpas.h"
+#include "shl_log.h"
 
 #define CTRL_PATH_TEMPLATE "/tmp/.miracle-wpas-%d-%lu"
 
@@ -741,6 +744,8 @@ static int wpas__parse_message(struct wpas *w,
 	char *pos;
 	int r, num;
 	bool is_event = false;
+
+	log_trace("raw message: %s", raw);
 
 	if ((pos = shl_startswith(raw, "IFNAME="))) {
 		ifname = pos;

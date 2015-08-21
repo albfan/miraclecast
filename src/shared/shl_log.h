@@ -46,6 +46,9 @@ enum log_severity {
 #ifndef LOG_DEBUG
 	LOG_DEBUG = 7,
 #endif
+#ifndef LOG_TRACE
+	LOG_TRACE = 8,
+#endif
 	LOG_SEV_NUM,
 };
 
@@ -167,9 +170,13 @@ extern const char *LOG_SUBSYSTEM;
 #ifdef BUILD_ENABLE_DEBUG
 	#define log_debug(format, ...) \
 		log_printf(LOG_DEBUG, (format), ##__VA_ARGS__)
+	#define log_trace(format, ...) \
+		log_printf(LOG_TRACE, (format), ##__VA_ARGS__)
 #else
 	#define log_debug(format, ...) \
 		log_dummyf(LOG_DEBUG, (format), ##__VA_ARGS__)
+	#define log_trace(format, ...) \
+		log_dummyf(LOG_TRACE, (format), ##__VA_ARGS__)
 #endif
 
 #define log_info(format, ...) \
