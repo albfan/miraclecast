@@ -116,6 +116,8 @@ void log_llog(void *data,
 	      const char *format,
 	      va_list args);
 
+int log_parse_arg(char *optarg);
+
 static inline __attribute__((format(printf, 2, 3)))
 void log_dummyf(unsigned int sev, const char *format, ...)
 {

@@ -238,3 +238,30 @@ void log_llog(void *data,
 {
 	log_submit(file, line, func, subs, sev, format, args);
 }
+
+int log_parse_arg(char *optarg)
+{
+	int log_max_sev;
+	if(!strcasecmp(optarg, "fatal")) {
+		log_max_sev = LOG_FATAL;
+	} else if(!strcasecmp(optarg, "alert")) {
+		log_max_sev = LOG_ALERT;
+	} else if(!strcasecmp(optarg, "critical")) {
+		log_max_sev = LOG_CRITICAL;
+	} else if(!strcasecmp(optarg, "error")) {
+		log_max_sev = LOG_ERROR;
+	} else if(!strcasecmp(optarg, "warning")) {
+		log_max_sev = LOG_WARNING;
+	} else if(!strcasecmp(optarg, "notice")) {
+		log_max_sev = LOG_NOTICE;
+	} else if(!strcasecmp(optarg, "info")) {
+		log_max_sev = LOG_INFO;
+	} else if(!strcasecmp(optarg, "debug")) {
+		log_max_sev = LOG_DEBUG;
+	} else if(!strcasecmp(optarg, "trace")) {
+		log_max_sev = LOG_TRACE;
+	} else {
+		log_max_sev = atoi(optarg);
+	}
+	return log_max_sev;
+}

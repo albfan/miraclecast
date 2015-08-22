@@ -818,7 +818,7 @@ static int parse_argv(int argc, char *argv[])
 			puts(PACKAGE_STRING);
 			return 0;
 		case ARG_LOG_LEVEL:
-			log_max_sev = atoi(optarg);
+			log_max_sev = log_parse_arg(optarg);
 			break;
 		case ARG_LOG_TIME:
 			log_init_time();
