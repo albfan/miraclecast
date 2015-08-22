@@ -27,6 +27,7 @@
 #include <sys/types.h>
 #include <systemd/sd-bus.h>
 #include "shl_dlist.h"
+#include "shl_log.h"
 
 #ifndef CTL_CTL_H
 #define CTL_CTL_H
@@ -122,34 +123,6 @@ bool ctl_sink_is_closed(struct ctl_sink *s);
 extern int cli_max_sev;
 void cli_printv(const char *fmt, va_list args);
 void cli_printf(const char *fmt, ...);
-
-enum {
-#ifndef LOG_FATAL
-	LOG_FATAL = 0,
-#endif
-#ifndef LOG_ALERT
-	LOG_ALERT = 1,
-#endif
-#ifndef LOG_CRITICAL
-	LOG_CRITICAL = 2,
-#endif
-#ifndef LOG_ERROR
-	LOG_ERROR = 3,
-#endif
-#ifndef LOG_WARNING
-	LOG_WARNING = 4,
-#endif
-#ifndef LOG_NOTICE
-	LOG_NOTICE = 5,
-#endif
-#ifndef LOG_INFO
-	LOG_INFO = 6,
-#endif
-#ifndef LOG_DEBUG
-	LOG_DEBUG = 7,
-#endif
-	LOG_SEV_NUM,
-};
 
 #define cli_log(_fmt, ...) \
 	cli_printf(_fmt "\n", ##__VA_ARGS__)

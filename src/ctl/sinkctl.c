@@ -703,7 +703,7 @@ static int parse_argv(int argc, char *argv[])
 			puts(PACKAGE_STRING);
 			return 0;
 		case ARG_LOG_LEVEL:
-			cli_max_sev = atoi(optarg);
+			cli_max_sev = log_parse_arg(optarg);
 			break;
 		case ARG_AUDIO:
 			gst_audio_en = atoi(optarg);
