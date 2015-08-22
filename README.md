@@ -117,6 +117,10 @@ Steps to use it as peer:
 
  5. Apart from list, or show info with peer &lt;mac&gt; there's nothing useful here by now.
 
+## Autocompletion
+
+ Source [res/miraclecast-completion](https://github.com/albfan/miraclecast/blob/master/res/miraclecast-completion) for autocompletion
+
 ## License
 
 This software is licensed under the terms of the GNU-LGPL license. Please see ./COPYING for further information.
