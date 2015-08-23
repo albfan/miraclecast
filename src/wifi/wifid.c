@@ -40,9 +40,8 @@
 #include "wifid.h"
 #include "config.h"
 
-#define RELY_UDEV 0
-
 const char *arg_wpa_bindir = "/usr/bin";
+const char *interface_name = NULL;
 unsigned int arg_wpa_loglevel = LOG_NOTICE;
 
 /*
@@ -90,6 +89,10 @@ static void manager_add_udev_link(struct manager *m,
 	if (!ifname)
 		return;
 
+	if (interface_name && strcmp(interface_name, ifname)) {
+		return;
+	}
+
 	/* ignore dynamic p2p interfaces */
 	if (shl_startswith(ifname, "p2p-"))
 		return;
@@ -100,10 +103,15 @@ static void manager_add_udev_link(struct manager *m,
 
 	link_set_friendly_name(l, m->friendly_name);
 
-#if RELY_UDEV
-	if (udev_device_has_tag(d, "miracle"))
+#ifdef RELY_UDEV
+	if (udev_device_has_tag(d, "miracle")) {
+#else
+	if (!interface_name || !strcmp(interface_name, ifname)) {
 #endif
 		link_set_managed(l, true);
+	} else {
+		log_debug("ignored device: %s", ifname);
+	}
 }
 
 static int manager_udev_fn(sd_event_source *source,
@@ -132,19 +140,23 @@ static int manager_udev_fn(sd_event_source *source,
 		if (l)
 			link_free(l);
 	} else if (l) {
+		ifname = udev_device_get_property_value(d, "INTERFACE");
 		if (action && !strcmp(action, "move")) {
-			ifname = udev_device_get_property_value(d, "INTERFACE");
 			if (ifname)
 				link_renamed(l, ifname);
 		}
 
-#if RELY_UDEV
+#ifdef RELY_UDEV
 		if (udev_device_has_tag(d, "miracle"))
 			link_set_managed(l, true);
 		else
 			link_set_managed(l, false);
 #else
-		link_set_managed(l, true);
+		if (!interface_name || !strcmp(interface_name, ifname)) {
+			link_set_managed(l, true);
+		} else {
+			log_debug("ignored device: %s", ifname);
+		}
 #endif
 	} else {
 		manager_add_udev_link(m, d);
@@ -438,13 +450,15 @@ static int help(void)
 	 */
 	printf("%s [OPTIONS...] ...\n\n"
 	       "Wifi Management Daemon.\n\n"
-	       "  -h --help               Show this help\n"
-	       "     --version            Show package version\n"
-	       "     --log-level <lvl>    Maximum level for log messages\n"
-	       "     --log-time           Prefix log-messages with timestamp\n"
+	       "  -h --help                Show this help\n"
+	       "     --version             Show package version\n"
+	       "     --log-level <lvl>     Maximum level for log messages\n"
+	       "     --log-time            Prefix log-messages with timestamp\n"
 	       "\n"
-	       "     --wpa-bindir <dir>       wpa_supplicant binary dir [/usr/bin]\n"
-	       "     --wpa-loglevel <lvl>     wpa_supplicant log-level\n"
+	       "  -i --interface           Choose the interface to use\n"
+	       "\n"
+	       "     --wpa-bindir <dir>    wpa_supplicant binary dir [/usr/bin]\n"
+	       "     --wpa-loglevel <lvl   wpa_supplicant log-level\n"
 	       , program_invocation_short_name);
 	/*
 	 * 80-char barrier:
@@ -472,14 +486,18 @@ static int parse_argv(int argc, char *argv[])
 
 		{ "wpa-bindir",		required_argument,	NULL,	ARG_WPA_BINDIR },
 		{ "wpa-loglevel",	required_argument,	NULL,	ARG_WPA_LOGLEVEL },
+		{ "interface",	required_argument,	NULL,	'i' },
 		{}
 	};
 	int c;
 
-	while ((c = getopt_long(argc, argv, "h", options, NULL)) >= 0) {
+	while ((c = getopt_long(argc, argv, "hi:", options, NULL)) >= 0) {
 		switch (c) {
 		case 'h':
 			return help();
+		case 'i':
+			interface_name = optarg;
+			break;
 		case ARG_VERSION:
 			puts(PACKAGE_STRING);
 			return 0;

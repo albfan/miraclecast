@@ -1199,7 +1199,7 @@ static void supplicant_event_p2p_group_started(struct supplicant *s,
 {
 	struct supplicant_peer *sp;
 	struct supplicant_group *g;
-	const char *mac, *ifname, *go;
+	const char *mac, *ssid, *ifname, *go;
 	bool is_go;
 	int r;
 
@@ -1208,6 +1208,11 @@ static void supplicant_event_p2p_group_started(struct supplicant *s,
 		log_debug("no go_dev_addr in P2P-GROUP-STARTED: %s",
 			  wpas_message_get_raw(ev));
 		return;
+	}
+
+	r = wpas_message_dict_read(ev, "ssid", 's', &ssid);
+	if (r == 0) {
+		log_debug("ssid: %s", ssid);
 	}
 
 	r = wpas_message_argv_read(ev, 0, 's', &ifname);
