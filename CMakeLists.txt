@@ -13,6 +13,7 @@ add_subdirectory(test)
 
 SET(BUILD_BINDIR "${CMAKE_INSTALL_PREFIX}/bin")
 OPTION(BUILD_ENABLE_DEBUG "Enable Debug" ON )
+OPTION(RELY_UDEV "Rely in udev tag to select device" OFF )
 OPTION(BUILD_TESTS "Enable TEST" ON )
 
 SET(PACKAGE_NAME miraclecast)

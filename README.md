@@ -30,7 +30,6 @@ The MiracleCast projects requires the following software to be installed:
 
 To compile MiracleCast, you can choose from [autotools](http://en.wikipedia.org/wiki/GNU_build_system) or [cmake](http://en.wikipedia.org/wiki/CMake):
 
-
 Autotools:
 
     $ ./autogen.sh
@@ -55,6 +54,14 @@ Test
 Install 
 
     $ sudo make install
+
+## Automatic interface selection with udev
+
+If you want to select the interface to start miraclecast with, add a udev rule with the script [res/write-udev-rule.sh](https://github.com/albfan/miraclecast/blob/master/res/write-udev-rule.sh) and configure miraclecast with
+
+    $ ../configure --enable-rely-udev
+
+You can also choose the interface with  `--interface` option for miracle-wifid.
 
 ### Ubuntu
 

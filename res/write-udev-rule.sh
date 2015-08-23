@@ -1,7 +1,5 @@
 #!/bin/bash
 
-./kill-wpa.sh
-
 . miracle-utils.sh
 
 ETHER_NAMES=$(find_choosable_networknames)
@@ -17,7 +15,7 @@ then
    ETHERNAME="$ETHER_NAMES"
 elif [ 2 -le $ETHER_COUNT ]
 then
-   echo choose device for normal connection:
+   echo choose device to use with miraclecast:
    QUIT="exit"
    select et_name in $ETHER_NAMES $QUIT
    do
@@ -42,11 +40,16 @@ then
    done
 fi
 
-# default path for config file
-CONFIG_FILE=${1:-/run/network/wpa_supplicant_${ETHERNAME}.conf}
+read -p "Provide order to udev rule (default 10): " -e -i 10 ORDER
 
-NUMBER=10
+RULE_FILE="/etc/udev/rules.d/${ORDER}-network.rules"
 
-cat > /etc/udev/rules.d/${NUMBER}-network.rules << EOF
-   SUBSYSTEM=="net", ACTION=="add", ATTR{address}=="$(cat /sys/class/net/${ETHERNAME}/address)", NAME="${ETHERNAME}", TAGS+="miracle"
+echo "...Press enter to finish (sorry, don't know why. It is related with sudo tee)"
+
+cat | sudo tee "${RULE_FILE}" &>/dev/null <<-EOF
+	SUBSYSTEM=="net", ACTION=="add", ATTR{address}=="$(cat /sys/class/net/${ETHERNAME}/address)", NAME="${ETHERNAME}", TAGS+="miracle"
 EOF
+
+echo file "${RULE_FILE}" writed
+
+cat "${RULE_FILE}"

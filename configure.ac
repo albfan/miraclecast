@@ -36,6 +36,10 @@ AC_PROG_AWK
 LT_PREREQ(2.2)
 LT_INIT
 
+AC_ARG_ENABLE([rely-udev],
+              AS_HELP_STRING([--enable-rely-udev], [Use tagged device with miraclecast]), AC_DEFINE([RELY_UDEV], [], [Rely on udev to find miraclecast device]))
+AC_ARG_ENABLE([log-debug],
+                  AS_HELP_STRING([--disable-log-debug], [Disable log debug]), , AC_DEFINE([BUILD_ENABLE_DEBUG], [], [Enable debug log level]))
 #
 # Mandatory dependencies
 #

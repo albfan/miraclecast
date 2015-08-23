@@ -11,7 +11,6 @@ AM_CFLAGS = -Wall \
 AM_CPPFLAGS = -include $(top_builddir)/config.h \
 	-I $(top_srcdir)/src \
 	-I $(top_srcdir)/src/shared \
-	-DBUILD_ENABLE_DEBUG \
 	'-DBUILD_BINDIR="$(bindir)"'
 
 AM_LDFLAGS = -Wl,--as-needed \

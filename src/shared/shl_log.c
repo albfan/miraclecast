@@ -112,6 +112,7 @@ static void log__submit(const char *file,
  */
 
 static const char *log__sev2str[LOG_SEV_NUM] = {
+	[LOG_TRACE] = "TRACE",
 	[LOG_DEBUG] = "DEBUG",
 	[LOG_INFO] = "INFO",
 	[LOG_NOTICE] = "NOTICE",
