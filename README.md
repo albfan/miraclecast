@@ -63,6 +63,8 @@ If you want to select the interface to start miraclecast with, add a udev rule w
 
 You can also choose the interface with  `--interface` option for miracle-wifid.
 
+## Linux Flavours and general compilation instructions
+
 ### Ubuntu
 
 This specific linux flavour is so hard to get miraclecast dependencies that an alternative repo was created to install systemd with dbus
@@ -80,6 +82,13 @@ Use existing [AUR package](https://aur.archlinux.org/packages/miraclecast-github
     $ export _systemd_git_kdbus=--enable-kdbus
 
 You can achieve installation using [yaourt](https://wiki.archlinux.org/index.php/Yaourt)
+
+### Other flavours
+
+If you feel confidence enough (since systemd is the entrypoint for an OS) extract instructions from arch linux AUR PKGBUILD:
+
+- [systemd-kdbus](https://aur.archlinux.org/cgit/aur.git/tree/PKGBUILD?h=systemd-kdbus)
+- [miraclecast](https://aur.archlinux.org/cgit/aur.git/tree/PKGBUILD?h=miraclecast)
 
 ## Documentation
 
