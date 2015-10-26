@@ -69,6 +69,8 @@ This specific linux flavour is so hard to get miraclecast dependencies that an a
 
 https://github.com/albfan/systemd-ubuntu-with-dbus
 
+At this time, ubuntu is on version 15.04 and systemd is stick on 219 version, use branch [systemd-219](https://github.com/albfan/miraclecast/tree/systemd-219) to compile miraclecast
+
 > See specific instructions on that repo
 
 ### Arch linux
