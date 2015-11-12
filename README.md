@@ -77,7 +77,7 @@ At this time, ubuntu is on version 15.04 and systemd is stick on 219 version, us
 
 ### Arch linux
 
-Use existing [AUR package](https://aur.archlinux.org/packages/miraclecast-github/). Remember to enable kdus to systemd-git dependency
+Use existing [AUR package](https://aur.archlinux.org/packages/miraclecast/). Remember to enable kdus to systemd-git dependency
 
     $ export _systemd_git_kdbus=--enable-kdbus
 
