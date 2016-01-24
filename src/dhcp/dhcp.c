@@ -909,7 +909,7 @@ static int parse_argv(int argc, char *argv[])
 
 	log_format(LOG_DEFAULT_BASE, NULL, LOG_INFO,
 		   "miracle-dhcp - revision %s %s %s",
-		   "some-rev-TODO-xyz", __DATE__, __TIME__);
+		   "1.0", __DATE__, __TIME__);
 
 	return 1;
 }
