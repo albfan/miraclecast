@@ -1,5 +1,17 @@
 #!/bin/bash
 
+eval SCRIPT_DEBUG="\$$(basename $0 .sh | tr - _)_DEBUG"
+SCRIPT_DEBUG=${SCRIPT_DEBUG:--1}
+
+if [ "$SCRIPT_DEBUG" -ge 1 ]
+then
+   set -x
+fi
+if [ "$SCRIPT_DEBUG" -ge 10 ]
+then
+   set -v
+fi
+
 . miracle-utils.sh
 
 WIFI_NAMES=$(find_wireless_network_interfaces)
