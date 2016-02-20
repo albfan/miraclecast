@@ -52,7 +52,7 @@ function find_wireless_connected_network_interfaces {
 #
 function find_physical_for_network_interface {
    PHY_INDEX=$(iw dev $1 info | grep wiphy | awk '{print $2}')
-   if [ -n $PHY_INDEX ]
+   if [ -n "$PHY_INDEX" ]
    then
       echo phy$PHY_INDEX
    fi
@@ -64,6 +64,12 @@ function find_physical_for_network_interface {
 function search_p2p_capabilities {
    WI_DEVICE=$1
    PHY_DEVICE=$(find_physical_for_network_interface $WI_DEVICE)
+
+   if [ -z "$PHY_DEVICE" ]
+   then
+      echo "cannot find physical device for $WI_DEVICE"
+      return
+   fi
 
    if iw phy $PHY_DEVICE info | grep -Pzo "(?s)Supported interface modes.*Supported commands" | grep "P2P" &> /dev/null
    then
