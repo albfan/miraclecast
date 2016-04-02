@@ -43,6 +43,7 @@ struct ctl_sink {
 	char *target;
 	char *session;
 	char *url;
+	char *uibc_setting;
 	struct sockaddr_storage addr;
 	size_t addr_size;
 	int fd;
@@ -60,7 +61,8 @@ struct ctl_sink {
 	int hres;
 	int vres;
 };
-
+static const int DEFAULT_UIBC_PORT = 7239;
+static const int DEFAULT_RSTP_PORT = 1991;
 /*
  * RTSP Session
  */
@@ -154,12 +156,26 @@ static void sink_handle_get_parameter(struct ctl_sink *s,
 	}
 	/* wfd_client_rtp_ports */
 	if (rtsp_message_read(m, "{<>}", "wfd_client_rtp_ports") >= 0) {
+		char wfd_client_rtp_ports[128];
+		sprintf(wfd_client_rtp_ports,
+					"wfd_client_rtp_ports: RTP/AVP/UDP;unicast %d 0 mode=play", DEFAULT_RSTP_PORT);
 		r = rtsp_message_append(rep, "{&}",
-					"wfd_client_rtp_ports: RTP/AVP/UDP;unicast 1991 0 mode=play");
+					wfd_client_rtp_ports);
 		if (r < 0)
 			return cli_vERR(r);
 	}
 
+	/* wfd_uibc_capability */
+	if (rtsp_message_read(m, "{<>}", "wfd_uibc_capability") >= 0) {
+		char wfd_uibc_capability[512];
+		sprintf(wfd_uibc_capability,
+			"wfd_uibc_capability: input_category_list=GENERIC;"
+         "generic_cap_list=Mouse,SingleTouch,Keyboard,Camera;"
+         "hidc_cap_list=none;port=%d", DEFAULT_UIBC_PORT);
+		r = rtsp_message_append(rep, "{&}", wfd_uibc_capability);
+		if (r < 0)
+			return cli_vERR(r);
+	}
 	rtsp_message_seal(rep);
 	cli_debug("OUTGOING: %s\n", rtsp_message_get_raw(rep));
 
@@ -241,6 +257,7 @@ static void sink_handle_set_parameter(struct ctl_sink *s,
 	_rtsp_message_unref_ struct rtsp_message *rep = NULL;
 	const char *trigger;
 	const char *url;
+	const char *uibc_setting;
 	char *nu;
 	unsigned int cea_res, vesa_res, hh_res;
 	int r;
@@ -273,6 +290,19 @@ static void sink_handle_set_parameter(struct ctl_sink *s,
 		}
 	}
 
+	/* M4 (or any other) can pass presentation URLs */
+	r = rtsp_message_read(m, "{<s>}", "wfd_uibc_setting", &uibc_setting);
+	if (r >= 0) {
+		if (!s->uibc_setting || strcmp(s->uibc_setting, uibc_setting)) {
+			nu = strdup(uibc_setting);
+			if (!nu)
+				return cli_vENOMEM();
+
+			free(s->uibc_setting);
+			s->uibc_setting = nu;
+			cli_debug("uibc setting: %s\n", s->uibc_setting);
+		}
+	}
 	/* M4 again */
 	r = rtsp_message_read(m, "{<****hhh>}", "wfd_video_formats",
 							&cea_res, &vesa_res, &hh_res);
