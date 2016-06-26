@@ -11,7 +11,7 @@ On the other hand, the Display-Sink side allows you to create wifi-capable exter
 
 The MiracleCast projects requires the following software to be installed:
  - **systemd**: A system management daemon. It is used for device-management (udev), dbus management (sd-bus) and service management.
-    Systemd must be compiled with --enable-kdbus, even though kdbus isn't used, but only the independent, experimental sd-libraries.
+    Systemd >= 221 will work out of the box. For earlier versions systemd must be compiled with --enable-kdbus, even though kdbus isn't used, but only the independent, experimental sd-libraries.
     *required*: >=systemd-213
 
  - **glib**: A utility library. Used by the current DHCP implementation. Will be removed once sd-dns gains DHCP-server capabilities.
