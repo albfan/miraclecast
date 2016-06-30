@@ -49,6 +49,14 @@ if(CHECK_FOUND)
 
 endif(CHECK_FOUND)
 
+
+# 20160630 test, to solve the issue "DSO missing from command line" of pthread
+find_package(Threads)
+set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -lpthread")
+target_link_libraries(test_wpas -lpthread)
+target_link_libraries(test_rtsp -lpthread)
+target_link_libraries(test_valgrind -lpthread)
+
 ########### install files ###############
 
 
