@@ -70,11 +70,17 @@ You can also choose the interface with  `--interface` option for miracle-wifid.
 
 ### Ubuntu
 
-This specific linux flavour is so hard to get miraclecast dependencies that an alternative repo was created to install systemd with dbus
+Check your systemd version with:
+
+    $ systemctl --version
+    
+If you are on 221 or above your systemd has kdbus enabled.
+ 
+If you are below 221, an alternative repo was created to install systemd with dbus
 
 https://github.com/albfan/systemd-ubuntu-with-dbus
 
-At this time, ubuntu is on version 15.04 and systemd is stick on 219 version, use branch [systemd-219](https://github.com/albfan/miraclecast/tree/systemd-219) to compile miraclecast
+See there was interface changes on systemd 219, if you are below that version, use branch [systemd-219](https://github.com/albfan/miraclecast/tree/systemd-219) to compile miraclecast
 
 > See specific instructions on that repo
 
