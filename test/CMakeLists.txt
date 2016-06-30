@@ -4,21 +4,22 @@
 find_package(PkgConfig)
 pkg_check_modules (CHECK check)
 
+set(test_rtsp_SOURCES test_common.h test_rtsp.c)
+add_executable(test_rtsp ${test_rtsp_SOURCES})
+target_link_libraries(test_rtsp miracle-shared)
+target_link_libraries(test_rtsp ${UDEV_LIBRARIES})
+target_link_libraries(test_rtsp ${GLIB2_LIBRARIES})
+
+set(test_wpas_SOURCES test_common.h test_wpas.c)
+add_executable(test_wpas ${test_wpas_SOURCES})
+target_link_libraries(test_wpas miracle-shared)
+target_link_libraries(test_wpas ${UDEV_LIBRARIES})
+target_link_libraries(test_wpas ${GLIB2_LIBRARIES})
+
 if(CHECK_FOUND)
-
-    set(test_rtsp_SOURCES test_common.h test_rtsp.c)
-    add_executable(test_rtsp ${test_rtsp_SOURCES})
-    target_link_libraries(test_rtsp miracle-shared)
     target_link_libraries(test_rtsp ${CHECK_LIBRARIES})
-    target_link_libraries(test_rtsp ${UDEV_LIBRARIES})
-    target_link_libraries(test_rtsp ${GLIB2_LIBRARIES})
 
-    set(test_wpas_SOURCES test_common.h test_wpas.c)
-    add_executable(test_wpas ${test_wpas_SOURCES})
-    target_link_libraries(test_wpas miracle-shared)
     target_link_libraries(test_wpas ${CHECK_LIBRARIES})
-    target_link_libraries(test_wpas ${UDEV_LIBRARIES})
-    target_link_libraries(test_wpas ${GLIB2_LIBRARIES})
 
     set(test_valgrind_SOURCES test_common.h test_valgrind.c)
     add_executable(test_valgrind ${test_valgrind_SOURCES})
