@@ -12,6 +12,7 @@ add_executable(miracle-wifid ${miracle-wifid_SRCS})
 
 target_link_libraries(miracle-wifid ${KDE4_KDECORE_LIBS})
 
+cmake_policy(SET CMP0015 NEW)
 include_directories(shared)
 link_directories(shared)
 target_link_libraries(miracle-wifid miracle-shared)
