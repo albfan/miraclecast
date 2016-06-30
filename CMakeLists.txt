@@ -5,7 +5,7 @@ set(CMAKE_C_FLAGS "-std=gnu11")
 add_definitions(-D_GNU_SOURCE)
 
 project(Miraclecast)
-cmake_minimum_required(VERSION 3.0)
+cmake_minimum_required(VERSION 2.8)
 
 add_subdirectory(src)
 add_subdirectory(res)
