@@ -171,4 +171,4 @@ If you have any questions, do not hesitate to contact one of the maintainers.
 - Website: http://www.freedesktop.org/wiki/Software/miracle
 - Original repo: git://people.freedesktop.org/~dvdhrm/miracle
 - Fork repo: https://github.com/albfan/miraclecast
-
+- Technical spec: https://www.wi-fi.org/file/wi-fi-display-technical-specification-v11 (free registration required)
