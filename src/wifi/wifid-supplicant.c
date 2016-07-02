@@ -386,7 +386,7 @@ static int supplicant_group_spawn_dhcp_server(struct supplicant_group *g,
 		}
 
 		i = 0;
-		argv[i++] = (char*) BUILD_BINDIR "/miracle-dhcp";
+		argv[i++] = (char*) "miracle-dhcp";
 		argv[i++] = "--server";
 		argv[i++] = "--prefix";
 		argv[i++] = prefix;
@@ -398,7 +398,9 @@ static int supplicant_group_spawn_dhcp_server(struct supplicant_group *g,
 		argv[i++] = commfd;
 		argv[i] = NULL;
 
-		execve(argv[0], argv, environ);
+		if (execvpe(argv[0], argv, environ)< 0) {
+			log_error("dhcp failed (%d): %m", errno);
+		}
 		_exit(1);
 	}
 
@@ -448,7 +450,7 @@ static int supplicant_group_spawn_dhcp_client(struct supplicant_group *g)
 		}
 
 		i = 0;
-		argv[i++] = (char*) BUILD_BINDIR "/miracle-dhcp";
+		argv[i++] = (char*) "miracle-dhcp";
 		argv[i++] = "--log-level";
 		argv[i++] = loglevel;
 		argv[i++] = "--netdev";
@@ -457,7 +459,9 @@ static int supplicant_group_spawn_dhcp_client(struct supplicant_group *g)
 		argv[i++] = commfd;
 		argv[i] = NULL;
 
-		execve(argv[0], argv, environ);
+		if (execvpe(argv[0], argv, environ) < 0) {
+			log_error("dhcp failed (%d): %m", errno);
+		}
 		_exit(1);
 	}
 

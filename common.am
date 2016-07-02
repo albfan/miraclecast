@@ -10,8 +10,7 @@ AM_CFLAGS = -Wall \
 
 AM_CPPFLAGS = -include $(top_builddir)/config.h \
 	-I $(top_srcdir)/src \
-	-I $(top_srcdir)/src/shared \
-	'-DBUILD_BINDIR="$(bindir)"'
+	-I $(top_srcdir)/src/shared
 
 AM_LDFLAGS = -Wl,--as-needed \
 	-Wl,--gc-sections \

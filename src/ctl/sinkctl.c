@@ -369,7 +369,7 @@ static void spawn_gst(int hres, int vres)
 		}
 
 		i = 0;
-		argv[i++] = (char*) BUILD_BINDIR "/miracle-gst.sh";
+		argv[i++] = (char*) "/miracle-gst.sh";
 		if (cli_max_sev >= 7)
 			argv[i++] = "-d 3";
 		if (gst_audio_en)

@@ -186,6 +186,7 @@ void cli_printf(const char *fmt, ...);
 #define CLI_BLUE		"\x1B[0;94m"
 #define CLI_BOLDGRAY		"\x1B[1;30m"
 #define CLI_BOLDWHITE		"\x1B[1;37m"
+
 #define CLI_PROMPT		CLI_BLUE "[miraclectl] # " CLI_DEFAULT
 
 struct cli_cmd {
