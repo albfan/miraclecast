@@ -102,6 +102,12 @@ function find_wpa_supplicant_pid {
 }
 
 #
+# checking if distro is archlinux
+#
+function check_archlinux_distro {
+   test -f "/etc/arch-release"
+}
+#
 # checking if distro is ubuntu
 #
 function check_ubuntu_distro {
@@ -120,6 +126,17 @@ function kill_ubuntu_network_manager {
 }
 
 #
+# arch linux manager restarts automatically wpa_supplicant
+#
+function kill_archlinux_network_manager {
+   if check_ubuntu_distro
+   then
+      echo stopping NetworkManager
+      sudo systemctl stop Network.service
+   fi
+}
+
+#
 # start ubuntu manager
 #
 function start_ubuntu_network_manager {
@@ -127,5 +144,16 @@ function start_ubuntu_network_manager {
    then
       echo starting NetworkManager
       sudo service NetworkManager start
+   fi
+}
+
+#
+# start arch linux manager
+#
+function start_archlinux_network_manager {
+   if check_archlinux_distro
+   then
+      echo starting NetworkManager
+      sudo systemctl start Network.service
    fi
 }
