@@ -1,5 +1,5 @@
 include $(top_srcdir)/common.am
-SUBDIRS = shared wifi dhcp ctl
+SUBDIRS = shared wifi dhcp ctl uibc
 
 bin_PROGRAMS = miracled
 

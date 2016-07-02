@@ -1,0 +1,8 @@
+#!/bin/bash
+
+IP=$1
+shift
+UIBC_PORT=$1
+shift
+
+gstplayer $@ | miracle-uibcctl $IP $UIBC_PORT --daemon

@@ -17,52 +17,8 @@
  * along with MiracleCast; If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <arpa/inet.h>
-#include <errno.h>
-#include <fcntl.h>
-#include <netinet/in.h>
-#include <poll.h>
-#include <stdbool.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <sys/socket.h>
-#include <sys/types.h>
-#include <systemd/sd-event.h>
-#include <time.h>
-#include <unistd.h>
-#include "ctl.h"
-#include "rtsp.h"
-#include "shl_macro.h"
-#include "shl_util.h"
-#include "wfd.h"
+#include "ctl-sink.h"
 
-struct ctl_sink {
-	sd_event *event;
-
-	char *target;
-	char *session;
-	char *url;
-	char *uibc_setting;
-	struct sockaddr_storage addr;
-	size_t addr_size;
-	int fd;
-	sd_event_source *fd_source;
-
-	struct rtsp *rtsp;
-
-	bool connected : 1;
-	bool hup : 1;
-
-	uint32_t resolutions_cea;
-	uint32_t resolutions_vesa;
-	uint32_t resolutions_hh;
-
-	int hres;
-	int vres;
-};
-static const int DEFAULT_UIBC_PORT = 7239;
-static const int DEFAULT_RSTP_PORT = 1991;
 /*
  * RTSP Session
  */
@@ -158,7 +114,7 @@ static void sink_handle_get_parameter(struct ctl_sink *s,
 	if (rtsp_message_read(m, "{<>}", "wfd_client_rtp_ports") >= 0) {
 		char wfd_client_rtp_ports[128];
 		sprintf(wfd_client_rtp_ports,
-					"wfd_client_rtp_ports: RTP/AVP/UDP;unicast %d 0 mode=play", DEFAULT_RSTP_PORT);
+					"wfd_client_rtp_ports: RTP/AVP/UDP;unicast %d 0 mode=play", rstp_port);
 		r = rtsp_message_append(rep, "{&}",
 					wfd_client_rtp_ports);
 		if (r < 0)
@@ -166,12 +122,12 @@ static void sink_handle_get_parameter(struct ctl_sink *s,
 	}
 
 	/* wfd_uibc_capability */
-	if (rtsp_message_read(m, "{<>}", "wfd_uibc_capability") >= 0) {
+	if (rtsp_message_read(m, "{<>}", "wfd_uibc_capability") >= 0 && uibc) {
 		char wfd_uibc_capability[512];
 		sprintf(wfd_uibc_capability,
 			"wfd_uibc_capability: input_category_list=GENERIC;"
-         "generic_cap_list=Mouse,SingleTouch,Keyboard,Camera;"
-         "hidc_cap_list=none;port=%d", DEFAULT_UIBC_PORT);
+         "generic_cap_list=Mouse,SingleTouch;"
+         "hidc_cap_list=none;port=none");
 		r = rtsp_message_append(rep, "{&}", wfd_uibc_capability);
 		if (r < 0)
 			return cli_vERR(r);
@@ -243,7 +199,7 @@ static int sink_set_format(struct ctl_sink *s,
 		if (hres && vres) {
 			s->hres = hres;
 			s->vres = vres;
-			ctl_fn_sink_resolution_set(s, hres, vres);
+			ctl_fn_sink_resolution_set(s);
 			return 0;
 		}
 	}
@@ -257,6 +213,7 @@ static void sink_handle_set_parameter(struct ctl_sink *s,
 	_rtsp_message_unref_ struct rtsp_message *rep = NULL;
 	const char *trigger;
 	const char *url;
+	const char *uibc_config;
 	const char *uibc_setting;
 	char *nu;
 	unsigned int cea_res, vesa_res, hh_res;
@@ -286,6 +243,30 @@ static void sink_handle_set_parameter(struct ctl_sink *s,
 
 			free(s->url);
 			s->url = nu;
+			cli_debug("Got URL: %s\n", s->url);
+		}
+	}
+
+	/* M4 (or any other) can pass presentation URLs */
+	r = rtsp_message_read(m, "{<s>}", "wfd_uibc_capability", &uibc_config);
+	if (r >= 0) {
+		if (!s->uibc_config || strcmp(s->uibc_config, uibc_config)) {
+			nu = strdup(uibc_config);
+			if (!nu)
+				return cli_vENOMEM();
+
+			free(s->uibc_config);
+			s->uibc_config = nu;
+
+            char* token = strtok(uibc_config, ";");
+
+            while (token) {
+                if (sscanf(token, "port=%d", &uibc_port)) {
+                    break;
+                }
+                token = strtok(0, ";");
+            }
+
 			cli_debug("Got URL: %s\n", s->url);
 		}
 	}
@@ -330,9 +311,9 @@ static void sink_handle_set_parameter(struct ctl_sink *s,
 		if (r < 0)
 			return cli_vERR(r);
 
-		r = rtsp_message_append(rep, "<s>",
-					"Transport",
-					"RTP/AVP/UDP;unicast;client_port=1991");
+		char rtsp_setup[128];
+		sprintf(rtsp_setup, "RTP/AVP/UDP;unicast;client_port=%d", rstp_port);
+		r = rtsp_message_append(rep, "<s>", "Transport", rtsp_setup);
 		if (r < 0)
 			return cli_vERR(r);
 

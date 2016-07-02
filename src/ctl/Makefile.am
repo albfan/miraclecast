@@ -17,6 +17,7 @@ miracle_wifictl_LDADD = \
 miracle_sinkctl_SOURCES = \
 	ctl.h \
 	ctl-cli.c \
+	ctl-sink.h \
 	ctl-sink.c \
 	ctl-wifi.c \
 	wfd.c \

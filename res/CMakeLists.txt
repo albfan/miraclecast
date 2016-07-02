@@ -1,7 +1,7 @@
 
 ########### install files ###############
 
-install(FILES  miracle-gst.sh DESTINATION bin)
+install(FILES miracle-gst gstplayer DESTINATION bin)
 
 
 

@@ -35,6 +35,7 @@ AC_PROG_AWK
 
 LT_PREREQ(2.2)
 LT_INIT
+LT_LIB_M
 
 AC_ARG_ENABLE([rely-udev],
               AS_HELP_STRING([--enable-rely-udev], [Use tagged device with miraclecast]), AC_DEFINE([RELY_UDEV], [], [Rely on udev to find miraclecast device]))
@@ -70,6 +71,7 @@ AC_CONFIG_FILES([Makefile
                  src/dhcp/Makefile
                  src/shared/Makefile
                  src/wifi/Makefile
+                 src/uibc/Makefile
                  test/Makefile])
 AC_OUTPUT
 

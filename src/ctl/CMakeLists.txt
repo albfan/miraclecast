@@ -24,11 +24,11 @@ target_link_libraries(miracle-wifictl miracle-shared)
 
 set(miracle-sinkctl_SRCS ctl.h 
                          ctl-cli.c 
+                         ctl-sink.h
                          ctl-sink.c 
                          ctl-wifi.c 
                          sinkctl.c
                          wfd.c)
-                     
 
 add_executable(miracle-sinkctl ${miracle-sinkctl_SRCS})
 

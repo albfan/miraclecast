@@ -34,6 +34,7 @@
 #include <time.h>
 #include <unistd.h>
 #include "ctl.h"
+#include "ctl-sink.h"
 #include "wfd.h"
 #include "shl_macro.h"
 #include "shl_util.h"
@@ -53,8 +54,15 @@ static struct ctl_link *running_link;
 static struct ctl_peer *running_peer;
 static struct ctl_peer *pending_peer;
 
+void launch_player(struct ctl_sink *s);
+
 char *gst_scale_res;
 int gst_audio_en = 1;
+static const int DEFAULT_RSTP_PORT = 1991;
+bool uibc;
+int rstp_port;
+int uibc_port;
+
 unsigned int wfd_supported_res_cea  = 0x0000001f;	/* up to 720x576 */
 unsigned int wfd_supported_res_vesa = 0x00000003;	/* up to 800x600 */
 unsigned int wfd_supported_res_hh   = 0x00000000;	/* not supported */
@@ -335,12 +343,10 @@ static const struct cli_cmd cli_cmds[] = {
 	{ },
 };
 
-static void spawn_gst(int hres, int vres)
+static void spawn_gst(struct ctl_sink *s)
 {
-	char *argv[64];
-	char resolution[64];
 	pid_t pid;
-	int fd_journal, i;
+	int fd_journal;
 	sigset_t mask;
 
 	if (sink_pid > 0)
@@ -357,7 +363,7 @@ static void spawn_gst(int hres, int vres)
 
 		/* redirect stdout/stderr to journal */
 		fd_journal = sd_journal_stream_fd("miracle-sinkctl-gst",
-						  LOG_INFO,
+						  LOG_DEBUG,
 						  false);
 		if (fd_journal >= 0) {
 			/* dup journal-fd to stdout and stderr */
@@ -368,8 +374,34 @@ static void spawn_gst(int hres, int vres)
 			dup2(2, 1);
 		}
 
-		i = 0;
-		argv[i++] = (char*) "/miracle-gst.sh";
+		launch_player(s);
+		_exit(1);
+	} else {
+		sink_pid = pid;
+	}
+}
+
+void launch_player(struct ctl_sink *s) {
+	char *argv[64];
+	char resolution[64];
+	char port[64];
+	char uibc_portStr[64];
+	int i = 0;
+	char* player;
+	if (uibc) {
+//		player = "gstplayer";
+		player = "uibc-viewer";
+	} else {
+		player = "miracle-gst";
+	}
+
+	argv[i++] = player;
+	if (uibc) {
+		argv[i++] = s->target;
+		sprintf(uibc_portStr, "%d", uibc_port);
+		argv[i++] = uibc_portStr;
+//		argv[i++] = "--daemon";
+	}
 		if (cli_max_sev >= 7)
 			argv[i++] = "-d 3";
 		if (gst_audio_en)
@@ -378,18 +410,55 @@ static void spawn_gst(int hres, int vres)
 			argv[i++] = "-s";
 			argv[i++] = gst_scale_res;
 		}
-		if (hres && vres) {
-			sprintf(resolution, "%dx%d", hres, vres);
+	argv[i++] = "-p";
+	sprintf(port, "%d", rstp_port);
+	argv[i++] = port;
+
+	if (s->hres && s->vres) {
+		sprintf(resolution, "%dx%d", s->hres, s->vres);
 			argv[i++] = "-r";
 			argv[i++] = resolution;
 		}
+
 		argv[i] = NULL;
 
-		execve(argv[0], argv, environ);
-		_exit(1);
-	} else {
-		sink_pid = pid;
+	i = 0;
+   int size = 0;
+	while (argv[i]) {
+      size += strlen(argv[i++] + 1);
 	}
+
+   char* player_command = malloc(size);
+	i = 0;
+   strcpy(player_command, argv[i++]);
+	while (argv[i]) {
+      strcat(player_command, " ");
+      strcat(player_command, argv[i++]);
+	}
+   log_debug("player command: %s", player_command);
+   //free(player_command);
+	if (execvpe(argv[0], argv, environ) < 0) {
+		cli_debug("stream player failed (%d): %m", errno);
+		int i = 0;
+		cli_debug("printing environment: ");
+		while (environ[i]) {
+			cli_debug("%s", environ[i++]);
+		}
+	}
+}
+
+void launch_uibc_daemon(int port) {
+	char *argv[64];
+	char portStr[64];
+	int i = 0;
+	argv[i++] = "miracle-uibcctl";
+	argv[i++] = "localhost";
+	sprintf(portStr, "%d", port);
+	argv[i++] = portStr;
+	argv[i] = NULL;
+
+	cli_debug("uibc daemon: %s", argv[0]);
+	execvpe(argv[0], argv, environ);
 }
 
 static void kill_gst(void)
@@ -418,11 +487,11 @@ void ctl_fn_sink_disconnected(struct ctl_sink *s)
 	}
 }
 
-void ctl_fn_sink_resolution_set(struct ctl_sink *s, int hres, int vres)
+void ctl_fn_sink_resolution_set(struct ctl_sink *s)
 {
-	cli_printf("SINK set resolution %dx%d\n", hres, vres);
+	cli_printf("SINK set resolution %dx%d\n", s->hres, s->vres);
 	if (sink_connected)
-		spawn_gst(hres, vres);
+		spawn_gst(s);
 }
 
 void ctl_fn_peer_new(struct ctl_peer *p)
@@ -604,14 +673,17 @@ void cli_fn_help()
 	       "  -h --help             Show this help\n"
 	       "     --version          Show package version\n"
 	       "     --log-level <lvl>  Maximum level for log messages\n"
+	       "     --log-journal-level <lvl>  Maximum level for journal log messages\n"
 	       "     --audio <0/1>      Enable audio support (default %d)\n"
 	       "     --scale WxH        Scale to resolution\n"
+	       "     --port <port>              Port for rtsp (default %d)\n"
+	       "     --uibc                     Enables UIBC\n"
 	       "     --res <n,n,n>      Supported resolutions masks (CEA, VESA, HH)\n"
 	       "                        default CEA  %08X\n"
 	       "                        default VESA %08X\n"
 	       "                        default HH   %08X\n"
 	       "\n"
-	       , program_invocation_short_name, gst_audio_en,
+	       , program_invocation_short_name, gst_audio_en, DEFAULT_RSTP_PORT,
 		   wfd_supported_res_cea, wfd_supported_res_vesa, wfd_supported_res_hh
 	       );
 	wfd_print_resolutions();
@@ -680,20 +752,29 @@ static int parse_argv(int argc, char *argv[])
 	enum {
 		ARG_VERSION = 0x100,
 		ARG_LOG_LEVEL,
+		ARG_JOURNAL_LEVEL,
 		ARG_AUDIO,
 		ARG_SCALE,
 		ARG_RES,
+		ARG_PORT,
+		ARG_UIBC,
 	};
 	static const struct option options[] = {
 		{ "help",	no_argument,		NULL,	'h' },
 		{ "version",	no_argument,		NULL,	ARG_VERSION },
 		{ "log-level",	required_argument,	NULL,	ARG_LOG_LEVEL },
+		{ "log-journal-level",	required_argument,	NULL,	ARG_JOURNAL_LEVEL },
 		{ "audio",	required_argument,	NULL,	ARG_AUDIO },
 		{ "scale",	required_argument,	NULL,	ARG_SCALE },
 		{ "res",	required_argument,	NULL,	ARG_RES },
+		{ "port",		required_argument,	NULL,	ARG_PORT },
+		{ "uibc",		no_argument,		NULL,	ARG_UIBC },
 		{}
 	};
 	int c;
+
+	uibc = false;
+	rstp_port = DEFAULT_RSTP_PORT;
 
 	while ((c = getopt_long(argc, argv, "h", options, NULL)) >= 0) {
 		switch (c) {
@@ -704,6 +785,9 @@ static int parse_argv(int argc, char *argv[])
 			return 0;
 		case ARG_LOG_LEVEL:
 			cli_max_sev = log_parse_arg(optarg);
+			break;
+		case ARG_JOURNAL_LEVEL:
+			log_max_sev = log_parse_arg(optarg);
 			break;
 		case ARG_AUDIO:
 			gst_audio_en = atoi(optarg);
@@ -716,6 +800,12 @@ static int parse_argv(int argc, char *argv[])
 				&wfd_supported_res_cea,
 				&wfd_supported_res_vesa,
 				&wfd_supported_res_hh);
+			break;
+		case ARG_PORT:
+			rstp_port = atoi(optarg);
+			break;
+		case ARG_UIBC:
+			uibc = true;
 			break;
 		case '?':
 			return -EINVAL;

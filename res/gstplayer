@@ -1,0 +1,219 @@
+#!/usr/bin/python3 -u
+
+import gi
+import sys
+import argparse
+
+gi.require_version('Gst', '1.0')
+gi.require_version('Gtk', '3.0')
+gi.require_version('GstVideo', '1.0')
+
+from gi.repository import GObject, Gst, Gtk, Gdk, GLib
+
+# Needed for window.get_xid(), xvimagesink.set_window_handle(), respectively:
+from gi.repository import GdkX11, GstVideo
+
+GObject.threads_init()
+Gst.init(None)
+
+class Player(object):
+    def __init__(self, **kwargs):
+
+        scale = kwargs.get("scale")
+        #scale = "1080x1920"
+        if not scale:
+            self.width = 800
+            self.height = 600
+        else:
+            split = scale.split("x")
+            self.width = int(split[0])
+            self.height = int(split[1])
+
+        port = kwargs.get("port")
+
+        uri = kwargs.get("uri")
+
+        self.window = Gtk.Window()
+        self.window.set_name('eco')
+        self.window.connect('destroy', self.quit)
+
+        title = kwargs.get("title")
+        if title:
+            self.window.set_title(title)
+
+        self.window.set_default_size(self.width, self.height)
+
+        self.drawingarea = Gtk.DrawingArea()
+        self.window.add(self.drawingarea)
+
+        self.drawingarea.set_size_request(self.width,self.height)
+        self.drawingarea.add_events(Gdk.EventMask.BUTTON_PRESS_MASK|Gdk.EventMask.BUTTON_RELEASE_MASK) 
+        self.drawingarea.connect('button-press-event', self.on_mouse_pressed)
+        self.drawingarea.connect('button-release-event', self.on_mouse_pressed)
+        self.drawingarea.add_events(Gdk.EventMask.KEY_PRESS_MASK)
+        self.window.connect('key-press-event', self.on_key_pressed)
+
+        audio = kwargs.get("audio")
+
+        self.playbin = None
+
+        #Create GStreamer pipeline
+        if uri is not None:
+            self.pipeline = Gst.Pipeline()
+
+            # Create GStreamer elements
+            self.playbin = Gst.ElementFactory.make('playbin', "source")
+
+            if not uri.startswith("http://") or not uri.startswith("http://") or not uri.startswith("file://"):
+                if not uri.startswith("/"):
+                    import os
+                    uri = os.path.abspath(uri)
+                uri = "file://"+uri
+
+            # Set properties
+            self.playbin.set_property('uri', uri)
+
+
+            # Add playbin to the pipeline
+            self.pipeline.add(self.playbin)
+        else:
+            gstcommand = "udpsrc port="+str(port)+" caps=\"application/x-rtp, media=video\" ! rtpjitterbuffer latency=100 ! rtpmp2tdepay ! tsdemux "
+
+            if audio:
+                gstcommand += "name=demuxer demuxer. "
+
+            gstcommand += "! queue max-size-buffers=0 max-size-time=0 ! h264parse ! avdec_h264 ! videoconvert ! "
+
+            if scale:
+                gstcommand += "videoscale method=1 ! video/x-raw,width="+str(self.width)+",height="+str(self.height)+" ! "
+
+            gstcommand += "autovideosink "
+
+            if audio:
+                gstcommand += "demuxer. ! queue max-size-buffers=0 max-size-time=0 ! aacparse ! avdec_aac ! audioconvert ! audioresample ! autoaudiosink "
+
+            self.pipeline = Gst.parse_launch(gstcommand)
+
+
+        # Create bus to get events from GStreamer pipeline
+        self.bus = self.pipeline.get_bus()
+        self.bus.add_signal_watch()
+        self.bus.connect('message::eos', self.on_eos)
+        self.bus.connect('message::error', self.on_error)
+
+        # This is needed to make the video output in our DrawingArea:
+        self.bus.enable_sync_message_emission()
+        self.bus.connect('sync-message::element', self.on_sync_message)
+        self.bus.connect('message', self.on_message)
+
+        self.success = False
+
+    def on_message(self, bus, message):
+        if self.playbin:
+            videoPad = self.playbin.emit("get-video-pad", 0)
+            if videoPad and not self.success:
+                videoPadCapabilities = videoPad.get_current_caps()
+                if videoPadCapabilities:
+                    (self.success, self.videoWidth) = \
+                        videoPadCapabilities.get_structure(0).get_int("width")
+                    (self.success, self.videoHeight) = \
+                        videoPadCapabilities.get_structure(0).get_int("height")
+                    if self.success:
+                        print("{0} {1}".format(self.videoWidth, self.videoHeight))
+                        self.drawingarea.set_size_request(self.videoWidth, self.videoHeight)
+
+    def on_mouse_pressed(self, widget, event):
+        #<type>,<count>,<id>,<x>,<y>
+        if event.type == Gdk.EventType.BUTTON_PRESS:
+            type = 0
+        else:
+            type = 1
+
+        width = self.drawingarea.get_allocation().width
+        height = self.drawingarea.get_allocation().height
+        half_area_width = width / 2
+        half_area_height = height / 2
+
+        half_def_width = self.width / 2
+        half_def_height = self.height / 2
+
+        min_hor_pos = half_area_width - half_def_width
+        max_hor_pos = half_area_width + half_def_width
+        min_ver_pos = half_area_height - half_def_height
+        max_ver_pos = half_area_height + half_def_height
+
+        pos_event_x = event.x
+        pos_event_y = event.y
+
+
+        #print('{0} {1} {2} {3} {4} {5}'.format(min_hor_pos, pos_event_x, max_hor_pos, min_ver_pos, pos_event_y,max_ver_pos))
+        if min_hor_pos <= pos_event_x <= max_hor_pos and min_ver_pos <= pos_event_y <= max_ver_pos:
+            uibc_x = int(pos_event_x - (half_area_width - half_def_width))
+            #print ('{0} {1} {2} {3}'.format(uibc_x, pos_event_x, half_area_width,half_def_width))
+            uibc_y = int(pos_event_y - (half_area_height - half_def_height))
+            #print ('{0} {1} {2} {3}'.format(uibc_y, pos_event_y, half_area_height,half_def_height))
+            print('{0},1,0,{1},{2}'.format(type, uibc_x , uibc_y))
+
+    def on_key_pressed(self, widget, event):
+        #print(Gdk.keyval_name(event.keyval))
+        print("3,0x%04X,0x0000" % event.keyval)
+        # print(event.state)
+        # if event.state & Gdk.ModifierType.LOCK_MASK == Gdk.ModifierType.LOCK_MASK:
+            # print("caps lock")
+        # print(Gtk.accelerator_get_label(event.keyval, event.state))
+
+    def run(self):
+        self.window.show_all()
+        # You need to get the XID after window.show_all().  You shouldn't get it
+        # in the on_sync_message() handler because threading issues will cause
+        # segfaults there.
+        self.xid = self.drawingarea.get_property('window').get_xid()
+        self.pipeline.set_state(Gst.State.PLAYING)
+        Gtk.main()
+
+
+    def quit(self, window):
+        self.pipeline.set_state(Gst.State.NULL)
+        Gtk.main_quit()
+
+    def on_sync_message(self, bus, msg):
+        if msg.get_structure().get_name() == 'prepare-window-handle':
+            print(self.drawingarea.get_allocation())
+            #msg.src.set_property("force-aspect-radio", True)
+            msg.src.set_window_handle(self.xid)
+
+    def on_eos(self, bus, msg):
+        print('on_eos(): seeking to start of video')
+        self.pipeline.seek_simple(
+            Gst.Format.TIME,
+            Gst.SeekFlags.FLUSH | Gst.SeekFlags.KEY_UNIT,
+            0
+        )
+
+    def on_error(self, bus, msg):
+        print('on_error():', msg.parse_error())
+
+
+if __name__ == '__main__':
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("uri", nargs="?",                 help="Uri to play")
+    parser.add_argument("-v", "--version",                help="Show package version")
+    parser.add_argument("--log-level",   metavar="lvl",   help="Maximum level for log messages")
+    parser.add_argument("-p", "--port",  type=int, default=1991,  help="Port for rtsp")
+    parser.add_argument("-a", "--audio", dest="audio", action="store_true", help="Enable audio support")
+    parser.add_argument("-s", "--scale", metavar="WxH",   help="Scale to resolution")
+    parser.add_argument("-d", "--debug",                  help="Debug")
+    parser.add_argument("--uibc",                         help="Enable UIBC")
+    parser.add_argument("--title",                        help="set player title")
+    parser.add_argument("--res",         metavar="n,n,n", help="Supported resolutions masks (CEA, VESA, HH)")
+    # res
+    # "                        default CEA  %08X\n"
+    # "                        default VESA %08X\n"
+    # "                        default HH   %08X\n"
+    parser.add_argument("-r", "--resolution",             help="Resolution")
+    parser.set_defaults(audio=True)
+    args = parser.parse_args()
+
+    p = Player(**vars(args))
+    p.run()

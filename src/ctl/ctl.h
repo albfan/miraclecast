@@ -241,7 +241,7 @@ void ctl_fn_link_free(struct ctl_link *l);
 
 void ctl_fn_sink_connected(struct ctl_sink *s);
 void ctl_fn_sink_disconnected(struct ctl_sink *s);
-void ctl_fn_sink_resolution_set(struct ctl_sink *s, int hres, int vres);
+void ctl_fn_sink_resolution_set(struct ctl_sink *s);
 
 void cli_fn_help(void);
 

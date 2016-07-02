@@ -86,7 +86,7 @@ See there was interface changes on systemd 219, if you are below that version, u
 
 ### Arch linux
 
-Use existing [AUR package](https://aur.archlinux.org/packages/miraclecast/). Remember to enable kdus to systemd-git dependency
+Use existing [AUR package](https://aur.archlinux.org/packages/miraclecast/). Remember to enable kdus to systemd-git dependency if you are below 221 systemd.
 
     $ export _systemd_git_kdbus=--enable-kdbus
 
@@ -142,7 +142,13 @@ Steps to use it as peer:
 
         > psp-scan
 
- 5. Apart from list, or show info with peer &lt;mac&gt; there's nothing useful here by now.
+ 5. Apart from list, or show info with peer &lt;mac&gt; there's nothing useful here by now. For a Q&D see [Using as peer](https://github.com/albfan/miraclecast/issues/4)
+
+## UIBC
+
+> The User Input Back Channel (UIBC) is an optional WFD feature that when implemented facilitates communication of user inputs to a User Interface, present at the WFD Sink, to the WFD Source.
+
+To use it just add `--uibc` on `miracle-sinkctl` startup. Single mouse events and key events are implemented.
 
 ## Autocompletion
 

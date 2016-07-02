@@ -26,6 +26,7 @@ miracle-dhcp
 miracle-sinkctl
 miracle-wifictl
 miracle-wifid
+miracle-uibcctl
 miraclectl
 miracled
 stamp-h1
