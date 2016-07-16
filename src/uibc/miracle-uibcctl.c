@@ -56,20 +56,22 @@ int main(int argc, char *argv[]) {
     bzero(buffer, 256);
     fgets(buffer, 255, stdin);
     if (buffer == NULL) {
-       break;
+      break;
     }
-    if (daemon) {
-        printf("input: %s", buffer);
+    if (!daemon) {
+      printf("input: %s", buffer);
     }
     char type = buffer[0];
     UibcMessage uibcmessage;
     if (type == '0' || type == '1') {
-        uibcmessage = buildUibcMessage(GENERIC_TOUCH_DOWN, buffer, 1, 1);
+      uibcmessage = buildUibcMessage(GENERIC_TOUCH_DOWN, buffer, 1, 1);
     } else if (type == '3' || type == '4') {
-        uibcmessage = buildUibcMessage(GENERIC_KEY_DOWN, buffer, 1, 1);
+      uibcmessage = buildUibcMessage(GENERIC_KEY_DOWN, buffer, 1, 1);
     } else {
+      if (!daemon) {
         printf("unknow event type: %s", buffer);
-        continue;
+      }
+      continue;
     }
 
     r = sendUibcMessage(&uibcmessage, sockfd);
@@ -86,8 +88,7 @@ const char *int2binary(int x, int padding)
 {
   char *b;
   int min_padding = x > 0 ? floor(log2(x)) : 0;
-  if (padding < min_padding)
-  {
+  if (padding < min_padding) {
     padding = min_padding;
   }
 
@@ -95,8 +96,7 @@ const char *int2binary(int x, int padding)
   strcpy(b, "");
 
   int z;
-  for (z = pow(2,padding); z > 0; z >>= 1)
-  {
+  for (z = pow(2,padding); z > 0; z >>= 1) {
     strcat(b, ((x & z) == z) ? "1" : "0");
   }
 
@@ -176,8 +176,8 @@ void getUIBCGenericTouchPacket(const char *inEventDesc,
   char** splitedStr = str_split((char*)inEventDesc, ",", &size);
 
   if ((int)size - 5 < 0 || ((int)size - 5) % 3 != 0) {
-      log_error("getUIBCGenericTouchPacket (%s)", "bad input event");
-      return;
+    log_error("getUIBCGenericTouchPacket (%s)", "bad input event");
+    return;
   }
   int offset_split = 0;
   typeId = atoi(*(splitedStr + offset_split++));
