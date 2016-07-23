@@ -19,12 +19,14 @@ Gst.init(None)
 class Player(object):
     def __init__(self, **kwargs):
 
+        resolution = kwargs.get("resolution")
+        if resolution:
+            split = resolution.split("x")
+            self.width = int(split[0])
+            self.height = int(split[1])
+
         scale = kwargs.get("scale")
-        #scale = "1080x1920"
-        if not scale:
-            self.width = 800
-            self.height = 600
-        else:
+        if scale:
             split = scale.split("x")
             self.width = int(split[0])
             self.height = int(split[1])

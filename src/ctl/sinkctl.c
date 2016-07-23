@@ -389,7 +389,6 @@ void launch_player(struct ctl_sink *s) {
 	int i = 0;
 	char* player;
 	if (uibc) {
-//		player = "gstplayer";
 		player = "uibc-viewer";
 	} else {
 		player = "miracle-gst";
@@ -400,27 +399,26 @@ void launch_player(struct ctl_sink *s) {
 		argv[i++] = s->target;
 		sprintf(uibc_portStr, "%d", uibc_port);
 		argv[i++] = uibc_portStr;
-//		argv[i++] = "--daemon";
 	}
-		if (cli_max_sev >= 7)
-			argv[i++] = "-d 3";
-		if (gst_audio_en)
-			argv[i++] = "-a";
-		if (gst_scale_res) {
-			argv[i++] = "-s";
-			argv[i++] = gst_scale_res;
-		}
+	if (cli_max_sev >= 7)
+		argv[i++] = "-d 3";
+	if (gst_audio_en)
+		argv[i++] = "-a";
+	if (gst_scale_res) {
+		argv[i++] = "-s";
+		argv[i++] = gst_scale_res;
+	}
 	argv[i++] = "-p";
 	sprintf(port, "%d", rstp_port);
 	argv[i++] = port;
 
 	if (s->hres && s->vres) {
 		sprintf(resolution, "%dx%d", s->hres, s->vres);
-			argv[i++] = "-r";
-			argv[i++] = resolution;
-		}
+		argv[i++] = "-r";
+		argv[i++] = resolution;
+	}
 
-		argv[i] = NULL;
+   argv[i] = NULL;
 
 	i = 0;
    int size = 0;
