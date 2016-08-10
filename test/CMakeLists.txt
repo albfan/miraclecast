@@ -1,10 +1,10 @@
 
 ########### next target ###############
 
-if(CHECK_FOUND)
-    find_package(PkgConfig)
-    pkg_check_modules (CHECK check)
+find_package(PkgConfig)
+pkg_check_modules (CHECK check)
     
+if(CHECK_FOUND)
     set(test_rtsp_SOURCES test_common.h test_rtsp.c)
     add_executable(test_rtsp ${test_rtsp_SOURCES})
     target_link_libraries(test_rtsp miracle-shared)
