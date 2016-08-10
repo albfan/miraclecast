@@ -19,6 +19,7 @@ OPTION(BUILD_TESTS "Enable TEST" ON )
 find_package(PkgConfig)
 pkg_check_modules (GLIB2 REQUIRED glib-2.0)
 pkg_check_modules (UDEV REQUIRED libudev)
+pkg_check_modules (SYSTEMD REQUIRED libsystemd)
 
 CONFIGURE_FILE(${CMAKE_SOURCE_DIR}/config.h.cmake ${CMAKE_BINARY_DIR}/config.h)
 
