@@ -16,6 +16,10 @@ OPTION(BUILD_ENABLE_DEBUG "Enable Debug" ON )
 OPTION(RELY_UDEV "Rely in udev tag to select device" OFF )
 OPTION(BUILD_TESTS "Enable TEST" ON )
 
+if(BUILD_ENABLE_DEBUG)
+    add_definitions(-DBUILD_ENABLE_DEBUG)
+endif()
+
 find_package(PkgConfig)
 pkg_check_modules (GLIB2 REQUIRED glib-2.0)
 pkg_check_modules (UDEV REQUIRED libudev)
