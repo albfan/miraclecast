@@ -140,7 +140,7 @@ Steps to use it as peer:
 
  4. Locate them using scanning
 
-        > psp-scan
+        > p2p-scan
 
  5. Apart from list, or show info with peer &lt;mac&gt; there's nothing useful here by now. For a Q&D see [Using as peer](https://github.com/albfan/miraclecast/issues/4)
 
