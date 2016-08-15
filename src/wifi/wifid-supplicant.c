@@ -24,6 +24,7 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #include <sys/socket.h>
+#include <sys/stat.h>
 #include <sys/types.h>
 #include <systemd/sd-event.h>
 #include <systemd/sd-journal.h>
@@ -2401,6 +2402,49 @@ static void supplicant_run(struct supplicant *s, const char *binary)
 	execve(argv[0], argv, environ);
 }
 
+static int supplicant_find(char **binary)
+{
+    _shl_free_ char *path = getenv("PATH");
+    if(!path) {
+        return -EINVAL;
+    }
+
+    path = strdup(path);
+    if(!path) {
+        return log_ENOMEM();
+    }
+
+    struct stat bin_stat;
+    char *curr = path, *next;
+    while(1) {
+        curr = strtok_r(curr, ":", &next);
+        if(!curr) {
+            break;
+        }
+
+        _shl_free_ char *bin = shl_strcat(curr, "/wpa_supplicant");
+        if (!bin)
+            return log_ENOMEM();
+
+        if(stat(bin, &bin_stat) < 0) {
+            if(ENOENT == errno) {
+                goto end;
+            }
+            return log_ERRNO();
+        }
+
+        if (!access(bin, X_OK)) {
+            *binary = strdup(bin);
+            return 0;
+        }
+
+end:
+        curr = NULL;
+    }
+
+    return -EINVAL;
+}
+
 static int supplicant_spawn(struct supplicant *s)
 {
 	_shl_free_ char *binary = NULL;
@@ -2414,14 +2458,12 @@ static int supplicant_spawn(struct supplicant *s)
 
 	log_debug("spawn supplicant of %s", s->l->ifname);
 
-	binary = shl_strcat(arg_wpa_bindir, "/wpa_supplicant");
-	if (!binary)
-		return log_ENOMEM();
+    if (supplicant_find(&binary) < 0) {
+        log_error("execution of wpas (%s) not possible: %m", binary);
+        return -EINVAL;
+    }
 
-	if (access(binary, X_OK) < 0) {
-		log_error("execution of wpas (%s) not possible: %m", binary);
-		return -EINVAL;
-	}
+    log_info("wpa_supplicant found: %s", binary);
 
 	pid = fork();
 	if (pid < 0) {
