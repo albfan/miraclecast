@@ -113,12 +113,18 @@ function check_archlinux_distro {
 function check_ubuntu_distro {
    cat /proc/version | grep -i ubuntu
 }
+#
+# checking if distro is debian
+#
+function check_debian_distro {
+   cat /proc/version | grep -i debian
+}
 
 #
 # ubuntu manager restarts automatically wpa_supplicant
 #
 function kill_ubuntu_network_manager {
-   if check_ubuntu_distro
+   if check_ubuntu_distro || check_debian_distro
    then
       echo stopping NetworkManager
       sudo service NetworkManager stop
@@ -140,7 +146,7 @@ function kill_archlinux_network_manager {
 # start ubuntu manager
 #
 function start_ubuntu_network_manager {
-   if check_ubuntu_distro
+   if check_ubuntu_distro || check_debian_distro
    then
       echo starting NetworkManager
       sudo service NetworkManager start
