@@ -47,7 +47,7 @@ CONFIG_FILE=${1:-/run/network/wpa_supplicant_${ETHERNAME}.conf}
 
 
 echo starting wpa_supplicant for normal connection
-if check_ubuntu_distro
+if check_ubuntu_distro || check_debian_distro
 then
     start_ubuntu_network_manager
     sudo wpa_supplicant -B -u -s -O /var/run/wpa_supplicant

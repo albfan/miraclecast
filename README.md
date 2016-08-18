@@ -103,7 +103,7 @@ If you feel confidence enough (since systemd is the entrypoint for an OS) extrac
 
 Steps to use it as sink:
 
- 1. shutdown wpa_supplicant
+ 1. shutdown wpa_supplicant and NetworkManager
 
         $ sudo kill -9 $(ps -ef | grep wpa_supplican[t] | awk '{print $2}')
         # now you can use `res/kill-wpa.sh`

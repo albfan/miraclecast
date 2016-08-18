@@ -40,7 +40,6 @@
 #include "wifid.h"
 #include "config.h"
 
-const char *arg_wpa_bindir = "/usr/bin";
 const char *interface_name = NULL;
 unsigned int arg_wpa_loglevel = LOG_NOTICE;
 
@@ -457,7 +456,6 @@ static int help(void)
 	       "\n"
 	       "  -i --interface           Choose the interface to use\n"
 	       "\n"
-	       "     --wpa-bindir <dir>    wpa_supplicant binary dir [/usr/bin]\n"
 	       "     --wpa-loglevel <lvl   wpa_supplicant log-level\n"
 	       , program_invocation_short_name);
 	/*
@@ -475,7 +473,6 @@ static int parse_argv(int argc, char *argv[])
 		ARG_LOG_LEVEL,
 		ARG_LOG_TIME,
 
-		ARG_WPA_BINDIR,
 		ARG_WPA_LOGLEVEL,
 	};
 	static const struct option options[] = {
@@ -484,7 +481,6 @@ static int parse_argv(int argc, char *argv[])
 		{ "log-level",	required_argument,	NULL,	ARG_LOG_LEVEL },
 		{ "log-time",	no_argument,		NULL,	ARG_LOG_TIME },
 
-		{ "wpa-bindir",		required_argument,	NULL,	ARG_WPA_BINDIR },
 		{ "wpa-loglevel",	required_argument,	NULL,	ARG_WPA_LOGLEVEL },
 		{ "interface",	required_argument,	NULL,	'i' },
 		{}
@@ -508,9 +504,6 @@ static int parse_argv(int argc, char *argv[])
 			log_init_time();
 			break;
 
-		case ARG_WPA_BINDIR:
-			arg_wpa_bindir = optarg;
-			break;
 		case ARG_WPA_LOGLEVEL:
 			arg_wpa_loglevel = log_parse_arg(optarg);
 			break;
