@@ -6,9 +6,7 @@ install(
     DESTINATION bin
     )
 
-
-
-#original Makefile.am contents follow:
-
-#bin_SCRIPTS = miracle-gst.sh
-#EXTRA_DIST = wpa.conf
+INSTALL(
+    FILES org.freedesktop.miracle.conf
+    DESTINATION /etc/dbus-1/system.d 
+    )
