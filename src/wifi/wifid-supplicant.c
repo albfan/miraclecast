@@ -2427,7 +2427,7 @@ static int supplicant_find(char **binary)
             return log_ENOMEM();
 
         if(stat(bin, &bin_stat) < 0) {
-            if(ENOENT == errno) {
+            if(ENOENT == errno || ENOTDIR == errno) {
                 goto end;
             }
             return log_ERRNO();
