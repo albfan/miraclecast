@@ -106,6 +106,20 @@ struct ctl_peer *ctl_wifi_find_peer(struct ctl_wifi *w,
 struct ctl_peer *ctl_wifi_search_peer(struct ctl_wifi *w,
 				      const char *real_label);
 
+/* source handling */
+
+struct ctl_src;
+
+int ctl_src_new(struct ctl_src **out,
+		 sd_event *event);
+void ctl_src_free(struct ctl_src *s);
+
+int ctl_src_listen(struct ctl_src *s, const char *local);
+void ctl_src_close(struct ctl_src *s);
+bool ctl_src_is_connecting(struct ctl_src *s);
+bool ctl_src_is_connected(struct ctl_src *s);
+bool ctl_src_is_closed(struct ctl_src *s);
+
 /* sink handling */
 
 struct ctl_sink;
@@ -240,6 +254,9 @@ void ctl_fn_peer_connected(struct ctl_peer *p);
 void ctl_fn_peer_disconnected(struct ctl_peer *p);
 void ctl_fn_link_new(struct ctl_link *l);
 void ctl_fn_link_free(struct ctl_link *l);
+
+void ctl_fn_src_connected(struct ctl_src *s);
+void ctl_fn_src_disconnected(struct ctl_src *s);
 
 void ctl_fn_sink_connected(struct ctl_sink *s);
 void ctl_fn_sink_disconnected(struct ctl_sink *s);
