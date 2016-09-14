@@ -132,6 +132,16 @@ void link_free(struct link *l)
 	free(l);
 }
 
+void link_use_dev(struct link *l)
+{
+    l->use_dev = true;
+}
+
+bool link_is_using_dev(struct link *l)
+{
+    return l->use_dev;
+}
+
 void link_set_managed(struct link *l, bool set)
 {
 	int r;
