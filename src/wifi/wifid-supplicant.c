@@ -2147,6 +2147,9 @@ static int supplicant_global_fn(struct wpas *w,
 	}
 
 	/* ignore events on the global-iface, we only listen on dev-iface */
+	if(wpas_message_get_ifname(m)) {
+        supplicant_event(s, m);
+    }
 
 	return 0;
 
