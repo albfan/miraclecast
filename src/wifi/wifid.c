@@ -42,6 +42,7 @@
 
 const char *interface_name = NULL;
 unsigned int arg_wpa_loglevel = LOG_NOTICE;
+bool use_dev = false;
 
 /*
  * Manager Handling
@@ -101,6 +102,9 @@ static void manager_add_udev_link(struct manager *m,
 		return;
 
 	link_set_friendly_name(l, m->friendly_name);
+
+    if(use_dev)
+        link_use_dev(l);
 
 #ifdef RELY_UDEV
 	if (udev_device_has_tag(d, "miracle")) {
@@ -457,6 +461,7 @@ static int help(void)
 	       "  -i --interface           Choose the interface to use\n"
 	       "\n"
 	       "     --wpa-loglevel <lvl   wpa_supplicant log-level\n"
+	       "     --use-dev             enable workaround for 'no ifname' issue\n"
 	       , program_invocation_short_name);
 	/*
 	 * 80-char barrier:
@@ -474,6 +479,8 @@ static int parse_argv(int argc, char *argv[])
 		ARG_LOG_TIME,
 
 		ARG_WPA_LOGLEVEL,
+
+		ARG_USE_DEV,
 	};
 	static const struct option options[] = {
 		{ "help",	no_argument,		NULL,	'h' },
@@ -483,6 +490,7 @@ static int parse_argv(int argc, char *argv[])
 
 		{ "wpa-loglevel",	required_argument,	NULL,	ARG_WPA_LOGLEVEL },
 		{ "interface",	required_argument,	NULL,	'i' },
+		{ "use-dev",	no_argument,	NULL,	ARG_USE_DEV },
 		{}
 	};
 	int c;
@@ -502,6 +510,9 @@ static int parse_argv(int argc, char *argv[])
 			break;
 		case ARG_LOG_TIME:
 			log_init_time();
+			break;
+		case ARG_USE_DEV:
+			use_dev = true;
 			break;
 
 		case ARG_WPA_LOGLEVEL:

@@ -135,6 +135,7 @@ struct link {
 
 	bool managed : 1;
 	bool public : 1;
+	bool use_dev : 1;
 };
 
 #define link_from_htable(_l) \
@@ -152,6 +153,10 @@ int link_new(struct manager *m,
 	     const char *ifname,
 	     struct link **out);
 void link_free(struct link *l);
+
+/* workaround for the 'no ifname' issue */
+void link_use_dev(struct link *l);
+bool link_is_using_dev(struct link *l);
 
 void link_set_managed(struct link *l, bool set);
 int link_renamed(struct link *l, const char *ifname);

@@ -742,6 +742,7 @@ static int wpas__parse_message(struct wpas *w,
 	const char *ifname = NULL;
 	unsigned int level;
 	char *pos;
+	char *orig_raw = raw;
 	int r, num;
 	bool is_event = false;
 
@@ -751,7 +752,7 @@ static int wpas__parse_message(struct wpas *w,
 		ifname = pos;
 		pos = strchrnul(pos, ' ');
 		if (*pos)
-			*pos++ = 0;
+			pos++;
 
 		len -= pos - raw;
 		raw = pos;
@@ -811,15 +812,12 @@ static int wpas__parse_message(struct wpas *w,
 
 	m->sealed = true;
 	m->rawlen = len;
-	m->raw = malloc(len + 1);
+	m->raw = strdup(orig_raw);
 	if (!m->raw)
 		return -ENOMEM;
 
-	/* copy with 0-terminator */
-	memcpy(m->raw, raw, len + 1);
-
 	if (ifname) {
-		m->ifname = strdup(ifname);
+		m->ifname = strndup(ifname, strchrnul(ifname, ' ') - ifname);
 		if (!m->ifname)
 			return -ENOMEM;
 	}
