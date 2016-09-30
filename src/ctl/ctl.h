@@ -27,7 +27,9 @@
 #include <sys/types.h>
 #include <systemd/sd-bus.h>
 #include "shl_dlist.h"
+#include "shl_htable.h"
 #include "shl_log.h"
+#include "wfd.h"
 
 #ifndef CTL_CTL_H
 #define CTL_CTL_H
@@ -248,3 +250,4 @@ void ctl_fn_sink_resolution_set(struct ctl_sink *s);
 void cli_fn_help(void);
 
 #endif /* CTL_CTL_H */
+

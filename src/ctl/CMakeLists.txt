@@ -2,7 +2,7 @@ find_package(PkgConfig)
 pkg_check_modules (GLIB2 REQUIRED glib-2.0)
 link_directories( ${GLIB2_LIBRARY_DIRS})
 include_directories( ${GLIB2_INCLUDE_DIRS})
-find_package(Readline)
+find_package(Readline REQUIRED)
 pkg_check_modules (GLIB2 REQUIRED glib-2.0)
 ########### next target ###############
 
@@ -50,12 +50,8 @@ endif(READLINE_FOUND)
 
 target_link_libraries(miracle-sinkctl miracle-shared)
 
-INCLUDE_DIRECTORIES(${CMAKE_BINARY_DIR} ${CMAKE_SOURCE_DIR}/src ${CMAKE_SOURCE_DIR}/src/shared)
-
-########### install files ###############
-
-
-
+include_directories(${CMAKE_BINARY_DIR}
+         ${CMAKE_SOURCE_DIR}/src ${CMAKE_SOURCE_DIR}/src/shared)
 
 #original Makefile.am contents follow:
 

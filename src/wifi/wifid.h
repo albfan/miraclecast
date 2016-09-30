@@ -130,6 +130,8 @@ struct link {
 	char *friendly_name;
 	char *wfd_subelements;
 	char *config_methods;
+	char *mac_addr;
+	int p2p_state;		/* 0: unknown, 1: supported, -1: unsupproted */
 
 	size_t peer_cnt;
 	struct shl_htable peers;
@@ -152,6 +154,7 @@ struct peer *link_find_peer_by_label(struct link *l, const char *label);
 int link_new(struct manager *m,
 	     unsigned int ifindex,
 	     const char *ifname,
+         const char *mac_addr,
 	     struct link **out);
 void link_free(struct link *l);
 
@@ -159,7 +162,7 @@ void link_free(struct link *l);
 void link_use_dev(struct link *l);
 bool link_is_using_dev(struct link *l);
 
-int link_set_managed(struct link *l, bool set);
+int link_manage(struct link *l, bool set);
 bool link_get_managed(struct link *l);
 int link_renamed(struct link *l, const char *ifname);
 
@@ -170,10 +173,14 @@ int link_set_wfd_subelements(struct link *l, const char *val);
 const char *link_get_wfd_subelements(struct link *l);
 int link_set_p2p_scanning(struct link *l, bool set);
 bool link_get_p2p_scanning(struct link *l);
+int link_get_p2p_state(struct link *l);
+const char *link_get_mac_addr(struct link *l);
 
 void link_supplicant_started(struct link *l);
 void link_supplicant_stopped(struct link *l);
 void link_supplicant_p2p_scan_changed(struct link *l, bool new_value);
+/* 0: unknown, -1: unsupported, 1: supported */
+void link_supplicant_p2p_state_known(struct link *l, int state);
 
 _shl_sentinel_
 void link_dbus_properties_changed(struct link *l, const char *prop, ...);

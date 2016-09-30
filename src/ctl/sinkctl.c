@@ -212,10 +212,8 @@ static int cmd_run(char **args, unsigned int n)
 		return 0;
 	}
 
-	if (!l->managed) {
-		cli_printf("link %s not managed\n", l->label);
-		return 0;
-	}
+	if (!l->managed)
+		return log_EUNMANAGED();
 
 	run_on(l);
 
@@ -247,10 +245,8 @@ static int cmd_bind(char **args, unsigned int n)
 	if (!l)
 		return 0;
 
-	if (!l->managed) {
-		cli_printf("link %s not managed\n", l->label);
-		return 0;
-	}
+	if (!l->managed)
+		return log_EUNMANAGED();
 
 	run_on(l);
 
@@ -843,7 +839,7 @@ static int parse_argv(int argc, char *argv[])
 		case ARG_HELP_COMMANDS:
 			return cli_help(cli_cmds, 20);
 		case ARG_HELP_RES:
-			wfd_print_resolutions("");
+			wfd_print_resolutions();
          return 0;
 		case ARG_VERSION:
 			puts(PACKAGE_STRING);

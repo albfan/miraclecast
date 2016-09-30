@@ -1,0 +1,11 @@
+miraclecast (1.0+r67) experimental; urgency=medium
+
+  * Jenkins Auto Build
+
+ --  <jenkins@45cd608b91cd>  Wed, 04 Jan 2017 10:27:21 +0000
+
+miraclecast (1.0) unstable; urgency=medium
+
+  * Initial release 
+
+ -- Deepin Packages Builder <packages@deepin.com>  Mon, 05 Dec 2016 13:43:00 +0800

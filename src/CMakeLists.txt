@@ -5,6 +5,7 @@ add_subdirectory(wifi)
 add_subdirectory(dhcp)
 add_subdirectory(ctl)
 add_subdirectory(uibc)
+add_subdirectory(disp)
 
 set(miracled_SRCS miracled.h miracled.c)
 add_executable(miracled ${miracled_SRCS})
