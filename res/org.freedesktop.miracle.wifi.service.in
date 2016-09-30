@@ -1,0 +1,5 @@
+[D-BUS Service]
+Name=@dbus_name_prefix@.wifi
+Exec=/bin/sh -c 'PATH=/sbin:/usr/bin @exec_path@/miracle-wifid --use-dev --log-level trace'
+User=root
+SystemdService=dbus-@dbus_name_prefix@.wifi.service

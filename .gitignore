@@ -6,6 +6,7 @@
 *.swp
 *.tar.xz
 *.trs
+*.pcap
 .deps/
 .dirstamp
 .libs/
@@ -42,3 +43,4 @@ CMakeCache.txt
 libmiracle-shared.a
 install_manifest.txt
 /build/
+.vimrc
