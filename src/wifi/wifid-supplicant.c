@@ -509,7 +509,7 @@ static int supplicant_group_new(struct supplicant *s,
 				j = shl_dlist_entry(i,
 						    struct supplicant_group,
 						    list);
-				if (j->subnet == j->subnet)
+				if (j->subnet == subnet)
 					break;
 			}
 
