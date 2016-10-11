@@ -1,4 +1,6 @@
 /*
+ * vim: set tabstop=4:softtabstop=4:shiftwidth=4:noexpandtab
+ *
  * MiracleCast - Wifi-Display/Miracast Implementation
  *
  * MiracleCast is free software; you can redistribute it and/or modify it
@@ -39,60 +41,70 @@
 #include "shl_util.h"
 #include "wfd.h"
 
-struct ctl_src {
-    sd_event *event;
-
-    char *local;
-    char *session;
-//    char *url;
-//    char *uibc_config;
-//    char *uibc_setting;
-    struct sockaddr_storage addr;
-    size_t addr_size;
-    int fd;
-    sd_event_source *fd_source;
-
-    struct rtsp *rtsp;
-
-    bool connected : 1;
-    bool hup : 1;
-//
-//    uint32_t resolutions_cea;
-//    uint32_t resolutions_vesa;
-//    uint32_t resolutions_hh;
-//
-//    int hres;
-//    int vres;
+enum audio_format {
+	AUDIO_FORMAT_UNKNOWN,
+	AUDIO_FORMAT_LPCM,
+	AUDIO_FORMAT_AAC,
+	AUDIO_FORMAT_AC3,
 };
 
-//extern int rstp_port;
-//extern bool uibc;
-//extern int uibc_port;
-//
-//struct ctl_sink {
-//    sd_event *event;
-//
-//    char *target;
-//    char *session;
-//    char *url;
-//    char *uibc_config;
-//    char *uibc_setting;
-//    struct sockaddr_storage addr;
-//    size_t addr_size;
-//    int fd;
-//    sd_event_source *fd_source;
-//
-//    struct rtsp *rtsp;
-//
-//    bool connected : 1;
-//    bool hup : 1;
-//
-//    uint32_t resolutions_cea;
-//    uint32_t resolutions_vesa;
-//    uint32_t resolutions_hh;
-//
-//    int hres;
-//    int vres;
-//};
+struct video_formats {
+	uint8_t native_disp_mode;
+	uint8_t pref_disp_mode;
+	uint8_t codec_profile;
+	uint8_t codec_level;
+	unsigned int resolutions_cea;
+	unsigned int resolutions_vesa;
+	unsigned int resolutions_hh;
+	uint8_t latency;
+	unsigned short min_slice_size;
+	unsigned short slice_enc_params;
+	uint8_t frame_rate_control;
+	int hres;
+	int vres;
+};
+
+struct audio_codecs {
+	enum audio_format format;
+	unsigned int modes;
+	uint8_t latency;
+};
+
+struct client_rtp_ports {
+	char *profile;
+	unsigned short port0;
+	unsigned short port1;
+};
+
+struct ctl_src {
+	sd_event *event;
+
+	char *local;
+	char *session;
+	char url[256];
+//	  char *uibc_config;
+//	  char *uibc_setting;
+	struct sockaddr_storage addr;
+	size_t addr_size;
+	int fd;
+	sd_event_source *fd_source;
+
+	sd_event_source *req_source;
+
+	struct rtsp *rtsp;
+
+	struct {
+		struct video_formats video_formats;
+		struct audio_codecs audio_codecs;
+		struct client_rtp_ports rtp_ports;
+
+		bool has_video_formats : 1;
+		bool has_audio_codecs : 1;
+		bool has_rtp_ports : 1;
+	} sink;
+
+	bool connected : 1;
+	bool hup : 1;
+};
 
 #endif /* CTL_SRC_H */
