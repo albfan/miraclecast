@@ -174,7 +174,7 @@ int vfd_get_cea_resolution(uint32_t mask, int *hres, int *vres)
 	if (!mask)
 		return -EINVAL;
 
-	for (i = 0; resolutions_cea[i].hres != 0; i++) {
+	for (i = N_ELEMENTS(resolutions_cea) - 1; i >= 0; --i) {
 		if ((1 << resolutions_cea[i].index) & mask) {
 			*vres = resolutions_cea[i].vres;
 			*hres = resolutions_cea[i].hres;
@@ -191,7 +191,7 @@ int vfd_get_vesa_resolution(uint32_t mask, int *hres, int *vres)
 	if (!mask)
 		return -EINVAL;
 
-	for (i = 0; resolutions_vesa[i].hres != 0; i++) {
+	for (N_ELEMENTS(resolutions_vesa) - 1; i >= 0; --i) {
 		if ((1 << resolutions_vesa[i].index) & mask) {
 			*vres = resolutions_vesa[i].vres;
 			*hres = resolutions_vesa[i].hres;
@@ -208,7 +208,7 @@ int vfd_get_hh_resolution(uint32_t mask, int *hres, int *vres)
 	if (!mask)
 		return -EINVAL;
 
-	for (i = 0; resolutions_hh[i].hres != 0; i++) {
+	for (N_ELEMENTS(resolutions_hh); i >= 0; --i) {
 		if ((1 << resolutions_hh[i].index) & mask) {
 			*vres = resolutions_hh[i].vres;
 			*hres = resolutions_hh[i].hres;
