@@ -20,180 +20,511 @@
 #include "ctl-src.h"
 #include "util.h"
 
-///*
-// * RTSP Session
-// */
-//
-//static int sink_req_fn(struct rtsp *bus, struct rtsp_message *m, void *data)
-//{
-//	cli_debug("INCOMING: %s\n", rtsp_message_get_raw(m));
-//	return 0;
-//}
-//
-//static void sink_handle_options(struct ctl_sink *s,
-//				struct rtsp_message *m)
-//{
-//	_rtsp_message_unref_ struct rtsp_message *rep = NULL;
-//	int r;
-//
-//	r = rtsp_message_new_reply_for(m, &rep, RTSP_CODE_OK, NULL);
-//	if (r < 0)
-//		return cli_vERR(r);
-//
-//	r = rtsp_message_append(rep, "<s>",
-//				"Public",
-//				"org.wfa.wfd1.0, GET_PARAMETER, SET_PARAMETER");
-//	if (r < 0)
-//		return cli_vERR(r);
-//
-//	rtsp_message_seal(rep);
-//	cli_debug("OUTGOING: %s\n", rtsp_message_get_raw(rep));
-//
-//	r = rtsp_send(s->rtsp, rep);
-//	if (r < 0)
-//		return cli_vERR(r);
-//
-//	rtsp_message_unref(rep);
-//	rep = NULL;
-//
-//	r = rtsp_message_new_request(s->rtsp,
-//				     &rep,
-//				     "OPTIONS",
-//				     "*");
-//	if (r < 0)
-//		return cli_vERR(r);
-//
-//	r = rtsp_message_append(rep, "<s>",
-//				"Require",
-//				"org.wfa.wfd1.0");
-//	if (r < 0)
-//		return cli_vERR(r);
-//
-//	rtsp_message_seal(rep);
-//	cli_debug("OUTGOING: %s\n", rtsp_message_get_raw(rep));
-//
-//	r = rtsp_call_async(s->rtsp, rep, sink_req_fn, NULL, 0, NULL);
-//	if (r < 0)
-//		return cli_vERR(r);
-//}
-//
-//static void sink_handle_get_parameter(struct ctl_sink *s,
-//				      struct rtsp_message *m)
-//{
-//	_rtsp_message_unref_ struct rtsp_message *rep = NULL;
-//	int r;
-//
-//	r = rtsp_message_new_reply_for(m, &rep, RTSP_CODE_OK, NULL);
-//	if (r < 0)
-//		return cli_vERR(r);
-//
-//	/* wfd_content_protection */
-//	if (rtsp_message_read(m, "{<>}", "wfd_content_protection") >= 0) {
-//		r = rtsp_message_append(rep, "{&}",
-//					"wfd_content_protection: none");
-//		if (r < 0)
-//			return cli_vERR(r);
-//	}
-//	/* wfd_video_formats */
-//	if (rtsp_message_read(m, "{<>}", "wfd_video_formats") >= 0) {
-//		char wfd_video_formats[128];
-//		sprintf(wfd_video_formats,
-//			"wfd_video_formats: 00 00 03 10 %08x %08x %08x 00 0000 0000 10 none none",
-//			s->resolutions_cea, s->resolutions_vesa, s->resolutions_hh);
-//		r = rtsp_message_append(rep, "{&}", wfd_video_formats);
-//		if (r < 0)
-//			return cli_vERR(r);
-//	}
-//	/* wfd_audio_codecs */
-//	if (rtsp_message_read(m, "{<>}", "wfd_audio_codecs") >= 0) {
-//		r = rtsp_message_append(rep, "{&}",
-//					"wfd_audio_codecs: AAC 00000007 00");
-//		if (r < 0)
-//			return cli_vERR(r);
-//	}
-//	/* wfd_client_rtp_ports */
-//	if (rtsp_message_read(m, "{<>}", "wfd_client_rtp_ports") >= 0) {
-//		char wfd_client_rtp_ports[128];
-//		sprintf(wfd_client_rtp_ports,
-//					"wfd_client_rtp_ports: RTP/AVP/UDP;unicast %d 0 mode=play", rstp_port);
-//		r = rtsp_message_append(rep, "{&}",
-//					wfd_client_rtp_ports);
-//		if (r < 0)
-//			return cli_vERR(r);
-//	}
-//
-//	/* wfd_uibc_capability */
-//	if (rtsp_message_read(m, "{<>}", "wfd_uibc_capability") >= 0 && uibc) {
-//		char wfd_uibc_capability[512];
-//		sprintf(wfd_uibc_capability,
-//			"wfd_uibc_capability: input_category_list=GENERIC;"
-//         "generic_cap_list=Mouse,SingleTouch;"
-//         "hidc_cap_list=none;port=none");
-//		r = rtsp_message_append(rep, "{&}", wfd_uibc_capability);
-//		if (r < 0)
-//			return cli_vERR(r);
-//	}
-//	rtsp_message_seal(rep);
-//	cli_debug("OUTGOING: %s\n", rtsp_message_get_raw(rep));
-//
-//	r = rtsp_send(s->rtsp, rep);
-//	if (r < 0)
-//		return cli_vERR(r);
-//}
-//
-//static int sink_setup_fn(struct rtsp *bus, struct rtsp_message *m, void *data)
-//{
-//	_rtsp_message_unref_ struct rtsp_message *rep = NULL;
-//	struct ctl_sink *s = data;
-//	const char *session;
-//	char *ns, *next;
-//	int r;
-//
-//	cli_debug("INCOMING: %s\n", rtsp_message_get_raw(m));
-//
-//	r = rtsp_message_read(m, "<s>", "Session", &session);
-//	if (r < 0)
-//		return cli_ERR(r);
-//
-//	ns = strdup(session);
-//	if (!ns)
-//		return cli_ENOMEM();
-//
-//	next = strchr(ns, ';');
-//	if (next)
-//		*next = '\0';
-//
-//	free(s->session);
-//	s->session = ns;
-//
-//	r = rtsp_message_new_request(s->rtsp,
-//				     &rep,
-//				     "PLAY",
-//				     s->url);
-//	if (r < 0)
-//		return cli_ERR(r);
-//
-//	r = rtsp_message_append(rep, "<s>", "Session", s->session);
-//	if (r < 0)
-//		return cli_ERR(r);
-//
-//	rtsp_message_seal(rep);
-//	cli_debug("OUTGOING: %s\n", rtsp_message_get_raw(rep));
-//
-//	r = rtsp_call_async(s->rtsp, rep, sink_req_fn, NULL, 0, NULL);
-//	if (r < 0)
-//		return cli_ERR(r);
-//
-//	return 0;
-//}
-//
-//static int sink_set_format(struct ctl_sink *s,
-//					  unsigned int cea_res,
-//					  unsigned int vesa_res,
-//					  unsigned int hh_res)
-//{
-//	int hres, vres;
-//
+#define DEFAULT_RTSP_PORT		(7236)
+
+/*
+ * RTSP Session
+ */
+
+static void src_handle_options(struct ctl_src *s,
+				struct rtsp_message *m)
+{
+	_rtsp_message_unref_ struct rtsp_message *rep = NULL;
+	int r;
+
+	cli_debug("INCOMING (M2): %s\n", rtsp_message_get_raw(m));
+
+	r = rtsp_message_new_reply_for(m, &rep, RTSP_CODE_OK, NULL);
+	if (r < 0) {
+		cli_vERR(r);
+		goto error;
+	}
+
+	r = rtsp_message_append(rep, "<s>",
+				"Public",
+				"org.wfa.wfd1.0, GET_PARAMETER, SET_PARAMETER, "
+				"SETUP, PLAY, PAUSE, TEARDOWN");
+	if (r < 0) {
+		cli_vERR(r);
+		goto error;
+	}
+
+	rtsp_message_seal(rep);
+	cli_debug("OUTGOING (M2): %s\n", rtsp_message_get_raw(rep));
+
+	r = rtsp_send(s->rtsp, rep);
+	if (r < 0) {
+		cli_vERR(r);
+		goto error;
+	}
+
+	return;
+
+error:
+	ctl_src_close(s);
+	ctl_fn_src_disconnected(s);
+}
+
+static int src_trigger_play_rep_fn(struct rtsp *bus,
+				struct rtsp_message *m,
+				void *data)
+{
+	cli_debug("INCOMING (M5): %s\n", rtsp_message_get_raw(m));
+}
+
+static void src_handle_setup(struct ctl_src *s,
+				struct rtsp_message *m)
+{
+	_rtsp_message_unref_ struct rtsp_message *rep = NULL;
+	_rtsp_message_unref_ struct rtsp_message *req = NULL;
+	int r;
+
+	cli_debug("INCOMING (M6): %s\n", rtsp_message_get_raw(m));
+
+	r = rtsp_message_new_reply_for(m, &rep, RTSP_CODE_OK, NULL);
+	if (r < 0) {
+		cli_vERR(r);
+		goto error;
+	}
+
+	r = rtsp_message_append(rep, "<s>",
+			"Session", "0;timeout=30");
+	if (r < 0) {
+		cli_vERR(r);
+		goto error;
+	}
+
+	char buf[128];
+	snprintf(buf, sizeof(buf), "RTP/AVP/UDP;unicast;client_port=%d", s->sink.rtp_ports.port0);
+	r = rtsp_message_append(rep, "<s>",
+			"Transport", buf);
+	if (r < 0) {
+		cli_vERR(r);
+		goto error;
+	}
+
+	rtsp_message_seal(rep);
+	cli_debug("OUTGOING (M6): %s\n", rtsp_message_get_raw(rep));
+
+	r = rtsp_send(s->rtsp, rep);
+	if (r < 0) {
+		cli_vERR(r);
+		goto error;
+	}
+
+	r = rtsp_message_new_request(s->rtsp,
+					 &req,
+					 "SET_PARAMETER",
+					 s->url);
+	if (r < 0) {
+		cli_vERR(r);
+		goto error;
+	}
+
+	r = rtsp_message_append(req, "{&}", "wfd_trigger_method: PLAY");
+	if (r < 0) {
+		cli_vERR(r);
+		goto error;
+	}
+
+	rtsp_message_seal(req);
+	cli_debug("OUTGOING (M5): %s\n", rtsp_message_get_raw(req));
+
+	r = rtsp_call_async(s->rtsp, req, src_trigger_play_rep_fn, s, 0, NULL);
+	if (r < 0) {
+		cli_vERR(r);
+		goto error;
+	}
+
+	return;
+
+error:
+	ctl_src_close(s);
+	ctl_fn_src_disconnected(s);
+}
+
+static void src_handle_play(struct ctl_src *s,
+				struct rtsp_message *m)
+{
+	_rtsp_message_unref_ struct rtsp_message *rep = NULL;
+	_rtsp_message_unref_ struct rtsp_message *req = NULL;
+	int r;
+
+	cli_debug("INCOMING (M7): %s\n", rtsp_message_get_raw(m));
+
+	r = rtsp_message_new_reply_for(m, &rep, RTSP_CODE_OK, NULL);
+	if (r < 0) {
+		cli_vERR(r);
+		goto error;
+	}
+
+	r = rtsp_message_append(rep, "<s>",
+			"Session", "0;timeout=30");
+	if (r < 0) {
+		cli_vERR(r);
+		goto error;
+	}
+
+	r = rtsp_message_append(rep, "<s>",
+			"Range", "ntp=now-");
+	if (r < 0) {
+		cli_vERR(r);
+		goto error;
+	}
+
+	rtsp_message_seal(rep);
+	cli_debug("OUTGOING (M7): %s\n", rtsp_message_get_raw(rep));
+
+	r = rtsp_send(s->rtsp, rep);
+	if (r < 0) {
+		cli_vERR(r);
+		goto error;
+	}
+
+	return;
+
+error:
+	ctl_src_close(s);
+	ctl_fn_src_disconnected(s);
+}
+
+static void src_handle_pause(struct ctl_src *s,
+				struct rtsp_message *m)
+{
+	cli_debug("INCOMING (M9): %s\n", rtsp_message_get_raw(m));
+}
+
+static void src_handle_teardown(struct ctl_src *s,
+				struct rtsp_message *m)
+{
+	cli_debug("INCOMING (M8): %s\n", rtsp_message_get_raw(m));
+}
+
+static bool parse_video_formats(struct rtsp_message *m,
+				struct video_formats *formats)
+{
+	const char *param;
+	int r;
+   
+	r = rtsp_message_read(m, "{<&>}", "wfd_video_formats", &param);
+	if(r < 0) {
+		goto error;
+	}
+	else if(!strncmp("none", param, 4) || strlen(param) < 55) {
+		return false;
+	}
+
+	r = sscanf(param, "%hhx %hhx %hhx %hhx %x %x %x %hhx %hx %hx %hhx",
+			&formats->native_disp_mode,
+			&formats->pref_disp_mode,
+			&formats->codec_profile,
+			&formats->codec_level,
+			&formats->resolutions_cea,
+			&formats->resolutions_vesa,
+			&formats->resolutions_hh,
+			&formats->latency,
+			&formats->min_slice_size,
+			&formats->slice_enc_params,
+			&formats->frame_rate_control);
+	if(r < 11) {
+		goto error;
+	}
+
+	formats->hres = -1;
+	formats->vres = -1;
+	sscanf(param + 55, "%hx %hx", &formats->hres, &formats->vres);
+
+	return true;
+
+error:
+	cli_printf("[" CLI_RED "ERROR" CLI_DEFAULT "] Invalid video formats\n");
+	return false;
+}
+
+static bool parse_audio_codecs(struct rtsp_message *m,
+				struct audio_codecs *codecs)
+{
+	const char *param;
+	int r;
+   
+	r = rtsp_message_read(m, "{<&>}", "wfd_audio_codecs", &param);
+	if(r < 0) {
+		goto error;
+	}
+	else if(!strncmp("none", param, 4) || strlen(param) < 4) {
+		return false;
+	}
+
+	cli_printf("audio codecs: %s\n", param);
+
+	if(!strncmp("LPCM", param, 4)) {
+		codecs->format = AUDIO_FORMAT_LPCM;
+	}
+	else if(!strncmp("AAC", param, 3)) {
+		codecs->format = AUDIO_FORMAT_AAC;
+	}
+	else if(!strncmp("AC3", param, 3)) {
+		codecs->format = AUDIO_FORMAT_AC3;
+	}
+	else {
+		goto error;
+	}
+
+	r = sscanf(param, "%x %hhx",
+			&codecs->modes,
+			&codecs->latency);
+	if(r < 2) {
+		goto error;
+	}
+
+	return true;
+
+error:
+	cli_printf("[" CLI_RED "ERROR" CLI_DEFAULT "] Invalid audio codecs\n");
+	return false;
+}
+
+static bool parse_client_rtp_ports(struct rtsp_message *m,
+				struct client_rtp_ports *ports)
+{
+	const char *param;
+	int r;
+	char mode[10] = "";
+   
+	r = rtsp_message_read(m, "{<&>}", "wfd_client_rtp_ports", &param);
+	if(r < 0) {
+		goto error;
+	}
+
+	r = sscanf(param, "%ms %hu %hu %9s",
+			&ports->profile,
+			&ports->port0,
+			&ports->port1,
+			mode);
+	if(r < 4 || strcmp("mode=play", mode)) {
+		goto error;
+	}
+
+	return true;
+
+error:
+	cli_printf("[" CLI_RED "ERROR" CLI_DEFAULT "] Invalid client RTP ports\n");
+	return false;
+}
+
+static int src_trigger_setup_rep_fn(struct rtsp *bus,
+				struct rtsp_message *m,
+				void *data)
+{
+	struct ctl_src *s = data;
+	_rtsp_message_unref_ struct rtsp_message *req = NULL;
+	int r;
+
+	cli_debug("INCOMING (M5): %s\n", rtsp_message_get_raw(m));
+
+	if(rtsp_message_is_reply(m, RTSP_CODE_OK, NULL)) {
+		return 0;
+	}
+
+	cli_printf("[" CLI_RED "ERROR" CLI_DEFAULT "] Sink failed to SETUP\n");
+
+	ctl_src_close(s);
+	ctl_fn_src_disconnected(s);
+
+	return r;
+}
+
+static int src_set_parameter_rep_fn(struct rtsp *bus,
+				struct rtsp_message *m,
+				void *data)
+{
+	struct ctl_src *s = data;
+	_rtsp_message_unref_ struct rtsp_message *req = NULL;
+	int r;
+
+	cli_debug("INCOMING (M4): %s\n", rtsp_message_get_raw(m));
+
+	if(!rtsp_message_is_reply(m, RTSP_CODE_OK, NULL)) {
+		r = -1;
+		goto error;
+	}
+
+	r = rtsp_message_new_request(s->rtsp,
+					 &req,
+					 "SET_PARAMETER",
+					 s->url);
+	if (r < 0) {
+		cli_vERR(r);
+		goto error;
+	}
+
+	r = rtsp_message_append(req, "{&}", "wfd_trigger_method: SETUP");
+	if (r < 0) {
+		cli_vERR(r);
+		goto error;
+	}
+
+	rtsp_message_seal(req);
+	cli_debug("OUTGOING (M5): %s\n", rtsp_message_get_raw(req));
+
+	r = rtsp_call_async(s->rtsp, req, src_trigger_setup_rep_fn, s, 0, NULL);
+	if (r < 0) {
+		cli_vERR(r);
+		goto error;
+	}
+
+	return 0;
+
+error:
+	cli_printf("[" CLI_RED "ERROR" CLI_DEFAULT "] SETUP failed\n");
+	return r;
+}
+
+char buf[1024];
+
+static int src_send_set_parameter(struct ctl_src *s)
+{
+	_rtsp_message_unref_ struct rtsp_message *req;
+	int r;
+	const static char tmp[] =
+			"wfd_video_formats: 00 00 02 02 00000002 00000000 00000000 00 0000 0000 00 none none\n"
+			//"wfd_audio_codecs: AAC 00000001 00\n"
+			//"wfd_uibc_capability: input_category_list=GENERIC\n;generic_cap_list=SingleTouch;hidc_cap_list=none;port=5100\n"
+			//"wfd_uibc_setting: disable\n"
+			"wfd_presentation_URL: %s/streamid=0 none\n"
+			"wfd_client_rtp_ports: %s %d %d mode=play";
+
+	r = rtsp_message_new_request(s->rtsp,
+					 &req,
+					 "SET_PARAMETER",
+					 s->url);
+	if (r < 0) {
+		cli_vERR(r);
+		goto error;
+	}
+
+	snprintf(buf, sizeof(buf), tmp, s->url, s->sink.rtp_ports.profile,
+			s->sink.rtp_ports.port0, s->sink.rtp_ports.port1);
+
+	r = rtsp_message_append(req, "{&}", buf);
+	if (r < 0) {
+		cli_vERR(r);
+		goto error;
+	}
+
+	rtsp_message_seal(req);
+	cli_debug("OUTGOING (M4): %s\n", rtsp_message_get_raw(req));
+
+	r = rtsp_call_async(s->rtsp, req, src_set_parameter_rep_fn, s, 0, NULL);
+	if (r < 0) {
+		cli_vERR(r);
+		goto error;
+	}
+
+	return 0;
+
+error:
+	ctl_src_close(s);
+	ctl_fn_src_disconnected(s);
+
+	return r;
+}
+
+static int src_get_parameter_rep_fn(struct rtsp *bus,
+				struct rtsp_message *m,
+				void *data)
+{
+	struct ctl_src *s = data;
+	int r;
+	const char *param;
+	int n_params;
+
+	cli_debug("INCOMING (M3): %s\n", rtsp_message_get_raw(m));
+
+	if (!rtsp_message_is_reply(m, RTSP_CODE_OK, NULL)) {
+		cli_printf("[" CLI_RED "ERROR" CLI_DEFAULT "] GET_PARAMETER failed\n");
+		r = -1;
+		goto error;
+	}
+
+	free(s->sink.rtp_ports.profile);
+	s->sink.rtp_ports.profile = NULL;
+
+	s->sink.has_video_formats = parse_video_formats(m, &s->sink.video_formats);
+	//s->sink.has_audio_codecs = parse_audio_codecs(m, &s->sink.audio_codecs);
+	s->sink.has_rtp_ports = parse_client_rtp_ports(m, &s->sink.rtp_ports);
+
+	r = src_send_set_parameter(s);
+
+	return 0;
+
+error:
+	ctl_src_close(s);
+	ctl_fn_src_disconnected(s);
+
+	return -EINVAL;
+}
+
+static int src_options_rep_fn(struct rtsp *bus,
+				struct rtsp_message *m,
+				void *data)
+{
+	struct ctl_src *s = data;
+	_rtsp_message_unref_ struct rtsp_message *req = NULL;
+	int r;
+
+	cli_debug("INCOMING (M1): %s\n", rtsp_message_get_raw(m));
+
+	if(!rtsp_message_is_reply(m, RTSP_CODE_OK, NULL)) {
+		cli_printf("[" CLI_RED "ERROR" CLI_DEFAULT "] Failed to get OPTIONS from sink\n");
+		goto error;
+	}
+
+	r = rtsp_message_new_request(s->rtsp,
+					 &req,
+					 "GET_PARAMETER",
+					 s->url);
+	if (r < 0) {
+		cli_vERR(r);
+		goto error;
+	}
+
+	r = rtsp_message_append(req, "{&}",
+			"wfd_video_formats\n"
+			//"wfd_audio_codecs\n"
+			"wfd_client_rtp_ports\n"
+			//"wfd_uibc_capability"
+	);
+	if (r < 0) {
+		cli_vERR(r);
+		goto error;
+	}
+
+	rtsp_message_seal(req);
+	cli_debug("OUTGOING (M3): %s\n", rtsp_message_get_raw(req));
+
+	r = rtsp_call_async(s->rtsp, req, src_get_parameter_rep_fn, s, 0, NULL);
+	if (r < 0) {
+		cli_vERR(r);
+		goto error;
+	}
+
+	return 0;
+
+error:
+	ctl_src_close(s);
+	ctl_fn_src_disconnected(s);
+
+	return r;
+}
+
+static int src_set_format(struct ctl_src *s,
+					  unsigned int cea_res,
+					  unsigned int vesa_res,
+					  unsigned int hh_res)
+{
+	int hres, vres;
+
 //	if ((vfd_get_cea_resolution(cea_res, &hres, &vres) == 0) ||
 //		(vfd_get_vesa_resolution(vesa_res, &hres, &vres) == 0) ||
 //		(vfd_get_hh_resolution(hh_res, &hres, &vres) == 0)) {
@@ -205,165 +536,83 @@
 //		}
 //	}
 //
-//	return -EINVAL;
-//}
-//
-//static void sink_handle_set_parameter(struct ctl_sink *s,
-//				      struct rtsp_message *m)
-//{
-//	_rtsp_message_unref_ struct rtsp_message *rep = NULL;
-//	const char *trigger;
-//	const char *url;
-//	const char *uibc_config;
-//	const char *uibc_setting;
-//	char *nu;
-//	unsigned int cea_res, vesa_res, hh_res;
-//	int r;
-//
-//	r = rtsp_message_new_reply_for(m, &rep, RTSP_CODE_OK, NULL);
-//	if (r < 0)
-//		return cli_vERR(r);
-//
-//	rtsp_message_seal(rep);
-//	cli_debug("OUTGOING: %s\n", rtsp_message_get_raw(rep));
-//
-//	r = rtsp_send(s->rtsp, rep);
-//	if (r < 0)
-//		return cli_vERR(r);
-//
-//	rtsp_message_unref(rep);
-//	rep = NULL;
-//
-//	/* M4 (or any other) can pass presentation URLs */
-//	r = rtsp_message_read(m, "{<s>}", "wfd_presentation_URL", &url);
-//	if (r >= 0) {
-//		if (!s->url || strcmp(s->url, url)) {
-//			nu = strdup(url);
-//			if (!nu)
-//				return cli_vENOMEM();
-//
-//			free(s->url);
-//			s->url = nu;
-//			cli_debug("Got URL: %s\n", s->url);
-//		}
-//	}
-//
-//	/* M4 (or any other) can pass presentation URLs */
-//	r = rtsp_message_read(m, "{<s>}", "wfd_uibc_capability", &uibc_config);
-//	if (r >= 0) {
-//		if (!s->uibc_config || strcmp(s->uibc_config, uibc_config)) {
-//			nu = strdup(uibc_config);
-//			if (!nu)
-//				return cli_vENOMEM();
-//
-//			free(s->uibc_config);
-//			s->uibc_config = nu;
-//
-//            char* token = strtok(uibc_config, ";");
-//
-//            while (token) {
-//                if (sscanf(token, "port=%d", &uibc_port)) {
-//                    break;
-//                }
-//                token = strtok(0, ";");
-//            }
-//
-//			cli_debug("Got URL: %s\n", s->url);
-//		}
-//	}
-//
-//	/* M4 (or any other) can pass presentation URLs */
-//	r = rtsp_message_read(m, "{<s>}", "wfd_uibc_setting", &uibc_setting);
-//	if (r >= 0) {
-//		if (!s->uibc_setting || strcmp(s->uibc_setting, uibc_setting)) {
-//			nu = strdup(uibc_setting);
-//			if (!nu)
-//				return cli_vENOMEM();
-//
-//			free(s->uibc_setting);
-//			s->uibc_setting = nu;
-//			cli_debug("uibc setting: %s\n", s->uibc_setting);
-//		}
-//	}
-//	/* M4 again */
-//	r = rtsp_message_read(m, "{<****hhh>}", "wfd_video_formats",
-//							&cea_res, &vesa_res, &hh_res);
-//	if (r == 0) {
-//		r = sink_set_format(s, cea_res, vesa_res, hh_res);
-//		if (r)
-//			return cli_vERR(r);
-//	}
-//
-//	/* M5 */
-//	r = rtsp_message_read(m, "{<s>}", "wfd_trigger_method", &trigger);
-//	if (r < 0)
-//		return;
-//
-//	if (!strcmp(trigger, "SETUP")) {
-//		if (!s->url) {
-//			cli_error("No valid wfd_presentation_URL\n");
-//			return;
-//		}
-//
-//		r = rtsp_message_new_request(s->rtsp,
-//					     &rep,
-//					     "SETUP",
-//					     s->url);
-//		if (r < 0)
-//			return cli_vERR(r);
-//
-//		char rtsp_setup[128];
-//		sprintf(rtsp_setup, "RTP/AVP/UDP;unicast;client_port=%d", rstp_port);
-//		r = rtsp_message_append(rep, "<s>", "Transport", rtsp_setup);
-//		if (r < 0)
-//			return cli_vERR(r);
-//
-//		rtsp_message_seal(rep);
-//		cli_debug("OUTGOING: %s\n", rtsp_message_get_raw(rep));
-//
-//		r = rtsp_call_async(s->rtsp, rep, sink_setup_fn, s, 0, NULL);
-//		if (r < 0)
-//			return cli_vERR(r);
-//	}
-//}
-//
-//static void sink_handle(struct ctl_sink *s,
-//			struct rtsp_message *m)
-//{
-//	const char *method;
-//
-//	cli_debug("INCOMING: %s\n", rtsp_message_get_raw(m));
-//
-//	method = rtsp_message_get_method(m);
-//	if (!method)
-//		return;
-//
-//	if (!strcmp(method, "OPTIONS")) {
-//		sink_handle_options(s, m);
-//	} else if (!strcmp(method, "GET_PARAMETER")) {
-//		sink_handle_get_parameter(s, m);
-//	} else if (!strcmp(method, "SET_PARAMETER")) {
-//		sink_handle_set_parameter(s, m);
-//	}
-//}
+	return -EINVAL;
+}
+
+static void src_handle(struct ctl_src *s,
+			struct rtsp_message *m)
+{
+	const char *method;
+
+	if(!m) {
+		ctl_src_close(s);
+		ctl_fn_src_disconnected(s);
+		return;
+	}
+
+	method = rtsp_message_get_method(m);
+	if(!method) {
+		cli_debug("INCOMING: Unexpected message (%d): %s\n",
+					rtsp_message_get_type(m),
+					rtsp_message_get_raw(m));
+	}
+	else if (!strcmp(method, "OPTIONS")) {
+		src_handle_options(s, m);
+	} else if (!strcmp(method, "SETUP")) {
+		src_handle_setup(s, m);
+	} else if (!strcmp(method, "PLAY")) {
+		src_handle_play(s, m);
+	} else if (!strcmp(method, "PAUSE")) {
+		src_handle_pause(s, m);
+	} else if (!strcmp(method, "TEARDOWN")) {
+		src_handle_teardown(s, m);
+	}
+}
 
 static int src_rtsp_fn(struct rtsp *bus,
 			struct rtsp_message *m,
 			void *data)
 {
-//	struct ctl_sink *s = data;
-//
-//	if (!m)
-//		s->hup = true;
-//	else
-//		sink_handle(s, m);
-//
-//	if (s->hup) {
-//		ctl_sink_close(s);
-//		ctl_fn_sink_disconnected(s);
-//	}
-//
+	struct ctl_src *s = data;
+
+	if (!m)
+		s->hup = true;
+	else
+		src_handle(s, m);
+
+	if (s->hup) {
+		ctl_src_close(s);
+		ctl_fn_src_disconnected(s);
+	}
+
 	return 0;
+}
+
+static void src_send_options(struct ctl_src *s)
+{
+	_rtsp_message_unref_ struct rtsp_message *req = NULL;
+	int r;
+
+	r = rtsp_message_new_request(s->rtsp,
+					 &req,
+					 "OPTIONS",
+					 "*");
+	if (r < 0)
+		return cli_vERR(r);
+
+	r = rtsp_message_append(req, "<s>",
+				"Require",
+				"org.wfa.wfd1.0");
+	if (r < 0)
+		return cli_vERR(r);
+
+	rtsp_message_seal(req);
+
+	r = rtsp_call_async(s->rtsp, req, src_options_rep_fn, s, 0, NULL);
+	if (r < 0)
+		return cli_vERR(r);
+
+	cli_debug("OUTGOING (M1): %s\n", rtsp_message_get_raw(req));
 }
 
 /*
@@ -373,17 +622,21 @@ static int src_rtsp_fn(struct rtsp *bus,
 static void src_connected(struct ctl_src *s)
 {
 	int r, val;
+	struct sockaddr_storage addr;
 	socklen_t len;
+	char buf[64];
 
-    cli_printf("got incomming connection request\n");
+	cli_printf("got incomming connection request\n");
 
 	if (s->connected || s->hup)
 		return;
 
 	sd_event_source_set_enabled(s->fd_source, SD_EVENT_OFF);
 
-	len = sizeof(val);
-	r = getsockopt(s->fd, SOL_SOCKET, SO_ERROR, &val, &len);
+	len = sizeof(addr);
+	int fd = accept(s->fd, (struct sockaddr *) &addr, &len);
+
+	r = getsockopt(fd, SOL_SOCKET, SO_ERROR, &val, &len);
 	if (r < 0) {
 		s->hup = true;
 		cli_vERRNO();
@@ -391,12 +644,16 @@ static void src_connected(struct ctl_src *s)
 	} else if (val) {
 		s->hup = true;
 		errno = val;
-		cli_error("cannot connect to remote host (%d): %m",
-			  errno);
+		cli_error("cannot connect to remote host (%d): %m", errno);
 		return;
 	}
 
 	cli_debug("connection established");
+
+	close(s->fd);
+	s->fd = fd;
+	s->addr = addr;
+	s->addr_size = len;
 
 	r = rtsp_open(&s->rtsp, s->fd);
 	if (r < 0)
@@ -412,6 +669,9 @@ static void src_connected(struct ctl_src *s)
 
 	s->connected = true;
 	ctl_fn_src_connected(s);
+
+	src_send_options(s);
+
 	return;
 
 error:
@@ -421,7 +681,7 @@ error:
 
 static void src_io(struct ctl_src *s, uint32_t mask)
 {
-    cli_notice("src_io: %u", mask);
+	cli_notice("src_io: %u", mask);
 
 	if (mask & EPOLLIN) {
 		src_connected(s);
@@ -439,9 +699,9 @@ static void src_io(struct ctl_src *s, uint32_t mask)
 }
 
 static int src_io_fn(sd_event_source *source,
-		      int fd,
-		      uint32_t mask,
-		      void *data)
+			  int fd,
+			  uint32_t mask,
+			  void *data)
 {
 	src_io(data, mask);
 	return 0;
@@ -459,12 +719,10 @@ static int src_listen(struct ctl_src *s)
 		return cli_EINVAL();
 
 	fd = socket(s->addr.ss_family,
-		    SOCK_STREAM | SOCK_CLOEXEC | SOCK_NONBLOCK,
-		    0);
+			SOCK_STREAM | SOCK_CLOEXEC | SOCK_NONBLOCK,
+			0);
 	if (fd < 0)
 		return cli_ERRNO();
-
-    cli_printf("RTSP server socket created\n");
 
 	r = bind(fd, (struct sockaddr*)&s->addr, s->addr_size);
 	if (fd < 0) {
@@ -472,8 +730,6 @@ static int src_listen(struct ctl_src *s)
 		cli_vERR(r);
 		goto err_close;
 	}
-
-    cli_printf("RTSP server socket bound\n");
 
 	r = listen(fd, 1);
 	if (r < 0) {
@@ -484,14 +740,14 @@ static int src_listen(struct ctl_src *s)
 		}
 	}
 
-    cli_printf("RTSP server socket listening\n");
+	cli_printf("Wait for RTSP connection request from sink...\n");
 
 	r = sd_event_add_io(s->event,
-			    &s->fd_source,
-			    fd,
-			    EPOLLERR | EPOLLIN | EPOLLET,
-			    src_io_fn,
-			    s);
+				&s->fd_source,
+				fd,
+				EPOLLERR | EPOLLIN | EPOLLET,
+				src_io_fn,
+				s);
 	if (r < 0) {
 		cli_vERR(r);
 		goto err_close;
@@ -510,6 +766,8 @@ static void src_close(struct ctl_src *s)
 	if (!s || s->fd < 0)
 		return;
 
+	free(s->sink.rtp_ports.profile);
+	s->sink.rtp_ports.profile = NULL;
 	rtsp_remove_match(s->rtsp, src_rtsp_fn, s);
 	rtsp_detach_event(s->rtsp);
 	rtsp_unref(s->rtsp);
@@ -519,7 +777,7 @@ static void src_close(struct ctl_src *s)
 	close(s->fd);
 	s->fd = -1;
 	s->connected = false;
-//	s->hup = false;
+	s->hup = false;
 }
 
 /*
@@ -567,7 +825,7 @@ int ctl_src_listen(struct ctl_src *s, const char *local)
 		return cli_EINVAL();
 
 	addr.sin_family = AF_INET;
-	addr.sin_port = htons(7236);
+	addr.sin_port = htons(DEFAULT_RTSP_PORT);
 	r = inet_pton(AF_INET, local, &addr.sin_addr);
 	if (r != 1)
 		return cli_EINVAL();
@@ -581,6 +839,8 @@ int ctl_src_listen(struct ctl_src *s, const char *local)
 
 	memcpy(&s->addr, &addr, sizeof(addr));
 	s->addr_size = sizeof(addr);
+
+	snprintf(s->url, sizeof(s->url), "rtsp://%s/wfd1.0", local);
 
 	return src_listen(s);
 }

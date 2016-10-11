@@ -54,8 +54,6 @@ static struct ctl_link *running_link;
 static struct ctl_peer *running_peer;
 static struct ctl_peer *pending_peer;
 //
-//void launch_player(struct ctl_sink *s);
-//
 //char *gst_scale_res;
 int gst_audio_en = 1;
 static const int DEFAULT_RSTP_PORT = 1991;
@@ -120,9 +118,9 @@ static int cmd_list(char **args, unsigned int n)
 		cli_printf("%6s %-24s %-30s\n",
 			   l->label,
 			   shl_isempty(l->ifname) ?
-			       "<unknown>" : l->ifname,
+				   "<unknown>" : l->ifname,
 			   shl_isempty(l->friendly_name) ?
-			       "<unknown>" : l->friendly_name);
+				   "<unknown>" : l->friendly_name);
 	}
 
 	cli_printf("\n");
@@ -143,7 +141,7 @@ static int cmd_list(char **args, unsigned int n)
 				   p->l->label,
 				   p->label,
 				   shl_isempty(p->friendly_name) ?
-				       "<unknown>" : p->friendly_name,
+					   "<unknown>" : p->friendly_name,
 				   p->connected ? "yes" : "no");
 		}
 	}
@@ -164,9 +162,9 @@ static int cmd_show(char **args, unsigned int n)
 
 	if (n > 0) {
 		if (!(l = ctl_wifi_find_link(wifi, args[0])) &&
-		    !(p = ctl_wifi_find_peer(wifi, args[0])) &&
-		    !(l = ctl_wifi_search_link(wifi, args[0])) &&
-		    !(p = ctl_wifi_search_peer(wifi, args[0]))) {
+			!(p = ctl_wifi_find_peer(wifi, args[0])) &&
+			!(l = ctl_wifi_search_link(wifi, args[0])) &&
+			!(p = ctl_wifi_search_peer(wifi, args[0]))) {
 			cli_error("unknown link or peer %s", args[0]);
 			return 0;
 		}
@@ -250,7 +248,7 @@ static int cmd_p2p_scan(char **args, unsigned int n)
 	struct ctl_link *l = NULL;
 	unsigned int i;
 	bool stop = false;
-    int r;
+	int r;
 
 	for (i = 0; i < n; ++i) {
 		if (!strcmp(args[i], "stop")) {
@@ -270,13 +268,13 @@ static int cmd_p2p_scan(char **args, unsigned int n)
 		return 0;
 	}
 
-    ctl_link_set_wfd_subelements(l, "00000600101c440032");
+	ctl_link_set_wfd_subelements(l, "000600101c4400c8");
 	r = ctl_link_set_p2p_scanning(l, !stop);
-    if(!r && !running_link) {
-        running_link = l;
-    }
+	if(!r && !running_link) {
+		running_link = l;
+	}
 
-    return r;
+	return r;
 }
 
 /*
@@ -363,9 +361,9 @@ static int cmd_quit(char **args, unsigned int n)
  */
 
 static void schedule_timeout(sd_event_source **out,
-			     uint64_t rel_usec,
-			     sd_event_time_handler_t timeout_fn,
-			     void *data)
+				 uint64_t rel_usec,
+				 sd_event_time_handler_t timeout_fn,
+				 void *data)
 {
 	int r;
 
@@ -377,12 +375,12 @@ static void schedule_timeout(sd_event_source **out,
 			cli_vERR(r);
 	} else {
 		r = sd_event_add_time(cli_event,
-				      out,
-				      CLOCK_MONOTONIC,
-				      rel_usec,
-				      0,
-				      timeout_fn,
-				      data);
+					  out,
+					  CLOCK_MONOTONIC,
+					  rel_usec,
+					  0,
+					  timeout_fn,
+					  data);
 		if (r < 0)
 			cli_vERR(r);
 	}
@@ -421,14 +419,9 @@ static int src_timeout_fn(sd_event_source *s, uint64_t usec, void *data)
 
 	stop_timeout(&src_timeout);
 
-    cli_printf("src_timeout_fn(): %p, %d, %d\n",
-               running_peer,
-               running_peer ? running_peer->connected : 0,
-               ctl_src_is_closed(src));
-
 	if (running_peer &&
-	    running_peer->connected &&
-	    ctl_src_is_closed(src)) {
+		running_peer->connected &&
+		ctl_src_is_closed(src)) {
 		r = ctl_src_listen(src, running_peer->local_address);
 		if (r < 0) {
 			if (src_timeout_time++ >= 3)
@@ -440,7 +433,7 @@ static int src_timeout_fn(sd_event_source *s, uint64_t usec, void *data)
 						 NULL);
 		}
 
-        log_info("listening on %s", running_peer->local_address);
+		log_info("listening on %s", running_peer->local_address);
 	}
 
 	return 0;
@@ -535,23 +528,23 @@ static const struct cli_cmd cli_cmds[] = {
 //		argv[i++] = resolution;
 //	}
 //
-//   argv[i] = NULL;
+//	 argv[i] = NULL;
 //
 //	i = 0;
-//   int size = 0;
+//	 int size = 0;
 //	while (argv[i]) {
-//      size += strlen(argv[i++] + 1);
+//		size += strlen(argv[i++] + 1);
 //	}
 //
-//   char* player_command = malloc(size);
+//	 char* player_command = malloc(size);
 //	i = 0;
-//   strcpy(player_command, argv[i++]);
+//	 strcpy(player_command, argv[i++]);
 //	while (argv[i]) {
-//      strcat(player_command, " ");
-//      strcat(player_command, argv[i++]);
+//		strcat(player_command, " ");
+//		strcat(player_command, argv[i++]);
 //	}
-//   log_debug("player command: %s", player_command);
-//   //free(player_command);
+//	 log_debug("player command: %s", player_command);
+//	 //free(player_command);
 //	if (execvpe(argv[0], argv, environ) < 0) {
 //		cli_debug("stream player failed (%d): %m", errno);
 //		int i = 0;
@@ -649,8 +642,8 @@ void ctl_fn_peer_free(struct ctl_peer *p)
 }
 //
 void ctl_fn_peer_provision_discovery(struct ctl_peer *p,
-				     const char *prov,
-				     const char *pin)
+					 const char *prov,
+					 const char *pin)
 {
 	if (p->l != running_link || shl_isempty(p->wfd_subelements))
 		return;
@@ -661,8 +654,8 @@ void ctl_fn_peer_provision_discovery(struct ctl_peer *p,
 }
 
 void ctl_fn_peer_go_neg_request(struct ctl_peer *p,
-				     const char *prov,
-				     const char *pin)
+					 const char *prov,
+					 const char *pin)
 {
 	if (p->l != running_link || shl_isempty(p->wfd_subelements))
 		return;
@@ -720,7 +713,6 @@ void ctl_fn_peer_connected(struct ctl_peer *p)
 
 		src_connected = false;
 		src_timeout_time = 1;
-        cli_printf("src_timeout_time=%llu\n", src_timeout_time);
 		schedule_timeout(&src_timeout,
 				 src_timeout_time * 1000ULL * 1000ULL,
 				 src_timeout_fn,
@@ -774,21 +766,21 @@ void cli_fn_help()
 {
 	/*
 	 * 80-char barrier:
-	 *      01234567890123456789012345678901234567890123456789012345678901234567890123456789
+	 *		01234567890123456789012345678901234567890123456789012345678901234567890123456789
 	 */
 	printf("%s [OPTIONS...] ...\n\n"
-	       "Control a dedicated local sink via MiracleCast.\n"
-	       "  -h --help             Show this help\n"
-	       "     --version          Show package version\n"
-	       "     --log-level <lvl>  Maximum level for log messages\n"
-	       "     --log-journal-level <lvl>  Maximum level for journal log messages\n"
-	       "     --audio <0/1>      Enable audio support (default %d)\n"
-	       "\n"
-	       , program_invocation_short_name, gst_audio_en
-	       );
+		   "Control a dedicated local sink via MiracleCast.\n"
+		   "  -h --help				Show this help\n"
+		   "	 --version			Show package version\n"
+		   "	 --log-level <lvl>	Maximum level for log messages\n"
+		   "	 --log-journal-level <lvl>	Maximum level for journal log messages\n"
+		   "	 --audio <0/1>		Enable audio support (default %d)\n"
+		   "\n"
+		   , program_invocation_short_name, gst_audio_en
+		   );
 	/*
 	 * 80-char barrier:
-	 *      01234567890123456789012345678901234567890123456789012345678901234567890123456789
+	 *		01234567890123456789012345678901234567890123456789012345678901234567890123456789
 	 */
 }
 
@@ -913,3 +905,5 @@ int main(int argc, char **argv)
 
 	return r < 0 ? EXIT_FAILURE : EXIT_SUCCESS;
 }
+
+/* vim: set tabstop=4 softtabstop=4 shiftwidth=4 noexpandtab : */
