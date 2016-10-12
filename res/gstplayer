@@ -219,7 +219,7 @@ if __name__ == '__main__':
     # "                        default VESA %08X\n"
     # "                        default HH   %08X\n"
     parser.add_argument("-r", "--resolution",             help="Resolution")
-    parser.set_defaults(audio=True)
+    parser.set_defaults(audio=False)
     args = parser.parse_args()
 
     p = Player(**vars(args))
