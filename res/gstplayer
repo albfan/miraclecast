@@ -48,7 +48,10 @@ class Player(object):
         if title:
             self.window.set_title(title)
 
-        self.window.set_default_size(self.width, self.height)
+        if kwargs.get("fullscreen"):
+            self.window.fullscreen()
+        else:
+            self.window.set_default_size(self.width, self.height)
 
         self.drawingarea = Gtk.DrawingArea()
         self.window.add(self.drawingarea)
@@ -209,6 +212,7 @@ if __name__ == '__main__':
     parser.add_argument("--log-level",   metavar="lvl",   help="Maximum level for log messages")
     parser.add_argument("-p", "--port",  type=int, default=1991,  help="Port for rtsp")
     parser.add_argument("-a", "--audio", dest="audio", action="store_true", help="Enable audio support")
+    parser.add_argument("-f", "--full-screen", dest="fullscreen", action="store_true", help="Enter full screen mode")
     parser.add_argument("-s", "--scale", metavar="WxH",   help="Scale to resolution")
     parser.add_argument("-d", "--debug",                  help="Debug")
     parser.add_argument("--uibc",                         help="Enable UIBC")
@@ -220,6 +224,7 @@ if __name__ == '__main__':
     # "                        default HH   %08X\n"
     parser.add_argument("-r", "--resolution",             help="Resolution")
     parser.set_defaults(audio=False)
+    parser.set_defaults(fullscreen=False)
     args = parser.parse_args()
 
     p = Player(**vars(args))
