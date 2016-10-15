@@ -70,4 +70,16 @@ struct ctl_sink {
     int vres;
 };
 
+bool check_rtsp_option(struct rtsp_message *m, char *option);
+
+#define check_and_response_option(option, response) \
+    if (check_rtsp_option(m, option)) { \
+        char option_response[512]; \
+        sprintf(option_response, "%s: %s", option, response); \
+        r = rtsp_message_append(rep, "{&}", option_response); \
+        if (r < 0) {\
+            return cli_vERR(r); \
+        } \
+    }
+
 #endif /* CTL_SINK_H */
