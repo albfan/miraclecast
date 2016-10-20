@@ -71,6 +71,7 @@ struct ctl_link {
 	unsigned int ifindex;
 	char *ifname;
 	char *friendly_name;
+	bool managed;
 	char *wfd_subelements;
 	bool p2p_scanning;
 };
@@ -78,6 +79,7 @@ struct ctl_link {
 #define link_from_dlist(_l) shl_dlist_entry((_l), struct ctl_link, list);
 
 int ctl_link_set_friendly_name(struct ctl_link *l, const char *name);
+int ctl_link_set_managed(struct ctl_link *l, bool val);
 int ctl_link_set_wfd_subelements(struct ctl_link *l, const char *val);
 int ctl_link_set_p2p_scanning(struct ctl_link *l, bool val);
 

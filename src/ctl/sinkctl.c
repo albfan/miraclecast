@@ -80,19 +80,20 @@ static int cmd_list(char **args, unsigned int n)
 
 	/* list links */
 
-	cli_printf("%6s %-24s %-30s\n",
-		   "LINK", "INTERFACE", "FRIENDLY-NAME");
+	cli_printf("%6s %-24s %-30s %-10s\n",
+		   "LINK", "INTERFACE", "FRIENDLY-NAME", "MANAGED");
 
 	shl_dlist_for_each(i, &wifi->links) {
 		l = link_from_dlist(i);
 		++link_cnt;
 
-		cli_printf("%6s %-24s %-30s\n",
+		cli_printf("%6s %-24s %-30s %-10s\n",
 			   l->label,
 			   shl_isempty(l->ifname) ?
 			       "<unknown>" : l->ifname,
 			   shl_isempty(l->friendly_name) ?
-			       "<unknown>" : l->friendly_name);
+			       "<unknown>" : l->friendly_name,
+			   l->managed ? "yes": "no");
 	}
 
 	cli_printf("\n");
@@ -153,6 +154,7 @@ static int cmd_show(char **args, unsigned int n)
 		cli_printf("P2PScanning=%d\n", l->p2p_scanning);
 		if (l->wfd_subelements && *l->wfd_subelements)
 			cli_printf("WfdSubelements=%s\n", l->wfd_subelements);
+		cli_printf("Managed=%d\n", l->managed);
 	} else if (p) {
 		cli_printf("Peer=%s\n", p->label);
 		if (p->p2p_mac && *p->p2p_mac)
@@ -206,6 +208,11 @@ static int cmd_run(char **args, unsigned int n)
 		return 0;
 	}
 
+	if (!l->managed) {
+		cli_printf("link %s not managed\n", l->label);
+		return 0;
+	}
+
 	run_on(l);
 
 	return 0;
@@ -236,9 +243,35 @@ static int cmd_bind(char **args, unsigned int n)
 	if (!l)
 		return 0;
 
+	if (!l->managed) {
+		cli_printf("link %s not managed\n", l->label);
+		return 0;
+	}
+
 	run_on(l);
 
 	return 0;
+}
+
+/*
+ * cmd: set-managed
+ */
+
+static int cmd_set_managed(char **args, unsigned int n)
+{
+	struct ctl_link *l = NULL;
+	bool managed = true;
+
+	l = ctl_wifi_search_link(wifi, args[0]);
+	if (!l) {
+		cli_error("unknown link %s", args[0]);
+		return 0;
+	}
+
+	if (!strcmp(args[1], "no")) {
+		managed = false;
+	}
+	return ctl_link_set_managed(l, managed);
 }
 
 /*
@@ -337,6 +370,7 @@ static const struct cli_cmd cli_cmds[] = {
 	{ "show",		"<link|peer>",				CLI_M,	CLI_LESS,	1,	cmd_show,		"Show detailed object information" },
 	{ "run",		"<link>",				CLI_M,	CLI_EQUAL,	1,	cmd_run,		"Run sink on given link" },
 	{ "bind",		"<link>",				CLI_M,	CLI_EQUAL,	1,	cmd_bind,		"Like 'run' but bind the link name to run when it is hotplugged" },
+	{ "set-managed",	"<link> <yes|no>",	CLI_M,	CLI_EQUAL,	2,	cmd_set_managed,	"Manage or unmnage a link" },
 	{ "quit",		NULL,					CLI_Y,	CLI_MORE,	0,	cmd_quit,		"Quit program" },
 	{ "exit",		NULL,					CLI_Y,	CLI_MORE,	0,	cmd_quit,		NULL },
 	{ "help",		NULL,					CLI_M,	CLI_MORE,	0,	NULL,			"Print help" },
