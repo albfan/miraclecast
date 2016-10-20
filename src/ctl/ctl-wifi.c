@@ -415,6 +415,8 @@ static int ctl_link_parse_properties(struct ctl_link *l,
 	bool p2p_scanning_set = false;
 	char *tmp;
 	int p2p_scanning, r;
+	bool managed_set = false;
+	int managed;
 
 	if (!l || !m)
 		return cli_EINVAL();
@@ -445,6 +447,13 @@ static int ctl_link_parse_properties(struct ctl_link *l,
 						&friendly_name);
 			if (r < 0)
 				return cli_log_parser(r);
+		} else if (!strcmp(t, "Managed")) {
+			r = bus_message_read_basic_variant(m, "b",
+						&managed);
+			if (r < 0)
+				return cli_log_parser(r);
+
+			managed_set = true;
 		} else if (!strcmp(t, "P2PScanning")) {
 			r = bus_message_read_basic_variant(m, "b",
 						&p2p_scanning);
@@ -494,6 +503,9 @@ static int ctl_link_parse_properties(struct ctl_link *l,
 			cli_vENOMEM();
 		}
 	}
+
+	if (managed_set)
+		l->managed = managed;
 
 	if (p2p_scanning_set)
 		l->p2p_scanning = p2p_scanning;
@@ -617,6 +629,63 @@ int ctl_link_set_wfd_subelements(struct ctl_link *l, const char *val)
 			  l->label, val, bus_error_message(&err, r));
 		return r;
 	}
+
+	return 0;
+}
+
+int ctl_link_set_managed(struct ctl_link *l, bool val)
+{
+	_sd_bus_message_unref_ sd_bus_message *m = NULL;
+	_sd_bus_error_free_ sd_bus_error err = SD_BUS_ERROR_NULL;
+	_shl_free_ char *node = NULL;
+	int r;
+
+	if (!l)
+		return cli_EINVAL();
+	if (l->managed == val)
+		return 0;
+
+	r = sd_bus_path_encode("/org/freedesktop/miracle/wifi/link",
+			       l->label,
+			       &node);
+	if (r < 0)
+		return cli_ERR(r);
+
+	r = sd_bus_message_new_method_call(l->w->bus,
+					   &m,
+					   "org.freedesktop.miracle.wifi",
+					   node,
+					   "org.freedesktop.DBus.Properties",
+					   "Set");
+	if (r < 0)
+		return cli_log_create(r);
+
+	r = sd_bus_message_append(m, "ss",
+				  "org.freedesktop.miracle.wifi.Link",
+				  "Managed");
+	if (r < 0)
+		return cli_log_create(r);
+
+	r = sd_bus_message_open_container(m, 'v', "b");
+	if (r < 0)
+		return cli_log_create(r);
+
+	r = sd_bus_message_append(m, "b", val);
+	if (r < 0)
+		return cli_log_create(r);
+
+	r = sd_bus_message_close_container(m);
+	if (r < 0)
+		return cli_log_create(r);
+
+	r = sd_bus_call(l->w->bus, m, 0, &err, NULL);
+	if (r < 0) {
+		cli_error("cannot change managed state on link %s to %d: %s",
+			  l->label, val, bus_error_message(&err, r));
+		return r;
+	}
+
+	l->managed = val;
 
 	return 0;
 }

@@ -231,4 +231,9 @@ extern const char *LOG_SUBSYSTEM;
 #define log_vERR(_r) \
 	((void)log_ERR(_r))
 
+#define log_EUNMANAGED() \
+	(log_error("interface unmanaged"), -EFAULT)
+#define log_vEUNMANAGED() \
+	((void)log_EUNMANAGED())
+
 #endif /* SHL_LOG_H */
