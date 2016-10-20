@@ -214,9 +214,8 @@ static int cmd_run(char **args, unsigned int n)
 
 	if (!l->managed) {
 		cli_printf("link %s not managed\n", l->label);
-		return 0;
+		return log_EUNMANAGED();
 	}
-
 	run_on(l);
 
 	return 0;
@@ -249,7 +248,7 @@ static int cmd_bind(char **args, unsigned int n)
 
 	if (!l->managed) {
 		cli_printf("link %s not managed\n", l->label);
-		return 0;
+		return log_EUNMANAGED();
 	}
 
 	run_on(l);
