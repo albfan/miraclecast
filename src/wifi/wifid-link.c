@@ -100,6 +100,8 @@ int link_new(struct manager *m,
 	if (out)
 		*out = l;
 
+	l->public = true;
+	link_dbus_added(l);
 	return 0;
 
 error:
@@ -115,6 +117,9 @@ void link_free(struct link *l)
 	log_debug("free link: %s (%u)", l->ifname, l->ifindex);
 
 	link_set_managed(l, false);
+
+	link_dbus_removed(l);
+	l->public = false;
 
 	if (shl_htable_remove_uint(&l->m->links, l->ifindex, NULL)) {
 		log_info("remove link: %s", l->ifname);
@@ -159,14 +164,19 @@ int link_set_config_methods(struct link *l, char *config_methods)
    return 0;
 }
 
-void link_set_managed(struct link *l, bool set)
+bool link_get_managed(struct link *l)
+{
+	return l->managed;
+}
+
+int link_set_managed(struct link *l, bool set)
 {
 	int r;
 
 	if (!l)
-		return log_vEINVAL();
+		return log_EINVAL();
 	if (l->managed == set)
-		return;
+		return 0;
 
 	if (set) {
 		log_info("manage link %s", l->ifname);
@@ -174,7 +184,7 @@ void link_set_managed(struct link *l, bool set)
 		r = supplicant_start(l->s);
 		if (r < 0) {
 			log_error("cannot start supplicant on %s", l->ifname);
-			return;
+			return -EFAULT;
 		}
 	} else {
 		log_info("link %s no longer managed", l->ifname);
@@ -182,6 +192,7 @@ void link_set_managed(struct link *l, bool set)
 	}
 
 	l->managed = set;
+	return 0;
 }
 
 int link_renamed(struct link *l, const char *ifname)
@@ -215,6 +226,9 @@ int link_set_friendly_name(struct link *l, const char *name)
 
 	if (!l || !name || !*name)
 		return log_EINVAL();
+
+	if (!l->managed)
+		return log_EUNMANAGED();
 
 	t = strdup(name);
 	if (!t)
@@ -251,6 +265,9 @@ int link_set_wfd_subelements(struct link *l, const char *val)
 	if (!l || !val)
 		return log_EINVAL();
 
+	if (!l->managed)
+		return log_EUNMANAGED();
+
 	t = strdup(val);
 	if (!t)
 		return log_ENOMEM();
@@ -283,6 +300,9 @@ int link_set_p2p_scanning(struct link *l, bool set)
 	if (!l)
 		return log_EINVAL();
 
+	if (!l->managed)
+		return log_EUNMANAGED();
+
 	if (set) {
 		return supplicant_p2p_start_scan(l->s);
 	} else {
@@ -293,7 +313,16 @@ int link_set_p2p_scanning(struct link *l, bool set)
 
 bool link_get_p2p_scanning(struct link *l)
 {
-	return l && supplicant_p2p_scanning(l->s);
+	if (!l) {
+		log_vEINVAL();
+		return false;
+	}
+
+	if (!l->managed) {
+		return false;
+	}
+
+	return supplicant_p2p_scanning(l->s);
 }
 
 void link_supplicant_started(struct link *l)
@@ -301,9 +330,8 @@ void link_supplicant_started(struct link *l)
 	if (!l || l->public)
 		return;
 
-	log_debug("link %s started", l->ifname);
-	l->public = true;
-	link_dbus_added(l);
+	link_set_friendly_name(l, l->m->friendly_name);
+	log_info("link %s managed", l->ifname);
 }
 
 void link_supplicant_stopped(struct link *l)
@@ -311,9 +339,7 @@ void link_supplicant_stopped(struct link *l)
 	if (!l || !l->public)
 		return;
 
-	log_debug("link %s stopped", l->ifname);
-	link_dbus_removed(l);
-	l->public = false;
+	log_info("link %s unmanaged", l->ifname);
 }
 
 void link_supplicant_p2p_scan_changed(struct link *l, bool new_value)

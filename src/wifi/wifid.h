@@ -159,7 +159,8 @@ void link_free(struct link *l);
 void link_use_dev(struct link *l);
 bool link_is_using_dev(struct link *l);
 
-void link_set_managed(struct link *l, bool set);
+int link_set_managed(struct link *l, bool set);
+bool link_get_managed(struct link *l);
 int link_renamed(struct link *l, const char *ifname);
 
 int link_set_config_methods(struct link *l, char *config_methods);

@@ -44,6 +44,7 @@ const char *interface_name = NULL;
 const char *config_methods = NULL;
 unsigned int arg_wpa_loglevel = LOG_NOTICE;
 bool use_dev = false;
+bool lazy_managed = false;
 
 /*
  * Manager Handling
@@ -109,9 +110,9 @@ static void manager_add_udev_link(struct manager *m,
         link_use_dev(l);
 
 #ifdef RELY_UDEV
-	if (udev_device_has_tag(d, "miracle")) {
+	if (udev_device_has_tag(d, "miracle") && !lazy_managed) {
 #else
-	if (!interface_name || !strcmp(interface_name, ifname)) {
+	if ((!interface_name || !strcmp(interface_name, ifname)) && !lazy_managed) {
 #endif
 		link_set_managed(l, true);
 	} else {
@@ -152,12 +153,12 @@ static int manager_udev_fn(sd_event_source *source,
 		}
 
 #ifdef RELY_UDEV
-		if (udev_device_has_tag(d, "miracle"))
+		if (udev_device_has_tag(d, "miracle") && !lazy_managed)
 			link_set_managed(l, true);
 		else
 			link_set_managed(l, false);
 #else
-		if (!interface_name || !strcmp(interface_name, ifname)) {
+		if ((!interface_name || !strcmp(interface_name, ifname)) && !lazy_managed) {
 			link_set_managed(l, true);
 		} else {
 			log_debug("ignored device: %s", ifname);
@@ -230,7 +231,7 @@ static int manager_new(struct manager **out)
 	unsigned int i;
 	sigset_t mask;
 	int r;
-   char *cm;
+	char *cm;
 
 	m = calloc(1, sizeof(*m));
 	if (!m)
@@ -477,6 +478,7 @@ static int help(void)
 	       "\n"
 	       "     --wpa-loglevel <lvl   wpa_supplicant log-level\n"
 	       "     --use-dev             enable workaround for 'no ifname' issue\n"
+	       "     --lazy-managed        manage interface only when user decide to do\n"
 	       , program_invocation_short_name);
 	/*
 	 * 80-char barrier:
@@ -495,6 +497,7 @@ static int parse_argv(int argc, char *argv[])
 		ARG_WPA_LOGLEVEL,
 		ARG_USE_DEV,
 		ARG_CONFIG_METHODS,
+		ARG_LAZY_MANAGED,
 	};
 	static const struct option options[] = {
 		{ "help",	no_argument,		NULL,	'h' },
@@ -506,6 +509,7 @@ static int parse_argv(int argc, char *argv[])
 		{ "interface",	required_argument,	NULL,	'i' },
 		{ "use-dev",	no_argument,	NULL,	ARG_USE_DEV },
 		{ "config-methods",	required_argument,	NULL,	ARG_CONFIG_METHODS },
+		{ "lazy-managed",	no_argument,	NULL,	ARG_LAZY_MANAGED },
 		{}
 	};
 	int c;
@@ -531,6 +535,8 @@ static int parse_argv(int argc, char *argv[])
 			break;
 		case ARG_CONFIG_METHODS:
 			config_methods = optarg;
+		case ARG_LAZY_MANAGED:
+			lazy_managed = true;
 			break;
 
 		case ARG_WPA_LOGLEVEL:

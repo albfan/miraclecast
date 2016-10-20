@@ -52,19 +52,20 @@ static int cmd_list(char **args, unsigned int n)
 
 	/* list links */
 
-	cli_printf("%6s %-24s %-30s\n",
-		   "LINK", "INTERFACE", "FRIENDLY-NAME");
+	cli_printf("%6s %-24s %-30s %-10s\n",
+		   "LINK", "INTERFACE", "FRIENDLY-NAME", "MANAGED");
 
 	shl_dlist_for_each(i, &wifi->links) {
 		l = link_from_dlist(i);
 		++link_cnt;
 
-		cli_printf("%6s %-24s %-30s\n",
+		cli_printf("%6s %-24s %-30s %-10s\n",
 			   l->label,
 			   shl_isempty(l->ifname) ?
 			       "<unknown>" : l->ifname,
 			   shl_isempty(l->friendly_name) ?
-			       "<unknown>" : l->friendly_name);
+			       "<unknown>" : l->friendly_name,
+			   l->managed ? "yes": "no");
 	}
 
 	cli_printf("\n");
@@ -157,6 +158,7 @@ static int cmd_show(char **args, unsigned int n)
 		cli_printf("P2PScanning=%d\n", l->p2p_scanning);
 		if (l->wfd_subelements && *l->wfd_subelements)
 			cli_printf("WfdSubelements=%s\n", l->wfd_subelements);
+		cli_printf("Managed=%d\n", l->managed);
 	} else if (p) {
 		cli_printf("Peer=%s\n", p->label);
 		if (p->p2p_mac && *p->p2p_mac)
@@ -212,7 +214,51 @@ static int cmd_set_friendly_name(char **args, unsigned int n)
 		return 0;
 	}
 
+	if (!l->managed) {
+		cli_printf("link %s not managed\n", l->label);
+		return 0;
+	}
+
 	return ctl_link_set_friendly_name(l, name);
+}
+
+/*
+ * cmd: set-managed
+ */
+
+static int cmd_set_managed(char **args, unsigned int n)
+{
+	struct ctl_link *l = NULL;
+	const char *value;
+	bool managed = true;
+
+	if (n < 1) {
+		cli_printf("To what?\n");
+		return 0;
+	}
+
+	if (n > 1) {
+		l = ctl_wifi_search_link(wifi, args[0]);
+		if (!l) {
+			cli_error("unknown link %s", args[0]);
+			return 0;
+		}
+
+		value = args[1];
+	} else {
+		value = args[0];
+	}
+
+	l = l ? : selected_link;
+	if (!l) {
+		cli_error("no link selected");
+		return 0;
+	}
+
+	if (!strcmp(value, "no")) {
+		managed = false;
+	}
+	return ctl_link_set_managed(l, managed);
 }
 
 /*
@@ -240,6 +286,11 @@ static int cmd_p2p_scan(char **args, unsigned int n)
 	l = l ? : selected_link;
 	if (!l) {
 		cli_error("no link selected");
+		return 0;
+	}
+
+	if (!l->managed) {
+		cli_printf("link %s not managed\n", l->label);
 		return 0;
 	}
 
@@ -290,6 +341,11 @@ static int cmd_connect(char **args, unsigned int n)
 		pin = "";
 	}
 
+	if (!p->l->managed) {
+		cli_printf("link %s not managed\n", p->l->label);
+		return 0;
+	}
+
 	return ctl_peer_connect(p, prov, pin);
 }
 
@@ -309,6 +365,11 @@ static int cmd_disconnect(char **args, unsigned int n)
 	p = ctl_wifi_search_peer(wifi, args[0]);
 	if (!p) {
 		cli_error("unknown peer %s", args[0]);
+		return 0;
+	}
+
+	if (!p->l->managed) {
+		cli_printf("link %s not managed\n", p->l->label);
 		return 0;
 	}
 
@@ -334,6 +395,7 @@ static const struct cli_cmd cli_cmds[] = {
 	{ "select",		"[link]",				CLI_Y,	CLI_LESS,	1,	cmd_select,		"Select default link" },
 	{ "show",		"[link|peer]",				CLI_M,	CLI_LESS,	1,	cmd_show,		"Show detailed object information" },
 	{ "set-friendly-name",	"[link] <name>",			CLI_M,	CLI_LESS,	2,	cmd_set_friendly_name,	"Set friendly name of an object" },
+	{ "set-managed",	"[link] <yes|no>",	CLI_M,	CLI_LESS,	2,	cmd_set_managed,	"Manage or unmnage a link" },
 	{ "p2p-scan",		"[link] [stop]",			CLI_Y,	CLI_LESS,	2,	cmd_p2p_scan,		"Control neighborhood P2P scanning" },
 	{ "connect",		"<peer> [provision] [pin]",		CLI_M,	CLI_LESS,	3,	cmd_connect,		"Connect to peer" },
 	{ "disconnect",		"<peer>",				CLI_M,	CLI_EQUAL,	1,	cmd_disconnect,		"Disconnect from peer" },
