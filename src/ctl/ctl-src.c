@@ -94,7 +94,7 @@ static void src_handle_setup(struct ctl_src *s,
 		goto error;
 	}
 
-	char buf[128];
+	char buf[256];
 	snprintf(buf, sizeof(buf), "RTP/AVP/UDP;unicast;client_port=%d", s->sink.rtp_ports.port0);
 	r = rtsp_message_append(rep, "<s>",
 			"Transport", buf);
@@ -180,6 +180,8 @@ static void src_handle_play(struct ctl_src *s,
 		cli_vERR(r);
 		goto error;
 	}
+
+	ctl_fn_src_playing(s);
 
 	return;
 
@@ -518,27 +520,6 @@ error:
 	return r;
 }
 
-static int src_set_format(struct ctl_src *s,
-					  unsigned int cea_res,
-					  unsigned int vesa_res,
-					  unsigned int hh_res)
-{
-	int hres, vres;
-
-//	if ((vfd_get_cea_resolution(cea_res, &hres, &vres) == 0) ||
-//		(vfd_get_vesa_resolution(vesa_res, &hres, &vres) == 0) ||
-//		(vfd_get_hh_resolution(hh_res, &hres, &vres) == 0)) {
-//		if (hres && vres) {
-//			s->hres = hres;
-//			s->vres = vres;
-//			ctl_fn_sink_resolution_set(s);
-//			return 0;
-//		}
-//	}
-//
-	return -EINVAL;
-}
-
 static void src_handle(struct ctl_src *s,
 			struct rtsp_message *m)
 {
@@ -634,7 +615,7 @@ static void src_connected(struct ctl_src *s)
 	sd_event_source_set_enabled(s->fd_source, SD_EVENT_OFF);
 
 	len = sizeof(addr);
-	int fd = accept(s->fd, (struct sockaddr *) &addr, &len);
+	int fd = accept4(s->fd, (struct sockaddr *) &addr, &len, SOCK_CLOEXEC);
 
 	r = getsockopt(fd, SOL_SOCKET, SO_ERROR, &val, &len);
 	if (r < 0) {

@@ -1,6 +1,4 @@
 /*
- * vim: set tabstop=4:softtabstop=4:shiftwidth=4:noexpandtab
- *
  * MiracleCast - Wifi-Display/Miracast Implementation
  *
  * MiracleCast is free software; you can redistribute it and/or modify it
@@ -82,8 +80,6 @@ struct ctl_src {
 	char *local;
 	char *session;
 	char url[256];
-//	  char *uibc_config;
-//	  char *uibc_setting;
 	struct sockaddr_storage addr;
 	size_t addr_size;
 	int fd;

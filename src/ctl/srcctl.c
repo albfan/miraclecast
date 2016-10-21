@@ -33,8 +33,11 @@
 #include <systemd/sd-journal.h>
 #include <time.h>
 #include <unistd.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
 #include "ctl.h"
-//#include "ctl-sink.h"
+#include "ctl-src.h"
 #include "wfd.h"
 #include "shl_macro.h"
 #include "shl_util.h"
@@ -47,12 +50,14 @@ static sd_event_source *scan_timeout;
 static sd_event_source *src_timeout;
 static unsigned int src_timeout_time;
 static bool src_connected;
-//static pid_t sink_pid;
-//
+static pid_t src_pid;
+
 //static char *selected_ link;
 static struct ctl_link *running_link;
 static struct ctl_peer *running_peer;
 static struct ctl_peer *pending_peer;
+
+void launch_sender(struct ctl_src *s);
 //
 //char *gst_scale_res;
 int gst_audio_en = 1;
@@ -452,109 +457,81 @@ static const struct cli_cmd cli_cmds[] = {
 	{ "help",		NULL,					CLI_M,	CLI_MORE,	0,	NULL,			"Print help" },
 	{ },
 };
-//
-//static void spawn_gst(struct ctl_sink *s)
-//{
-//	pid_t pid;
-//	int fd_journal;
-//	sigset_t mask;
-//
-//	if (sink_pid > 0)
-//		return;
-//
-//	pid = fork();
-//	if (pid < 0) {
-//		return cli_vERRNO();
-//	} else if (!pid) {
-//		/* child */
-//
-//		sigemptyset(&mask);
-//		sigprocmask(SIG_SETMASK, &mask, NULL);
-//
-//		/* redirect stdout/stderr to journal */
-//		fd_journal = sd_journal_stream_fd("miracle-sinkctl-gst",
-//						  LOG_DEBUG,
-//						  false);
-//		if (fd_journal >= 0) {
-//			/* dup journal-fd to stdout and stderr */
-//			dup2(fd_journal, 1);
-//			dup2(fd_journal, 2);
-//		} else {
-//			/* no journal? redirect stdout to parent's stderr */
-//			dup2(2, 1);
-//		}
-//
-//		launch_player(s);
-//		_exit(1);
-//	} else {
-//		sink_pid = pid;
-//	}
-//}
-//
-//void launch_player(struct ctl_sink *s) {
-//	char *argv[64];
-//	char resolution[64];
-//	char port[64];
-//	char uibc_portStr[64];
-//	int i = 0;
-//	char* player;
-//	if (uibc) {
-//		player = "uibc-viewer";
-//	} else {
-//		player = "miracle-gst";
-//	}
-//
-//	argv[i++] = player;
-//	if (uibc) {
-//		argv[i++] = s->target;
-//		sprintf(uibc_portStr, "%d", uibc_port);
-//		argv[i++] = uibc_portStr;
-//	}
-//	if (cli_max_sev >= 7)
-//		argv[i++] = "-d 3";
-//	if (gst_audio_en)
-//		argv[i++] = "-a";
-//	if (gst_scale_res) {
-//		argv[i++] = "-s";
-//		argv[i++] = gst_scale_res;
-//	}
-//	argv[i++] = "-p";
-//	sprintf(port, "%d", rstp_port);
-//	argv[i++] = port;
-//
+
+static void spawn_gst(struct ctl_src *s)
+{
+	pid_t pid;
+	int fd_journal;
+	sigset_t mask;
+
+	if (src_pid > 0)
+		return;
+
+	pid = fork();
+	if (pid < 0) {
+		return cli_vERRNO();
+	} else if (!pid) {
+		/* child */
+
+		sigemptyset(&mask);
+		sigprocmask(SIG_SETMASK, &mask, NULL);
+
+		/* redirect stdout/stderr to journal */
+		fd_journal = sd_journal_stream_fd("miracle-srcctl-gst",
+						  LOG_DEBUG,
+						  false);
+		if (fd_journal >= 0) {
+			/* dup journal-fd to stdout and stderr */
+			dup2(fd_journal, 1);
+			dup2(fd_journal, 2);
+		} else {
+			/* no journal? redirect stdout to parent's stderr */
+			dup2(2, 1);
+		}
+
+		launch_sender(s);
+		_exit(1);
+	} else {
+		src_pid = pid;
+	}
+}
+
+void launch_sender(struct ctl_src *s) {
+	char * argv[64];
+	char resolution[64];
+	char port[64];
+	char uibc_portStr[64];
+	int i = 0;
+
+	argv[i++] = "miracle-sender";
+	//if (gst_audio_en) {
+	//	argv[i++] = "--acodec";
+	//	argv[i++] = "aac";
+	//}
+	argv[i++] = "--host";
+	argv[i++] = inet_ntoa(((struct sockaddr_in *) &s->addr)->sin_addr);
+	argv[i++] = "-p";
+	sprintf(port, "%d", rstp_port);
+	argv[i++] = port;
+
 //	if (s->hres && s->vres) {
 //		sprintf(resolution, "%dx%d", s->hres, s->vres);
 //		argv[i++] = "-r";
 //		argv[i++] = resolution;
 //	}
-//
-//	 argv[i] = NULL;
-//
-//	i = 0;
-//	 int size = 0;
-//	while (argv[i]) {
-//		size += strlen(argv[i++] + 1);
-//	}
-//
-//	 char* player_command = malloc(size);
-//	i = 0;
-//	 strcpy(player_command, argv[i++]);
-//	while (argv[i]) {
-//		strcat(player_command, " ");
-//		strcat(player_command, argv[i++]);
-//	}
-//	 log_debug("player command: %s", player_command);
-//	 //free(player_command);
-//	if (execvpe(argv[0], argv, environ) < 0) {
-//		cli_debug("stream player failed (%d): %m", errno);
-//		int i = 0;
-//		cli_debug("printing environment: ");
-//		while (environ[i]) {
-//			cli_debug("%s", environ[i++]);
-//		}
-//	}
-//}
-//
+
+	argv[i] = NULL;
+
+	if (execvpe(argv[0], argv, environ) < 0) {
+		cli_debug("stream sender failed (%d): %m", errno);
+		int i = 0;
+		cli_debug("printing environment: ");
+		while (environ[i]) {
+			cli_debug("%s", environ[i++]);
+		}
+	}
+}
+
 //void launch_uibc_daemon(int port) {
 //	char *argv[64];
 //	char portStr[64];
@@ -571,11 +548,11 @@ static const struct cli_cmd cli_cmds[] = {
 //
 //static void kill_gst(void)
 //{
-//	if (sink_pid <= 0)
+//	if (src_pid <= 0)
 //		return;
 //
-//	kill(sink_pid, SIGTERM);
-//	sink_pid = 0;
+//	kill(src_pid, SIGTERM);
+//	src_pid = 0;
 //}
 
 void ctl_fn_src_connected(struct ctl_src *s)
@@ -595,12 +572,13 @@ void ctl_fn_src_disconnected(struct ctl_src *s)
 	}
 }
 
-//void ctl_fn_sink_resolution_set(struct ctl_sink *s)
-//{
-//	cli_printf("SINK set resolution %dx%d\n", s->hres, s->vres);
-//	if (sink_connected)
-//		spawn_gst(s);
-//}
+void ctl_fn_src_playing(struct ctl_src *s)
+{
+	cli_printf("SRC got play request\n");
+	// TODO src_connected must be true, why if() failed?
+	//if (src_connected)
+		spawn_gst(s);
+}
 
 void ctl_fn_peer_new(struct ctl_peer *p)
 {
