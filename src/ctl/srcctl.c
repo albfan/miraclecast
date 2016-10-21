@@ -546,14 +546,14 @@ void launch_sender(struct ctl_src *s) {
 //	execvpe(argv[0], argv, environ);
 //}
 //
-//static void kill_gst(void)
-//{
-//	if (src_pid <= 0)
-//		return;
-//
-//	kill(src_pid, SIGTERM);
-//	src_pid = 0;
-//}
+static void kill_gst(void)
+{
+	if (src_pid <= 0)
+		return;
+
+	kill(src_pid, SIGTERM);
+	src_pid = 0;
+}
 
 void ctl_fn_src_connected(struct ctl_src *s)
 {
@@ -607,7 +607,7 @@ void ctl_fn_peer_free(struct ctl_peer *p)
 		cli_printf("no longer running on peer %s\n",
 			   running_peer->label);
 		stop_timeout(&src_timeout);
-		//kill_gst();
+		kill_gst();
 		ctl_src_close(src);
 		running_peer = NULL;
 		stop_timeout(&scan_timeout);
@@ -707,7 +707,7 @@ void ctl_fn_peer_disconnected(struct ctl_peer *p)
 		cli_printf("no longer running on peer %s\n",
 			   running_peer->label);
 		stop_timeout(&src_timeout);
-		//kill_gst();
+		kill_gst();
 		ctl_src_close(src);
 		running_peer = NULL;
 		stop_timeout(&scan_timeout);
