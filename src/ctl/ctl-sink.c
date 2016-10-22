@@ -122,7 +122,7 @@ static void sink_handle_get_parameter(struct ctl_sink *s,
 	}
 
 	/* wfd_uibc_capability */
-	if (rtsp_message_read(m, "{<>}", "wfd_uibc_capability") >= 0 && uibc) {
+	if (rtsp_message_read(m, "{<>}", "wfd_uibc_capability") >= 0 && uibc_option) {
 		char wfd_uibc_capability[512];
 		sprintf(wfd_uibc_capability,
 			"wfd_uibc_capability: input_category_list=GENERIC;"
@@ -258,16 +258,22 @@ static void sink_handle_set_parameter(struct ctl_sink *s,
 			free(s->uibc_config);
 			s->uibc_config = nu;
 
-            char* token = strtok(uibc_config, ";");
+         if (!strcasecmp(uibc_config, "none")) {
+             uibc_enabled = false;
+         } else {
+             char* token = strtok(uibc_config, ";");
 
-            while (token) {
-                if (sscanf(token, "port=%d", &uibc_port)) {
-                    break;
-                }
-                token = strtok(0, ";");
-            }
-
-			cli_debug("Got URL: %s\n", s->url);
+             while (token) {
+                 if (sscanf(token, "port=%d", &uibc_port)) {
+                     log_debug("UIBC port: %d\n", uibc_port);
+                     if (uibc_option) {
+                         uibc_enabled = true;
+                     }
+                     break;
+                 }
+                 token = strtok(0, ";");
+             }
+         }
 		}
 	}
 

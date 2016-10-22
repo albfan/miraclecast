@@ -40,7 +40,8 @@
 #include "wfd.h"
 
 extern int rstp_port;
-extern bool uibc;
+extern bool uibc_option;
+extern bool uibc_enabled;
 extern int uibc_port;
 
 struct ctl_sink {

@@ -59,7 +59,8 @@ void launch_player(struct ctl_sink *s);
 char *gst_scale_res;
 int gst_audio_en = 1;
 static const int DEFAULT_RSTP_PORT = 1991;
-bool uibc;
+bool uibc_option;
+bool uibc_enabled;
 int rstp_port;
 int uibc_port;
 
@@ -388,14 +389,14 @@ void launch_player(struct ctl_sink *s) {
 	char uibc_portStr[64];
 	int i = 0;
 	char* player;
-	if (uibc) {
+	if (uibc_enabled) {
 		player = "uibc-viewer";
 	} else {
 		player = "miracle-gst";
 	}
 
 	argv[i++] = player;
-	if (uibc) {
+	if (uibc_enabled) {
 		argv[i++] = s->target;
 		sprintf(uibc_portStr, "%d", uibc_port);
 		argv[i++] = uibc_portStr;
@@ -420,29 +421,28 @@ void launch_player(struct ctl_sink *s) {
 
    argv[i] = NULL;
 
-	i = 0;
+   i = 0;
    int size = 0;
-	while (argv[i]) {
+   while (argv[i]) {
       size += strlen(argv[i++] + 1);
-	}
+   }
 
    char* player_command = malloc(size);
-	i = 0;
+   i = 0;
    strcpy(player_command, argv[i++]);
-	while (argv[i]) {
+   while (argv[i]) {
       strcat(player_command, " ");
       strcat(player_command, argv[i++]);
-	}
+   }
    log_debug("player command: %s", player_command);
-   //free(player_command);
-	if (execvpe(argv[0], argv, environ) < 0) {
-		cli_debug("stream player failed (%d): %m", errno);
-		int i = 0;
-		cli_debug("printing environment: ");
-		while (environ[i]) {
-			cli_debug("%s", environ[i++]);
-		}
-	}
+   if (execvpe(argv[0], argv, environ) < 0) {
+      cli_debug("stream player failed (%d): %m", errno);
+      int i = 0;
+      cli_debug("printing environment: ");
+      while (environ[i]) {
+         cli_debug("%s", environ[i++]);
+      }
+   }
 }
 
 void launch_uibc_daemon(int port) {
@@ -771,7 +771,8 @@ static int parse_argv(int argc, char *argv[])
 	};
 	int c;
 
-	uibc = false;
+	uibc_option = false;
+	uibc_enabled = false;
 	rstp_port = DEFAULT_RSTP_PORT;
 
 	while ((c = getopt_long(argc, argv, "h", options, NULL)) >= 0) {
@@ -803,7 +804,7 @@ static int parse_argv(int argc, char *argv[])
 			rstp_port = atoi(optarg);
 			break;
 		case ARG_UIBC:
-			uibc = true;
+			uibc_option = true;
 			break;
 		case '?':
 			return -EINVAL;
