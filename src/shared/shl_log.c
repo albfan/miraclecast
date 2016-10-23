@@ -85,6 +85,8 @@ const char *LOG_SUBSYSTEM = NULL;
 
 unsigned int log_max_sev = LOG_NOTICE;
 
+char *gst_debug = NULL;
+
 /*
  * Forward declaration so we can use the locked-versions in other functions
  * here. Be careful to avoid deadlocks, though.

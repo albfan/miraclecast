@@ -1,7 +1,6 @@
 #!/usr/bin/python3 -u
 
 import gi
-import sys
 import argparse
 
 gi.require_version('Gst', '1.0')
@@ -31,6 +30,11 @@ class Player(object):
             split = scale.split("x")
             self.width = int(split[0])
             self.height = int(split[1])
+
+        debug = kwargs.get("debug")
+        if debug:
+            Gst.debug_set_active(True)
+            Gst.debug_set_threshold_from_string(debug, True)
 
         port = kwargs.get("port")
 

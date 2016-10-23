@@ -62,6 +62,11 @@ enum log_severity {
 extern unsigned int log_max_sev;
 
 /*
+ * Defines the debug configuration for gstreamer
+ */
+extern char* gst_debug;
+
+/*
  * Timestamping
  * Call this to initialize timestamps and cause all log-messages to be prefixed
  * with a timestamp. If not called, no timestamps are added.

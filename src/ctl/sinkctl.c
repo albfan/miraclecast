@@ -401,8 +401,13 @@ void launch_player(struct ctl_sink *s) {
 		sprintf(uibc_portStr, "%d", uibc_port);
 		argv[i++] = uibc_portStr;
 	}
-	if (cli_max_sev >= 7)
-		argv[i++] = "-d 3";
+	if (gst_debug) {
+		argv[i++] = "-d";
+		argv[i++] = gst_debug;
+	} else if (cli_max_sev >= LOG_DEBUG) {
+		argv[i++] = "-d";
+		argv[i++] = "3";
+	}
 	if (gst_audio_en)
 		argv[i++] = "-a";
 	if (gst_scale_res) {
@@ -422,9 +427,9 @@ void launch_player(struct ctl_sink *s) {
    argv[i] = NULL;
 
    i = 0;
-   int size = 0;
+   size_t size = 0;
    while (argv[i]) {
-      size += strlen(argv[i++] + 1);
+      size += strlen(argv[i++]) + 1;
    }
 
    char* player_command = malloc(size);
@@ -668,18 +673,19 @@ void cli_fn_help()
 	 */
 	printf("%s [OPTIONS...] ...\n\n"
 	       "Control a dedicated local sink via MiracleCast.\n"
-	       "  -h --help             Show this help\n"
-	       "     --version          Show package version\n"
-	       "     --log-level <lvl>  Maximum level for log messages\n"
-	       "     --log-journal-level <lvl>  Maximum level for journal log messages\n"
-	       "     --audio <0/1>      Enable audio support (default %d)\n"
-	       "     --scale WxH        Scale to resolution\n"
-	       "     --port <port>              Port for rtsp (default %d)\n"
-	       "     --uibc                     Enables UIBC\n"
-	       "     --res <n,n,n>      Supported resolutions masks (CEA, VESA, HH)\n"
-	       "                        default CEA  %08X\n"
-	       "                        default VESA %08X\n"
-	       "                        default HH   %08X\n"
+	       "  -h --help                      Show this help\n"
+	       "     --version                   Show package version\n"
+	       "     --log-level <lvl>           Maximum level for log messages\n"
+	       "     --log-journal-level <lvl>   Maximum level for journal log messages\n"
+	       "     --gst-debug [cat:]lvl[,...] List of categories an level of debug\n"
+	       "     --audio <0/1>               Enable audio support (default %d)\n"
+	       "     --scale WxH                 Scale to resolution\n"
+	       "     --port <port>                  Port for rtsp (default %d)\n"
+	       "     --uibc                         Enables UIBC\n"
+	       "     --res <n,n,n>               Supported resolutions masks (CEA, VESA, HH)\n"
+	       "                                    default CEA  %08X\n"
+	       "                                    default VESA %08X\n"
+	       "                                    default HH   %08X\n"
 	       "\n"
 	       , program_invocation_short_name, gst_audio_en, DEFAULT_RSTP_PORT,
 		   wfd_supported_res_cea, wfd_supported_res_vesa, wfd_supported_res_hh
@@ -751,6 +757,7 @@ static int parse_argv(int argc, char *argv[])
 		ARG_VERSION = 0x100,
 		ARG_LOG_LEVEL,
 		ARG_JOURNAL_LEVEL,
+		ARG_GST_DEBUG,
 		ARG_AUDIO,
 		ARG_SCALE,
 		ARG_RES,
@@ -762,6 +769,7 @@ static int parse_argv(int argc, char *argv[])
 		{ "version",	no_argument,		NULL,	ARG_VERSION },
 		{ "log-level",	required_argument,	NULL,	ARG_LOG_LEVEL },
 		{ "log-journal-level",	required_argument,	NULL,	ARG_JOURNAL_LEVEL },
+		{ "gst-debug",	required_argument,	NULL,	ARG_GST_DEBUG },
 		{ "audio",	required_argument,	NULL,	ARG_AUDIO },
 		{ "scale",	required_argument,	NULL,	ARG_SCALE },
 		{ "res",	required_argument,	NULL,	ARG_RES },
@@ -784,6 +792,9 @@ static int parse_argv(int argc, char *argv[])
 			return 0;
 		case ARG_LOG_LEVEL:
 			cli_max_sev = log_parse_arg(optarg);
+			break;
+		case ARG_GST_DEBUG:
+			gst_debug = optarg;
 			break;
 		case ARG_JOURNAL_LEVEL:
 			log_max_sev = log_parse_arg(optarg);
