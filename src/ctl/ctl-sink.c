@@ -253,29 +253,29 @@ static void sink_handle_set_parameter(struct ctl_sink *s,
 	r = rtsp_message_read(m, "{<&>}", "wfd_uibc_capability", &uibc_config);
 	if (r >= 0) {
 		if (!s->uibc_config || strcmp(s->uibc_config, uibc_config)) {
-			nu = strdup(uibc_config);
-			if (!nu)
-				return cli_vENOMEM();
+            nu = strdup(uibc_config);
+            if (!nu)
+                return cli_vENOMEM();
 
-			free(s->uibc_config);
-			s->uibc_config = nu;
+            free(s->uibc_config);
+            s->uibc_config = nu;
 
-         if (!strcasecmp(uibc_config, "none")) {
-             uibc_enabled = false;
-         } else {
-             char* token = strtok(uibc_config, ";");
+            if (!strcasecmp(uibc_config, "none")) {
+                uibc_enabled = false;
+            } else {
+                char* token = strtok(uibc_config, ";");
 
-             while (token) {
-                 if (sscanf(token, "port=%d", &uibc_port)) {
-                     log_debug("UIBC port: %d\n", uibc_port);
-                     if (uibc_option) {
-                         uibc_enabled = true;
-                     }
-                     break;
-                 }
-                 token = strtok(0, ";");
-             }
-         }
+                while (token) {
+                    if (sscanf(token, "port=%d", &uibc_port)) {
+                        log_debug("UIBC port: %d\n", uibc_port);
+                        if (uibc_option) {
+                            uibc_enabled = true;
+                        }
+                        break;
+                    }
+                    token = strtok(0, ";");
+                }
+            }
 		}
 	}
 
