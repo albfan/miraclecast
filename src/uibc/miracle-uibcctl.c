@@ -106,7 +106,7 @@ const char *int2binary(int x, int padding)
 int sendUibcMessage(UibcMessage* uibcmessage, int sockfd) {
   ssize_t n;
 
-  printf("sending %d bytes\n", uibcmessage->m_PacketDataLen);
+  printf("sending %zu bytes\n", uibcmessage->m_PacketDataLen);
 
   n = write(sockfd, uibcmessage->m_PacketData , uibcmessage->m_PacketDataLen);
 
@@ -249,7 +249,7 @@ void getUIBCGenericTouchPacket(const char *inEventDesc,
 void hexdump(void *_data, size_t len)
 {
   unsigned char *data = _data;
-  int count;
+  size_t count;
 
   int line = 15;
   for (count = 0; count < len; count++) {
@@ -270,7 +270,7 @@ void hexdump(void *_data, size_t len)
 void binarydump(void *_data, size_t len)
 {
   unsigned char *data = _data;
-  int count;
+  size_t count;
 
   int line = 7;
   for (count = 0; count < len; count++) {

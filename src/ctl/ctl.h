@@ -120,7 +120,7 @@ bool ctl_sink_is_closed(struct ctl_sink *s);
 
 /* CLI handling */
 
-extern int cli_max_sev;
+extern unsigned int cli_max_sev;
 void cli_printv(const char *fmt, va_list args);
 void cli_printf(const char *fmt, ...);
 

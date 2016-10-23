@@ -47,7 +47,7 @@ static sd_event_source *cli_sigs[_NSIG];
 static sd_event_source *cli_stdin;
 static bool cli_rl;
 static const struct cli_cmd *cli_cmds;
-int cli_max_sev = LOG_NOTICE;
+unsigned int cli_max_sev = LOG_NOTICE;
 
 static bool is_cli(void)
 {

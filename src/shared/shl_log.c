@@ -12,6 +12,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/time.h>
+#include <limits.h>
 #include "shl_log.h"
 
 /*
@@ -239,9 +240,9 @@ void log_llog(void *data,
 	log_submit(file, line, func, subs, sev, format, args);
 }
 
-int log_parse_arg(char *optarg)
+unsigned int log_parse_arg(char *optarg)
 {
-	int log_max_sev;
+	unsigned int log_max_sev;
 	if(!strcasecmp(optarg, "fatal")) {
 		log_max_sev = LOG_FATAL;
 	} else if(!strcasecmp(optarg, "alert")) {
@@ -261,7 +262,23 @@ int log_parse_arg(char *optarg)
 	} else if(!strcasecmp(optarg, "trace")) {
 		log_max_sev = LOG_TRACE;
 	} else {
-		log_max_sev = atoi(optarg);
+		errno = 0;
+		char *temp;
+		long val = strtoul(optarg, &temp, 0);
+
+		if (temp == optarg || *temp != '\0'
+			|| ((val == LONG_MIN || val == LONG_MAX) && errno == ERANGE)) {
+			log_error("Could not convert '%s' to long and leftover string is: '%s'\n", optarg, temp);
+		}
+		if (val > INT_MAX) {
+			errno = ERANGE;
+			return INT_MAX;
+		}
+		if (val < INT_MIN) {
+			errno = ERANGE;
+			return INT_MIN;
+		}
+		log_max_sev = (unsigned int) val;
 	}
 	return log_max_sev;
 }

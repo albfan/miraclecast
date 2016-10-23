@@ -213,7 +213,7 @@ static void sink_handle_set_parameter(struct ctl_sink *s,
 	_rtsp_message_unref_ struct rtsp_message *rep = NULL;
 	const char *trigger;
 	const char *url;
-	const char *uibc_config;
+	char *uibc_config;
 	const char *uibc_setting;
 	char *nu;
 	unsigned int cea_res, vesa_res, hh_res;
