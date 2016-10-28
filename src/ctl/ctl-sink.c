@@ -248,7 +248,7 @@ static void sink_handle_set_parameter(struct ctl_sink *s,
 	}
 
 	/* M4 (or any other) can pass presentation URLs */
-	r = rtsp_message_read(m, "{<s>}", "wfd_uibc_capability", &uibc_config);
+	r = rtsp_message_read(m, "{<&>}", "wfd_uibc_capability", &uibc_config);
 	if (r >= 0) {
 		if (!s->uibc_config || strcmp(s->uibc_config, uibc_config)) {
 			nu = strdup(uibc_config);
