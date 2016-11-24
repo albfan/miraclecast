@@ -184,7 +184,7 @@ void getUIBCGenericTouchPacket(const char *inEventDesc,
   numberOfPointers = atoi(*(splitedStr + offset_split++));
 
   genericPacketLen = numberOfPointers * 5 + 1;
-  uibcBodyLen = genericPacketLen + 7; // Generic header length = 7
+  uibcBodyLen = genericPacketLen + 11; // Generic header length = 7 // HIDC header length = 9
   //Padding to even number
   uibcBodyLen = (uibcBodyLen % 2 == 0) ? uibcBodyLen : (uibcBodyLen + 1);
 
@@ -193,46 +193,61 @@ void getUIBCGenericTouchPacket(const char *inEventDesc,
   int offset_header = 0;
   //Version (3 bits),T (1 bit),Reserved(8 bits),Input Category (4 bits)
   outData[offset_header++] = 0x00; // 000 0 0000
-  outData[offset_header++] = 0x00; // 0000 0000
+  outData[offset_header++] = 0x11; // 0000 0000
 
   //Length(16 bits)
   outData[offset_header++] = (uibcBodyLen >> 8) & 0xFF; // first 8 bytes
   outData[offset_header++] = uibcBodyLen & 0xFF; // last 8 bytes
 
-  //Generic Input Body Format
-  outData[offset_header++] = typeId & 0xFF; // Tyoe ID, 1 octet
+  // HID Input Path
+  outData[offset_header++] = 0x01;
+  // HID Type
+  outData[offset_header++] = 0x00;
 
-  // Length, 2 octets
-  outData[offset_header++] = (genericPacketLen >> 8) & 0xFF; // first 8 bytes
-  outData[offset_header++] = genericPacketLen & 0xFF; //last 8 bytes
+  // HID Usage
+  outData[offset_header++] = 0x00;
+  outData[offset_header++] = 0x00;
 
-  // Number of pointers, 1 octet
-  outData[offset_header++] = numberOfPointers & 0xFF; 
+  // HIDC value
+  outData[offset_header++] = 0x08; // Descript size
+  outData[offset_header++] = 0x00; // data type?
+  outData[offset_header++] = 0x00; // data type?
+//  outData[offset_header++] = 0x00 ^ typeId;
+  if (typeId)
+      outData[offset_header++] = 0x00;
+  else
+      outData[offset_header++] = 0x04;
 
-  int offset = 0;
-  log_info("getUIBCGenericTouchPacket numberOfPointers=[%d]\n", numberOfPointers);
-  for (int i = 0; i < numberOfPointers; i++) {
-    int splitoffset = offset_split + (i * 3);
-    temp = atoi(*(splitedStr + splitoffset++));
-    offset = offset_header + ( i * 5);
-    outData[offset++] = temp & 0xFF;
-    log_info("getUIBCGenericTouchPacket PointerId=[%d]\n", temp);
+//  outData[offset_header++] = (genericPacketLen >> 8) & 0xFF; // first 8 bytes
+//  outData[offset_header++] = genericPacketLen & 0xFF; //last 8 bytes
+//
+//  // Number of pointers, 1 octet
+//  outData[offset_header++] = numberOfPointers & 0xFF;
 
-    temp = atoi(*(splitedStr + splitoffset++));
-    temp = (int32_t)((double)temp / widthRatio);
-    log_info("getUIBCGenericTouchPacket X-coordinate=[%d]\n", temp);
-    outData[offset++] = (temp >> 8) & 0xFF;
-    outData[offset++] = temp & 0xFF;
+//  int offset = 0;
+//  log_info("getUIBCGenericTouchPacket numberOfPointers=[%d]\n", numberOfPointers);
+//  for (int i = 0; i < numberOfPointers; i++) {
+//    int splitoffset = offset_split + (i * 3);
+//    temp = atoi(*(splitedStr + splitoffset++));
+//    offset = offset_header + ( i * 5);
+//    outData[offset++] = temp & 0xFF;
+//    log_info("getUIBCGenericTouchPacket PointerId=[%d]\n", temp);
+//
+//    temp = atoi(*(splitedStr + splitoffset++));
+//    temp = (int32_t)((double)temp / widthRatio);
+//    log_info("getUIBCGenericTouchPacket X-coordinate=[%d]\n", temp);
+//    outData[offset++] = (temp >> 8) & 0xFF;
+//    outData[offset++] = temp & 0xFF;
+//
+//    temp = atoi(*(splitedStr + splitoffset++));
+//    temp = (int32_t)((double)temp / heightRatio);
+//    log_info("getUIBCGenericTouchPacket Y-coordinate=[%d]\n", temp);
+//    outData[offset++] = (temp >> 8) & 0xFF;
+//    outData[offset++] = temp & 0xFF;
+//  }
 
-    temp = atoi(*(splitedStr + splitoffset++));
-    temp = (int32_t)((double)temp / heightRatio);
-    log_info("getUIBCGenericTouchPacket Y-coordinate=[%d]\n", temp);
-    outData[offset++] = (temp >> 8) & 0xFF;
-    outData[offset++] = temp & 0xFF;
-  }
-
-  while (offset <= uibcBodyLen) {
-    outData[offset++] = 0x00;
+  while (offset_header <= uibcBodyLen) {
+    outData[offset_header++] = 0x00;
   }
 
   for (int i = 0; i < size; i++) {
