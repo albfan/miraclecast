@@ -119,16 +119,11 @@ static void sink_handle_get_parameter(struct ctl_sink *s,
 
 	/* wfd_uibc_capability */
 	if (uibc_option) {
-//		check_and_response_option("wfd_uibc_capability",
-//								  "input_category_list=GENERIC;"
-//				                  "generic_cap_list=Mouse,SingleTouch;"
-//				                  "hidc_cap_list=none;"
-//				                  "port=none");
 		check_and_response_option("wfd_uibc_capability",
-								      "input_category_list=GENERIC, HIDC;"
-									  "generic_cap_list=Keyboard;"
-									  "hidc_cap_list=Keyboard/USB, Mouse/USB, MultiTouch/USB, Gesture/USB, RemoteControl/USB;"
-									  "port=none");
+								  "input_category_list=GENERIC;"
+				                  "generic_cap_list=Mouse,SingleTouch;"
+				                  "hidc_cap_list=none;"
+				                  "port=none");
 	}
 	rtsp_message_seal(rep);
 	cli_debug("OUTGOING: %s\n", rtsp_message_get_raw(rep));
