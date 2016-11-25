@@ -106,12 +106,15 @@ static void sink_handle_get_parameter(struct ctl_sink *s,
 	check_and_response_option("wfd_content_protection", "none");
 	check_and_response_option("wfd_display_edid", "0001 00ffffffffffff0051f38f50010000000e100104a51d10ff2f0000a057499b2610484f000000010101010101010101010101010101011a36809c70381f403020350025a510000018000000fc00496e7465726e616c204c43440a000000fd003c3c9a9a0e00000000000000000000000000000000000000000000000000000030");
 	check_and_response_option("wfd_connector_type", "05");
-	check_and_response_option("microsoft_cursor", "none");
+
 	check_and_response_option("microsoft_rtcp_capability", "none");
 	check_and_response_option("wfd_idr_request_capability", "1");
 	check_and_response_option("microsoft_latency_management_capability", "none");
 	check_and_response_option("microsoft_format_change_capability", "none");
 	check_and_response_option("microsoft_diagnostics_capability", "none");
+	check_and_response_option("microsoft_latency_management_capability", "supported");
+	check_and_response_option("microsoft_cursor", "none 0100 0100 4abe");
+	check_and_response_option("intel_interactivity_mode", "HIGH,DEFAULT");
 	check_and_response_option("intel_friendly_name", "miraclecast");
 	check_and_response_option("intel_sink_manufacturer_name", "GNU Linux");
 	check_and_response_option("intel_sink_model_name", "Arch linux");
@@ -126,8 +129,9 @@ static void sink_handle_get_parameter(struct ctl_sink *s,
 //				                  "port=none");
 		check_and_response_option("wfd_uibc_capability",
 								      "input_category_list=GENERIC, HIDC;"
-									  "generic_cap_list=Keyboard;"
-									  "hidc_cap_list=Keyboard/USB, Mouse/USB, MultiTouch/USB, Gesture/USB, RemoteControl/USB;"
+									  "generic_cap_list=Keyboard, Mouse, MultiTouch;"
+									  "hidc_cap_list=Keyboard/USB, Mouse/USB, "
+		                              "SingleTouch/USB, MultiTouch/USB;"
 									  "port=none");
 	}
 	rtsp_message_seal(rep);
