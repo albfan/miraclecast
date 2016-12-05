@@ -255,6 +255,7 @@ void ctl_fn_peer_disconnected(struct ctl_peer *p);
 void ctl_fn_link_new(struct ctl_link *l);
 void ctl_fn_link_free(struct ctl_link *l);
 
+void ctl_fn_src_setup(struct ctl_src *s);
 void ctl_fn_src_playing(struct ctl_src *s);
 void ctl_fn_src_connected(struct ctl_src *s);
 void ctl_fn_src_disconnected(struct ctl_src *s);

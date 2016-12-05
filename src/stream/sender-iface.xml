@@ -1,0 +1,20 @@
+<node>
+	<interface name="org.freedesktop.miracle.Sender">
+		<method name="Prepare">
+			<arg name="host" type="s" direction="in"/>
+			<arg name="port" type="q" direction="in"/>
+			<arg name="display" type="s" direction="in"/>
+			<arg name="width" type="q" direction="in"/>
+			<arg name="height" type="q" direction="in"/>
+			<arg name="refresh_rate" type="q" direction="in"/>
+			<arg name="interleave" type="b" direction="in"/>
+		</method>
+		<method name="Play">
+		</method>
+		<method name="Pause">
+		</method>
+		<method name="Stop">
+		</method>
+		<property name="State" type="s" access="read"/>
+	</interface>
+</node>
