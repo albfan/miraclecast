@@ -36,12 +36,16 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#include <gio/gio.h>
 #include "ctl.h"
 #include "ctl-src.h"
 #include "wfd.h"
 #include "shl_macro.h"
 #include "shl_util.h"
 #include "config.h"
+#include "sender-iface.h"
+
+void launch_sender(struct ctl_src *s);
 
 static sd_bus *bus;
 static struct ctl_wifi *wifi;
@@ -57,18 +61,19 @@ static struct ctl_link *running_link;
 static struct ctl_peer *running_peer;
 static struct ctl_peer *pending_peer;
 
-void launch_sender(struct ctl_src *s);
 //
 //char *gst_scale_res;
-int gst_audio_en = 1;
-static const int DEFAULT_RSTP_PORT = 1991;
+static int gst_audio_en = 1;
+static const int DEFAULT_RTSP_PORT = 1991;
 //bool uibc;
-int rstp_port;
+static int rtsp_port;
 //int uibc_port;
 //
 //unsigned int wfd_supported_res_cea  = 0x0000001f;	/* up to 720x576 */
 //unsigned int wfd_supported_res_vesa = 0x00000003;	/* up to 800x600 */
 //unsigned int wfd_supported_res_hh   = 0x00000000;	/* not supported */
+
+static Sender *sender;
 
 /*
  * cmd: select
@@ -504,14 +509,14 @@ void launch_sender(struct ctl_src *s) {
 	int i = 0;
 
 	argv[i++] = "miracle-sender";
-	//if (gst_audio_en) {
-	//	argv[i++] = "--acodec";
-	//	argv[i++] = "aac";
-	//}
+	if (gst_audio_en) {
+		argv[i++] = "--acodec";
+		argv[i++] = "aac";
+	}
 	argv[i++] = "--host";
 	argv[i++] = inet_ntoa(((struct sockaddr_in *) &s->addr)->sin_addr);
 	argv[i++] = "-p";
-	sprintf(port, "%d", rstp_port);
+	sprintf(port, "%d", rtsp_port);
 	argv[i++] = port;
 
 //	if (s->hres && s->vres) {
@@ -569,15 +574,80 @@ void ctl_fn_src_disconnected(struct ctl_src *s)
 	} else {
 		cli_notice("SRC disconnected");
 		src_connected = false;
+
+		if(sender) {
+			GError *error = NULL;
+			if(sender_call_stop_sync(sender, NULL, &error)) {
+				cli_error("SRC failed to stop sender: %s", error->message);
+				g_error_free(error);
+			}
+
+			g_object_unref(sender);
+			sender = NULL;
+		}
 	}
+}
+
+void ctl_fn_src_setup(struct ctl_src *s)
+{
+	GError *error = NULL;
+
+	cli_printf("SRC got setup request\n");
+
+	if(!sender) {
+		sender = sender_proxy_new_for_bus_sync(G_BUS_TYPE_SESSION,
+						G_DBUS_PROXY_FLAGS_NONE,
+						"org.freedesktop.miracle.Sender",
+						"/org/freedesktop/miracle/Sender/0",
+						NULL,
+						&error);
+		if(!sender) {
+			cli_error("SRC failed to connect to sender: %s", error->message);
+			g_error_free(error);
+			return;
+		}
+	}
+
+	sender_call_prepare_sync(sender,
+					inet_ntoa(((struct sockaddr_in *) &s->addr)->sin_addr),
+					s->sink.rtp_ports.port0,
+					":0",
+					1920,
+					1080,
+					30,
+					FALSE,
+					NULL,
+					&error);
+	if(error) {
+		cli_error("SRC failed to setup: %s", error->message);
+		g_error_free(error);
+		return;
+	}
+
+	g_info("SRC sender prepared");
 }
 
 void ctl_fn_src_playing(struct ctl_src *s)
 {
+	GError *error = NULL;
+
 	cli_printf("SRC got play request\n");
 	// TODO src_connected must be true, why if() failed?
 	//if (src_connected)
-		spawn_gst(s);
+		//spawn_gst(s);
+	
+	if(!sender) {
+		cli_error("SRC not setup yet");
+		return;
+	}
+
+	if(!sender_call_play_sync(sender, NULL, &error)) {
+		cli_error("SRC failed to play: %s", error->message);
+		g_error_free(error);
+		return;
+	}
+
+	g_info("SRC sender playing");
 }
 
 void ctl_fn_peer_new(struct ctl_peer *p)
@@ -834,7 +904,7 @@ static int parse_argv(int argc, char *argv[])
 	};
 	int c;
 
-	rstp_port = DEFAULT_RSTP_PORT;
+	rtsp_port = DEFAULT_RTSP_PORT;
 
 	while ((c = getopt_long(argc, argv, "h", options, NULL)) >= 0) {
 		switch (c) {
@@ -863,6 +933,7 @@ static int parse_argv(int argc, char *argv[])
 int main(int argc, char **argv)
 {
 	int r;
+	GError *error = NULL;
 
 	setlocale(LC_ALL, "");
 

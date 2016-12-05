@@ -136,6 +136,8 @@ static void src_handle_setup(struct ctl_src *s,
 		goto error;
 	}
 
+	ctl_fn_src_setup(s);
+
 	return;
 
 error:
@@ -389,7 +391,7 @@ static int src_send_set_parameter(struct ctl_src *s)
 	_rtsp_message_unref_ struct rtsp_message *req;
 	int r;
 	const static char tmp[] =
-			"wfd_video_formats: 00 00 02 02 00000002 00000000 00000000 00 0000 0000 00 none none\n"
+			"wfd_video_formats: 38 00 02 10 00000080 00000000 00000000 00 0000 0000 00 none none\n"
 			//"wfd_audio_codecs: AAC 00000001 00\n"
 			//"wfd_uibc_capability: input_category_list=GENERIC\n;generic_cap_list=SingleTouch;hidc_cap_list=none;port=5100\n"
 			//"wfd_uibc_setting: disable\n"
@@ -690,7 +692,7 @@ static int src_io_fn(sd_event_source *source,
 
 static int src_listen(struct ctl_src *s)
 {
-	int fd, r;
+	int fd, r, enable = 1;
 
 	if (!s)
 		return cli_EINVAL();
@@ -705,8 +707,15 @@ static int src_listen(struct ctl_src *s)
 	if (fd < 0)
 		return cli_ERRNO();
 
+	r = setsockopt(fd, SOL_SOCKET, SO_REUSEPORT, &enable, sizeof(enable));
+	if(r < 0) {
+		r = -errno;
+		cli_vERR(r);
+		goto err_close;
+	}
+
 	r = bind(fd, (struct sockaddr*)&s->addr, s->addr_size);
-	if (fd < 0) {
+	if (r < 0) {
 		r = -errno;
 		cli_vERR(r);
 		goto err_close;
