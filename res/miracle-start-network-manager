@@ -1,8 +1,17 @@
 #!/bin/bash
 
-./kill-wpa.sh
+miracle-stop-network-manager
 
 . miracle-utils.sh
+
+echo starting wpa_supplicant for normal connection
+start_network_manager
+
+exit 0
+
+# ---
+# Nothing of the code below is needed to restart wireless anymore on systemd, tweak it for distros based 
+# on service or other system admin daemon.
 
 ETHER_NAMES=$(find_choosable_networknames)
 
@@ -45,13 +54,5 @@ fi
 # default path for config file
 CONFIG_FILE=${1:-/run/network/wpa_supplicant_${ETHERNAME}.conf}
 
-
-echo starting wpa_supplicant for normal connection
-if check_ubuntu_distro || check_debian_distro
-then
-    start_ubuntu_network_manager
-    sudo wpa_supplicant -B -u -s -O /var/run/wpa_supplicant
-else
-    sudo wpa_supplicant -B -u -P /run/wpa_supplicant_${ETHERNAME}pid -i ${ETHERNAME} -D nl80211 -c$CONFIG_FILE
-fi
+sudo wpa_supplicant -B -u -P /run/wpa_supplicant_${ETHERNAME}pid -i ${ETHERNAME} -D nl80211 -c$CONFIG_FILE
 

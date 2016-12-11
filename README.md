@@ -106,9 +106,9 @@ Steps to use it as sink:
  1. shutdown wpa_supplicant and NetworkManager
 
         $ sudo kill -9 $(ps -ef | grep wpa_supplican[t] | awk '{print $2}')
-        # now you can use `res/kill-wpa.sh`
+        # you can use `miracle-stop-network-manager` for a standard way to stop it
 
-        >Remember to save your config to use with `res/normal-wifi.sh`
+        >Remember to save your config to use with `miracle-start-network-manager`
         >it will be easily located with `ps -ef | grep wpa_supplicant` on `-c` option.
 
  2. launch wifi daemon

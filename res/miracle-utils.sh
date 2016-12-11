@@ -107,12 +107,14 @@ function find_wpa_supplicant_pid {
 function check_archlinux_distro {
    test -f "/etc/arch-release"
 }
+
 #
 # checking if distro is ubuntu
 #
 function check_ubuntu_distro {
    cat /proc/version | grep -i ubuntu
 }
+
 #
 # checking if distro is debian
 #
@@ -121,45 +123,76 @@ function check_debian_distro {
 }
 
 #
-# ubuntu manager restarts automatically wpa_supplicant
+# checking if ubuntu use service
 #
-function kill_ubuntu_network_manager {
-   if check_ubuntu_distro || check_debian_distro
+function ubuntu_using_systemd {
+   test $( lsb_release -r | awk '{print $2}' | cut -d . -f 1 ) -ge 15
+}
+
+#
+# checking if debian use service
+#
+function debian_using_systemd {
+   test $( lsb_release -r | awk '{print $2}' | cut -d . -f 1 ) -ge 8
+}
+
+#
+# Stop network manager
+#
+function stop_network_manager {
+   stop_service_network_manager
+   stop_systemd_network_manager
+}
+
+#
+# stop Network manager from service
+#
+function stop_service_network_manager {
+   if ( check_ubuntu_distro && ! ubuntu_using_systemd ) || ( check_debian_distro && ! debian_using_systemd )
    then
-      echo stopping NetworkManager
+      echo stopping NetworkManager using service
       sudo service NetworkManager stop
    fi
 }
 
 #
-# arch linux manager restarts automatically wpa_supplicant
+# stop Network manager from systemd
 #
-function kill_archlinux_network_manager {
-   if check_ubuntu_distro
+function stop_systemd_network_manager {
+   if check_arch_linux_distro || ( check_ubuntu_distro && ubuntu_using_systemd ) || ( check_debian_distro && debian_using_systemd )
    then
-      echo stopping NetworkManager
+      echo stopping NetworkManager using systemctl
       sudo systemctl stop Network.service
    fi
 }
 
 #
-# start ubuntu manager
 #
-function start_ubuntu_network_manager {
-   if check_ubuntu_distro || check_debian_distro
+#
+function start_network_manager {
+   start_service_network_manager
+   start_systemd_network_manager
+}
+
+#
+# start Network manager with service
+#
+function start_service_network_manager {
+   if ( check_ubuntu_distro && ! ubuntu_using_systemd ) || ( check_debian_distro && ! debian_using_systemd )
    then
-      echo starting NetworkManager
+      echo starting NetworkManager with service
       sudo service NetworkManager start
+      sudo wpa_supplicant -B -u -s -O /var/run/wpa_supplicant
    fi
 }
 
 #
-# start arch linux manager
+# start Network manager with systemd
 #
-function start_archlinux_network_manager {
-   if check_archlinux_distro
+function start_systemd_network_manager {
+   if check_arch_linux_distro || ( check_ubuntu_distro && ubuntu_using_systemd ) || ( check_debian_distro && debian_using_systemd )
    then
       echo starting NetworkManager
-      sudo systemctl start Network.service
+      sudo systemctl start NetworkManager
    fi
 }
