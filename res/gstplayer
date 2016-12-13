@@ -99,10 +99,10 @@ class Player(object):
             if scale:
                 gstcommand += "videoscale method=1 ! video/x-raw,width="+str(self.width)+",height="+str(self.height)+" ! "
 
-            gstcommand += "autovideosink "
+            gstcommand += "autovideosink sync=false "
 
             if audio:
-                gstcommand += "demuxer. ! queue max-size-buffers=0 max-size-time=0 ! aacparse ! avdec_aac ! audioconvert ! audioresample ! autoaudiosink "
+                gstcommand += "demuxer. ! queue max-size-buffers=0 max-size-time=0 ! aacparse ! avdec_aac ! audioconvert ! audioresample ! autoaudiosink sync=false "
 
             self.pipeline = Gst.parse_launch(gstcommand)
 
