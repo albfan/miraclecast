@@ -1707,6 +1707,8 @@ static int supplicant_status_fn(struct wpas *w,
 				    NULL,
 				    0,
 				    NULL);
+		wpas_message_unref(m);
+		m = NULL;
 		if (r < 0) {
 			log_vERR(r);
 			goto error;
@@ -1735,6 +1737,8 @@ static int supplicant_status_fn(struct wpas *w,
 				    s,
 				    0,
 				    NULL);
+		wpas_message_unref(m);
+		m = NULL;
 		if (r < 0) {
 			log_vERR(r);
 			goto error;
@@ -1763,6 +1767,8 @@ static int supplicant_status_fn(struct wpas *w,
 				    s,
 				    0,
 				    NULL);
+		wpas_message_unref(m);
+		m = NULL;
 		if (r < 0) {
 			log_vERR(r);
 			goto error;
