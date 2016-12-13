@@ -434,7 +434,7 @@ static void sender_on_name_acquired(GDBusConnection *conn,
 	result = g_dbus_interface_skeleton_export(
 					G_DBUS_INTERFACE_SKELETON(self->skeleton),
 					conn,
-					"/org/freedesktop/miracle/Sender/0",
+					"/org/freedesktop/miracle/Senders/0",
 					&error);
 	if(!result) {
 		g_error("failed to expose object");
@@ -464,7 +464,7 @@ static gint sender_impl_init(struct SenderImpl *self)
 	}
 
 	self->bus_owner_id = g_bus_own_name(G_BUS_TYPE_SESSION,
-				"org.freedesktop.miracle.Sender",
+				"org.freedesktop.miracle",
 				G_BUS_NAME_OWNER_FLAGS_NONE,
 				NULL,
 				sender_on_name_acquired,
