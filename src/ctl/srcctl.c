@@ -597,7 +597,7 @@ void ctl_fn_src_setup(struct ctl_src *s)
 	if(!sender) {
 		sender = sender_proxy_new_for_bus_sync(G_BUS_TYPE_SESSION,
 						G_DBUS_PROXY_FLAGS_NONE,
-						"org.freedesktop.miracle.Sender",
+						"org.freedesktop.miracle",
 						"/org/freedesktop/miracle/Sender/0",
 						NULL,
 						&error);

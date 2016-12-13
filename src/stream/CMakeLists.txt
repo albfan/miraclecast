@@ -21,7 +21,7 @@ add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/sender-iface.c
 				   COMMAND ${GDBUS_CODEGEN_EXEC}
 				   ARGS --generate-c-code sender-iface
 						--annotate org.freedesktop.miracle.Sender org.gtk.GDBus.C.Name Sender
-						--interface-prefix org.freedesktop.Miracle
+						--interface-prefix org.freedesktop.miracle
 						${CMAKE_CURRENT_SOURCE_DIR}/sender-iface.xml
 				   DEPENDS sender-iface.xml
 				   COMMENT "generating sender interface"

@@ -8,12 +8,12 @@ execute_process(
 )
 
 configure_file(
-    org.freedesktop.miracle.Sender.service.cmake
-    org.freedesktop.miracle.Sender.service
+    org.freedesktop.miracle.service.cmake
+    org.freedesktop.miracle.service
     )
 
 install(
-    FILES ${CMAKE_CURRENT_BINARY_DIR}/org.freedesktop.miracle.Sender.service
+    FILES ${CMAKE_CURRENT_BINARY_DIR}/org.freedesktop.miracle.service
     DESTINATION ${DBUS_SESSION_SERVICES_DIR}/
     )
 
