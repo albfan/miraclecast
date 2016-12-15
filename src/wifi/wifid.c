@@ -181,8 +181,9 @@ static int manager_signal_fn(sd_event_source *source,
 	struct manager *m = data;
 
 	if (ssi->ssi_signo == SIGCHLD) {
+		siginfo_t info;
 		log_debug("caught SIGCHLD for %ld, reaping child", (long)ssi->ssi_pid);
-		waitid(P_PID, ssi->ssi_pid, NULL, WNOHANG|WEXITED);
+		waitid(P_PID, ssi->ssi_pid, &info, WNOHANG|WEXITED);
 		return 0;
 	} else if (ssi->ssi_signo == SIGPIPE) {
 		/* ignore SIGPIPE */
