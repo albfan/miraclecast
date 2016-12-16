@@ -391,7 +391,7 @@ static int src_send_set_parameter(struct ctl_src *s)
 	_rtsp_message_unref_ struct rtsp_message *req;
 	int r;
 	const static char tmp[] =
-			"wfd_video_formats: 38 00 02 10 00000080 00000000 00000000 00 0000 0000 00 none none\n"
+			"wfd_video_formats: 38 00 02 10 00000080 00000000 00000000 00 0000 0000 11 none none\n"
 			//"wfd_audio_codecs: AAC 00000001 00\n"
 			//"wfd_uibc_capability: input_category_list=GENERIC\n;generic_cap_list=SingleTouch;hidc_cap_list=none;port=5100\n"
 			//"wfd_uibc_setting: disable\n"

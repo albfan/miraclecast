@@ -463,94 +463,6 @@ static const struct cli_cmd cli_cmds[] = {
 	{ },
 };
 
-static void spawn_gst(struct ctl_src *s)
-{
-	pid_t pid;
-	int fd_journal;
-	sigset_t mask;
-
-	if (src_pid > 0)
-		return;
-
-	pid = fork();
-	if (pid < 0) {
-		return cli_vERRNO();
-	} else if (!pid) {
-		/* child */
-
-		sigemptyset(&mask);
-		sigprocmask(SIG_SETMASK, &mask, NULL);
-
-		/* redirect stdout/stderr to journal */
-		fd_journal = sd_journal_stream_fd("miracle-srcctl-gst",
-						  LOG_DEBUG,
-						  false);
-		if (fd_journal >= 0) {
-			/* dup journal-fd to stdout and stderr */
-			dup2(fd_journal, 1);
-			dup2(fd_journal, 2);
-		} else {
-			/* no journal? redirect stdout to parent's stderr */
-			dup2(2, 1);
-		}
-
-		launch_sender(s);
-		_exit(1);
-	} else {
-		src_pid = pid;
-	}
-}
-
-void launch_sender(struct ctl_src *s) {
-	char * argv[64];
-	char resolution[64];
-	char port[64];
-	char uibc_portStr[64];
-	int i = 0;
-
-	argv[i++] = "miracle-sender";
-	if (gst_audio_en) {
-		argv[i++] = "--acodec";
-		argv[i++] = "aac";
-	}
-	argv[i++] = "--host";
-	argv[i++] = inet_ntoa(((struct sockaddr_in *) &s->addr)->sin_addr);
-	argv[i++] = "-p";
-	sprintf(port, "%d", rtsp_port);
-	argv[i++] = port;
-
-//	if (s->hres && s->vres) {
-//		sprintf(resolution, "%dx%d", s->hres, s->vres);
-//		argv[i++] = "-r";
-//		argv[i++] = resolution;
-//	}
-
-	argv[i] = NULL;
-
-	if (execvpe(argv[0], argv, environ) < 0) {
-		cli_debug("stream sender failed (%d): %m", errno);
-		int i = 0;
-		cli_debug("printing environment: ");
-		while (environ[i]) {
-			cli_debug("%s", environ[i++]);
-		}
-	}
-}
-
-//void launch_uibc_daemon(int port) {
-//	char *argv[64];
-//	char portStr[64];
-//	int i = 0;
-//	argv[i++] = "miracle-uibcctl";
-//	argv[i++] = "localhost";
-//	sprintf(portStr, "%d", port);
-//	argv[i++] = portStr;
-//	argv[i] = NULL;
-//
-//	cli_debug("uibc daemon: %s", argv[0]);
-//	execvpe(argv[0], argv, environ);
-//}
-//
 static void kill_gst(void)
 {
 	if (src_pid <= 0)
@@ -614,7 +526,7 @@ void ctl_fn_src_setup(struct ctl_src *s)
 					":0",
 					1920,
 					1080,
-					30,
+					25,
 					FALSE,
 					NULL,
 					&error);
@@ -632,9 +544,6 @@ void ctl_fn_src_playing(struct ctl_src *s)
 	GError *error = NULL;
 
 	cli_printf("SRC got play request\n");
-	// TODO src_connected must be true, why if() failed?
-	//if (src_connected)
-		//spawn_gst(s);
 	
 	if(!sender) {
 		cli_error("SRC not setup yet");
@@ -647,7 +556,7 @@ void ctl_fn_src_playing(struct ctl_src *s)
 		return;
 	}
 
-	g_info("SRC sender playing");
+	cli_printf("SRC sender playing\n");
 }
 
 void ctl_fn_peer_new(struct ctl_peer *p)
@@ -933,8 +842,6 @@ static int parse_argv(int argc, char *argv[])
 int main(int argc, char **argv)
 {
 	int r;
-	GError *error = NULL;
-
 	setlocale(LC_ALL, "");
 
 	r = parse_argv(argc, argv);

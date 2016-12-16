@@ -60,29 +60,26 @@ static gchar *arg_acodec = NULL;
 
 static gboolean arg_audio_only = FALSE;
 
-static guint arg_refresh_rate = 30;
-
-static gboolean arg_interleave = FALSE;
-
-static char * arg_h264_profile = NULL;
+static guint arg_refresh_rate = 25;
 
 static const char *vpipeline_desc =
-				"ximagesrc name=vsrc use-damage=false show-pointer=false do-timestamp=true starty=%d startx=%d endy=%d endx=%d "
-				"capsfilter name=caps_framerate caps=\"video/x-raw, framerate=%d/1\" "
-				"videoscale name=vscale "
-				"capsfilter name=caps_scale caps=\"video/x-raw, width=%d, height=%d\" "
+				"ximagesrc name=vsrc use-damage=false show-pointer=false starty=%d startx=%d endy=%d endx=%d "
+				"capsfilter name=caps_framerate caps=\"video/x-raw, framerate=%u/1\" "
+				//"videoscale name=vscale "
+				//"capsfilter name=caps_scale caps=\"video/x-raw, width=%d, height=%d\" "
 				"autovideoconvert name=vconv "
 				"capsfilter name=caps_format caps=\"video/x-raw, format=I420\" "
-				"encodebin name=vencoder "
-				"queue name=vqueue max-size-buffers=0 max-size-bytes=0 "
-				"mpegtsmux name=muxer alignment=7 "
-				"capsfilter name=caps_muxer caps=\"video/mpegts, packetsize=188, systemstream=true\" "
+				//"encodebin name=vencoder "
+				"vaapih264enc name=vencoder max-bframes=0 "
+				"capsfilter name=caps_vencoder caps=\"video/x-h264, profile=high\" "
+				//"queue name=vqueue max-size-buffers=0 max-size-bytes=0 "
+				"mpegtsmux name=muxer "
 				"rtpmp2tpay name=rtppay "
 				"udpsink name=sink host=\"%s\" port=%d ";
+				//"filesink name=sink location=vaapi.mp2t ";
 
 static const char *apipeline_desc =
-				//"pulsesrc name=asrc device=\"%s\" "
-				"audiotestsrc name=asrc "
+				"pulsesrc name=asrc device=\"%s\" "
 				"audioconvert name=aconv "
 				"audioresample name=aresample "
 				"encodebin name=aencoder "
@@ -192,7 +189,15 @@ static int link_elements(GstBin *bin, const char *name, ...)
 	name1 = name;
 	while((name2 = va_arg(argv, const char *))) {
 		GstElement *e1 = gst_bin_get_by_name(bin, name1);
+		if(!e1) {
+			g_warning("no such element: %s", name1);
+			return -1;
+		}
 		GstElement *e2 = gst_bin_get_by_name(bin, name2);
+		if(!e2) {
+			g_warning("no such element: %s", name2);
+			return -1;
+		}
 		gboolean linked = gst_element_link(e1, e2);
 		g_object_unref(G_OBJECT(e2));
 		g_object_unref(G_OBJECT(e1));
@@ -234,6 +239,23 @@ void on_gst_message_state_changed(struct SenderImpl *self,
 								self->method_invoke);
 				self->method_invoke = NULL;
 			}
+			g_info("sender playing");
+			GST_DEBUG_BIN_TO_DOT_FILE(GST_BIN(self->pipeline),
+							GST_DEBUG_GRAPH_SHOW_ALL,
+							"miracle-sender-playing");
+			break;
+		case GST_STATE_READY:
+			g_object_set(self->skeleton, "state", "paused", NULL);
+			if(self->method_invoke) {
+				sender_complete_prepare(SENDER(self->skeleton),
+								self->method_invoke);
+				self->method_invoke = NULL;
+			}
+			g_info("sender ready");
+
+			GST_DEBUG_BIN_TO_DOT_FILE(GST_BIN(self->pipeline),
+							GST_DEBUG_GRAPH_SHOW_ALL,
+							"miracle-sender-ready");
 			break;
 		case GST_STATE_PAUSED:
 			g_object_set(self->skeleton, "state", "paused", NULL);
@@ -242,6 +264,7 @@ void on_gst_message_state_changed(struct SenderImpl *self,
 								self->method_invoke);
 				self->method_invoke = NULL;
 			}
+			g_info("sender paused");
 			break;
 		default:
 			break;
@@ -267,7 +290,7 @@ void on_gst_message(struct SenderImpl *self,
 				GstMessage *message,
 				GstBus *bus)
 {
-	g_debug("Gstreamer message: %s", GST_MESSAGE_TYPE_NAME(message));
+	g_debug("pipeline message: %s", GST_MESSAGE_TYPE_NAME(message));
 	switch(GST_MESSAGE_TYPE(message)) {
 		case GST_MESSAGE_ERROR:
 			on_gst_message_error(self, message);
@@ -306,8 +329,8 @@ static int prepare_pipeline(struct SenderImpl *self)
 					screen_bottom,
 					screen_right,
 					arg_refresh_rate,
-					arg_width ? arg_width : screen_right - screen_left + 1,
-					arg_height ? arg_height : screen_bottom - screen_top + 1,
+					//arg_width ? arg_width : screen_right - screen_left + 1,
+					//arg_height ? arg_height : screen_bottom - screen_top + 1,
 					arg_host,
 					arg_port);
 
@@ -317,6 +340,8 @@ static int prepare_pipeline(struct SenderImpl *self)
 					"alsa_output.pci-0000_00_1b.0.analog-stereo.monitor");
 	}
 
+	g_debug("finale pipeline: %s", desc->str);
+
 	self->pipeline = gst_parse_launch(desc->str, &error);
 	if(error) {
 		g_error("%s", error->message);
@@ -325,26 +350,29 @@ static int prepare_pipeline(struct SenderImpl *self)
 
 	gst_element_set_name(GST_ELEMENT(self->pipeline), "pipeline");
 
-	GstEncodingVideoProfile *vencode_profile = gst_encoding_video_profile_new(
-					gst_caps_from_string("video/x-h264, profile=high"),
-					NULL,
-					gst_caps_new_any(),
-					0);
+	/*GstEncodingVideoProfile *vencode_profile = gst_encoding_video_profile_new(*/
+					/*gst_caps_from_string("video/x-h264, profile=high"),*/
+					/*NULL,*/
+					/*gst_caps_new_any(),*/
+					/*0);*/
 	GstElement *vencoder = gst_bin_get_by_name(GST_BIN(self->pipeline), "vencoder");
-	g_object_set(G_OBJECT(vencoder), "tune", 0x4, NULL);
-	g_object_set(G_OBJECT(vencoder), "profile", vencode_profile, NULL);
+	g_object_set(G_OBJECT(vencoder),
+					//"profile", vencode_profile,
+					"max-bframes", 0,
+					NULL);
 	g_object_unref(G_OBJECT(vencoder));
+	//g_object_unref(G_OBJECT(vencode_profile));
 
 	if(arg_acodec) {
 		const char *format;
-		if(!strncmp("aac", arg_acodec, 3)) {
-			format = "audio/mpeg, framed=true, mpegversion=4, stream-format=adts";
-		}
-		else if(!strncmp("ac3", arg_acodec, 3)) {
+		if(!strncmp("ac3", arg_acodec, 3)) {
 			format = "audio/x-ac3, framed=true";
 		}
 		else if(!strncmp("pcm", arg_acodec, 3)) {
 			format = "audio/x-lpcm";
+		}
+		else {
+			format = "audio/mpeg, framed=true, mpegversion=4, stream-format=adts";
 		}
 		GstEncodingAudioProfile *aencode_profile = gst_encoding_audio_profile_new(
 						gst_caps_from_string(format),
@@ -359,14 +387,14 @@ static int prepare_pipeline(struct SenderImpl *self)
 	result = link_elements(GST_BIN(self->pipeline),
 					"vsrc",
 					"caps_framerate",
-					"vscale",
-					"caps_scale",
+					//"vscale",
+					//"caps_scale",
 					"vconv",
 					"caps_format",
 					"vencoder",
-					"vqueue",
+					"caps_vencoder",
+					//"vqueue",
 					"muxer",
-					"caps_muxer",
 					"rtppay",
 					"sink",
 					NULL);
@@ -389,7 +417,7 @@ static int prepare_pipeline(struct SenderImpl *self)
 	g_signal_connect_swapped(bus, "message", G_CALLBACK(on_gst_message), self);
 	gst_bus_add_signal_watch(bus);
 
-	gst_element_set_state(self->pipeline, GST_STATE_PAUSED);
+	gst_element_set_state(self->pipeline, GST_STATE_READY);
 
 	goto free_desc;
 
@@ -411,6 +439,8 @@ static void sender_on_name_acquired(GDBusConnection *conn,
 	struct SenderImpl *self = user_data;
 	GError *error = NULL;
 	gboolean result;
+
+	g_info("dbus name org.freedesktop.miracle acquired");
 
 	self->skeleton = sender_skeleton_new();
 	g_signal_connect_swapped(self->skeleton,
@@ -434,7 +464,7 @@ static void sender_on_name_acquired(GDBusConnection *conn,
 	result = g_dbus_interface_skeleton_export(
 					G_DBUS_INTERFACE_SKELETON(self->skeleton),
 					conn,
-					"/org/freedesktop/miracle/Senders/0",
+					"/org/freedesktop/miracle/Sender/0",
 					&error);
 	if(!result) {
 		g_error("failed to expose object");
@@ -462,6 +492,8 @@ static gint sender_impl_init(struct SenderImpl *self)
 		result = -1;
 		goto end;
 	}
+
+	g_info("trying to acquire dbus name org.freedesktop.miracle...");
 
 	self->bus_owner_id = g_bus_own_name(G_BUS_TYPE_SESSION,
 				"org.freedesktop.miracle",
@@ -515,6 +547,13 @@ static gboolean sender_impl_prepare(struct SenderImpl *self,
 	return TRUE;
 }
 
+static gboolean start_play(gpointer user_data)
+{
+	gst_element_set_state(((struct SenderImpl *) user_data)->pipeline, GST_STATE_PLAYING);
+
+	return FALSE;
+}
+
 static gboolean sender_impl_play(struct SenderImpl *self,
 				GDBusMethodInvocation *invocation)
 {
@@ -536,7 +575,7 @@ static gboolean sender_impl_play(struct SenderImpl *self,
 
 	self->method_invoke = invocation;
 
-	gst_element_set_state(self->pipeline, GST_STATE_PLAYING);
+	g_timeout_add_seconds(1, start_play, self);
 
 	return TRUE;
 }
@@ -594,12 +633,10 @@ end:
 	return TRUE;
 }
 
-static gboolean sender_impl_run(struct SenderImpl *self)
+static void sender_impl_run(struct SenderImpl *self)
 {
 	g_main_loop_run(self->loop);
 }
-
-static void arg_enable_audio();
 
 static GOptionEntry entries[] = {
 	{ "host", 0, G_OPTION_FLAG_NONE, G_OPTION_ARG_STRING, &arg_host, "the hostname of sink", "" },
@@ -636,7 +673,7 @@ static void arg_parse(int *argc, char ***args)
 	g_option_context_free(opt_context);
 }
 
-static void gst_rerank(const char *name, ...)
+static void gst_raise_rank(const char *name, ...)
 {
 	va_list names;
 	GstRegistry *reg = gst_registry_get();
@@ -671,7 +708,7 @@ int main(int argc, char *args[])
 	gdk_init(&argc, &args);
 	gst_init(&argc, &args);
 	gst_pb_utils_init();
-	//gst_rerank("vaapih264enc", "vaapienc_h264", "glcolorconvert", NULL);
+	gst_raise_rank("vaapih264enc", "vaapienc_h264", "glcolorconvert", NULL);
 
 	sender = sender_impl_new();
 	if(!sender) {
@@ -684,7 +721,7 @@ int main(int argc, char *args[])
 
 	sender_impl_run(sender);
 
-	g_object_unref(sender);
+	sender_impl_free(sender);
 
 	return 0;
 }
