@@ -463,13 +463,21 @@ static const struct cli_cmd cli_cmds[] = {
 	{ },
 };
 
-static void kill_gst(void)
+static void stop_sender(void)
 {
-	if (src_pid <= 0)
+	GError *error = NULL;
+
+	if (!sender)
 		return;
 
-	kill(src_pid, SIGTERM);
-	src_pid = 0;
+	sender_call_stop_sync(sender, NULL, &error);
+	if(error) {
+		cli_error("SOURCE failed to stop sender: %s", error->message);
+		g_error_free(error);
+	}
+
+	g_object_unref(sender);
+	sender = NULL;
 }
 
 void ctl_fn_src_connected(struct ctl_src *s)
@@ -586,7 +594,7 @@ void ctl_fn_peer_free(struct ctl_peer *p)
 		cli_printf("no longer running on peer %s\n",
 			   running_peer->label);
 		stop_timeout(&src_timeout);
-		kill_gst();
+		stop_sender();
 		ctl_src_close(src);
 		running_peer = NULL;
 		stop_timeout(&scan_timeout);
@@ -686,7 +694,7 @@ void ctl_fn_peer_disconnected(struct ctl_peer *p)
 		cli_printf("no longer running on peer %s\n",
 			   running_peer->label);
 		stop_timeout(&src_timeout);
-		kill_gst();
+		stop_sender();
 		ctl_src_close(src);
 		running_peer = NULL;
 		stop_timeout(&scan_timeout);

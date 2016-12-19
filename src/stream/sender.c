@@ -44,6 +44,8 @@ struct SenderImpl
 	guint bus_obj_id;
 
 	GDBusMethodInvocation *method_invoke;
+
+	guint timer_handle;
 };
 
 static gchar *arg_host = NULL;
@@ -519,6 +521,11 @@ static gboolean sender_impl_prepare(struct SenderImpl *self,
 				guint16 refresh_rate,
 				gboolean interleave)
 {
+	if(self->timer_handle) {
+		g_source_remove(self->timer_handle);
+		self->timer_handle = 0;
+	}
+
 	if(self->pipeline) {
 		sender_complete_prepare(SENDER(self->skeleton), invocation);
 		return TRUE;
@@ -607,6 +614,15 @@ static gboolean sender_impl_pause(struct SenderImpl *self,
 	return TRUE;
 }
 
+static gboolean on_timeout_quit(gpointer user_data)
+{
+	struct SenderImpl *self = user_data;
+
+	g_main_loop_quit(self->loop);
+
+	return FALSE;
+}
+
 static gboolean sender_impl_stop(struct SenderImpl *self,
 				GDBusMethodInvocation *invocation)
 {
@@ -627,6 +643,8 @@ static gboolean sender_impl_stop(struct SenderImpl *self,
 	gst_element_set_state(self->pipeline, GST_STATE_NULL);
 	g_object_unref(self->pipeline);
 	self->pipeline = NULL;
+
+	self->timer_handle = g_timeout_add_seconds(3, on_timeout_quit, self);
 
 end:
 	sender_complete_stop(SENDER(self->skeleton), invocation);
