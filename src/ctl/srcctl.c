@@ -774,7 +774,9 @@ static int ctl_interactive(char **argv, int argc)
 	r = cli_run();
 
 error:
+	stop_sender();
 	ctl_src_free(src);
+	src = NULL;
 	cli_destroy();
 	return r;
 }
