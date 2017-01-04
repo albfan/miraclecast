@@ -54,7 +54,6 @@ static sd_event_source *scan_timeout;
 static sd_event_source *src_timeout;
 static unsigned int src_timeout_time;
 static bool src_connected;
-static pid_t src_pid;
 
 //static char *selected_ link;
 static struct ctl_link *running_link;

@@ -829,7 +829,6 @@ static int manager_dbus_enumerate(sd_bus *bus,
 	struct peer *p;
 	size_t i, peer_cnt;
 	char **nodes, *node;
-	int r;
 
     if(strcmp("/org/freedesktop/miracle/wifi", path)) {
         return 0;
@@ -888,7 +887,7 @@ error:
 	while (i--)
 		free(nodes[i]);
 	free(nodes);
-	return r;
+	return log_ENOMEM();
 }
 
 int manager_dbus_connect(struct manager *m)
