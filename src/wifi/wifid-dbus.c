@@ -830,12 +830,16 @@ static int manager_dbus_enumerate(sd_bus *bus,
 	char **nodes, *node;
 	int r;
 
+    if(strcmp("/org/freedesktop/miracle/wifi", path)) {
+        return 0;
+    }
+
 	peer_cnt = 0;
 	MANAGER_FOREACH_LINK(l, m)
 		if (l->public)
 			peer_cnt += l->peer_cnt;
 
-	nodes = malloc(sizeof(*nodes) * (m->link_cnt + peer_cnt + 2));
+	nodes = malloc(sizeof(*nodes) * (m->link_cnt + peer_cnt + 1));
 	if (!nodes)
 		return log_ENOMEM();
 
@@ -874,13 +878,6 @@ static int manager_dbus_enumerate(sd_bus *bus,
 		}
 	}
 
-	node = strdup("/org/freedesktop/miracle/wifi");
-	if (!node) {
-		r = log_ENOMEM();
-		goto error;
-	}
-
-	nodes[i++] = node;
 	nodes[i] = NULL;
 	*out = nodes;
 
