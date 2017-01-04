@@ -70,6 +70,8 @@ static int src_trigger_play_rep_fn(struct rtsp *bus,
 				void *data)
 {
 	cli_debug("INCOMING (M5): %s\n", rtsp_message_get_raw(m));
+
+    return 0;
 }
 
 static void src_handle_setup(struct ctl_src *s,
@@ -236,7 +238,7 @@ static bool parse_video_formats(struct rtsp_message *m,
 
 	formats->hres = -1;
 	formats->vres = -1;
-	sscanf(param + 55, "%hx %hx", &formats->hres, &formats->vres);
+	sscanf(param + 55, "%x %x", &formats->hres, &formats->vres);
 
 	return true;
 
@@ -322,7 +324,6 @@ static int src_trigger_setup_rep_fn(struct rtsp *bus,
 {
 	struct ctl_src *s = data;
 	_rtsp_message_unref_ struct rtsp_message *req = NULL;
-	int r;
 
 	cli_debug("INCOMING (M5): %s\n", rtsp_message_get_raw(m));
 
@@ -335,7 +336,7 @@ static int src_trigger_setup_rep_fn(struct rtsp *bus,
 	ctl_src_close(s);
 	ctl_fn_src_disconnected(s);
 
-	return r;
+	return 0;
 }
 
 static int src_set_parameter_rep_fn(struct rtsp *bus,
@@ -439,16 +440,16 @@ static int src_get_parameter_rep_fn(struct rtsp *bus,
 				void *data)
 {
 	struct ctl_src *s = data;
-	int r;
-	const char *param;
-	int n_params;
 
 	cli_debug("INCOMING (M3): %s\n", rtsp_message_get_raw(m));
 
 	if (!rtsp_message_is_reply(m, RTSP_CODE_OK, NULL)) {
 		cli_printf("[" CLI_RED "ERROR" CLI_DEFAULT "] GET_PARAMETER failed\n");
-		r = -1;
-		goto error;
+
+        ctl_src_close(s);
+        ctl_fn_src_disconnected(s);
+
+        return -EINVAL;
 	}
 
 	free(s->sink.rtp_ports.profile);
@@ -458,15 +459,7 @@ static int src_get_parameter_rep_fn(struct rtsp *bus,
 	//s->sink.has_audio_codecs = parse_audio_codecs(m, &s->sink.audio_codecs);
 	s->sink.has_rtp_ports = parse_client_rtp_ports(m, &s->sink.rtp_ports);
 
-	r = src_send_set_parameter(s);
-
-	return 0;
-
-error:
-	ctl_src_close(s);
-	ctl_fn_src_disconnected(s);
-
-	return -EINVAL;
+	return src_send_set_parameter(s);
 }
 
 static int src_options_rep_fn(struct rtsp *bus,
@@ -607,7 +600,6 @@ static void src_connected(struct ctl_src *s)
 	int r, val;
 	struct sockaddr_storage addr;
 	socklen_t len;
-	char buf[64];
 
 	cli_printf("got incomming connection request\n");
 
