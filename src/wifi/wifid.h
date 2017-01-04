@@ -129,6 +129,7 @@ struct link {
 	char *ifname;
 	char *friendly_name;
 	char *wfd_subelements;
+    char *mac_addr;
 
 	size_t peer_cnt;
 	struct shl_htable peers;
@@ -151,6 +152,7 @@ struct peer *link_find_peer_by_label(struct link *l, const char *label);
 int link_new(struct manager *m,
 	     unsigned int ifindex,
 	     const char *ifname,
+         const char *mac_addr,
 	     struct link **out);
 void link_free(struct link *l);
 
@@ -168,6 +170,7 @@ int link_set_wfd_subelements(struct link *l, const char *val);
 const char *link_get_wfd_subelements(struct link *l);
 int link_set_p2p_scanning(struct link *l, bool set);
 bool link_get_p2p_scanning(struct link *l);
+const char *link_get_mac_addr(struct link *l);
 
 void link_supplicant_started(struct link *l);
 void link_supplicant_stopped(struct link *l);

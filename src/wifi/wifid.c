@@ -80,6 +80,8 @@ static void manager_add_udev_link(struct manager *m,
 	struct link *l;
 	unsigned int ifindex;
 	const char *ifname;
+    const char *mac_addr;
+    char buf[18];
 	int r;
 
 	ifindex = ifindex_from_udev_device(d);
@@ -98,7 +100,11 @@ static void manager_add_udev_link(struct manager *m,
 	if (shl_startswith(ifname, "p2p-"))
 		return;
 
-	r = link_new(m, ifindex, ifname, &l);
+	mac_addr = udev_device_get_property_value(d, "ID_NET_NAME_MAC");
+    mac_addr = mac_addr + strlen(mac_addr) - 12;
+    snprintf(buf, sizeof(buf), "%.2s:%.2s:%.2s:%.2s:%.2s:%.2s", mac_addr, mac_addr + 2, mac_addr + 4, mac_addr + 6, mac_addr + 8, mac_addr + 10);
+
+	r = link_new(m, ifindex, ifname, buf, &l);
 	if (r < 0)
 		return;
 

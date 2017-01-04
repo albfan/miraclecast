@@ -512,6 +512,24 @@ static int link_dbus_get_interface_index(sd_bus *bus,
 	return 1;
 }
 
+static int link_dbus_get_mac_addr(sd_bus *bus,
+					const char *path,
+					const char *interface,
+					const char *property,
+					sd_bus_message *reply,
+					void *data,
+					sd_bus_error *err)
+{
+	struct link *l = data;
+	int r;
+
+	r = sd_bus_message_append_basic(reply, 's', l->mac_addr);
+	if (r < 0)
+		return r;
+
+	return 1;
+}
+
 static int link_dbus_get_interface_name(sd_bus *bus,
 					const char *path,
 					const char *interface,
@@ -684,6 +702,11 @@ static const sd_bus_vtable link_dbus_vtable[] = {
 	SD_BUS_PROPERTY("InterfaceIndex",
 			"u",
 			link_dbus_get_interface_index,
+			0,
+			SD_BUS_VTABLE_PROPERTY_CONST),
+	SD_BUS_PROPERTY("MACAddress",
+			"s",
+			link_dbus_get_mac_addr,
 			0,
 			SD_BUS_VTABLE_PROPERTY_CONST),
 	SD_BUS_PROPERTY("InterfaceName",
