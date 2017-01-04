@@ -57,6 +57,7 @@ struct peer *link_find_peer_by_label(struct link *l, const char *label)
 int link_new(struct manager *m,
 	     unsigned int ifindex,
 	     const char *ifname,
+	     const char *mac_addr,
 	     struct link **out)
 {
 	struct link *l;
@@ -83,6 +84,12 @@ int link_new(struct manager *m,
 		r = log_ENOMEM();
 		goto error;
 	}
+
+    l->mac_addr = strdup(mac_addr);
+    if (!l->mac_addr) {
+        r = log_ENOMEM();
+        goto error;
+    }
 
 	r = supplicant_new(l, &l->s);
 	if (r < 0)
@@ -131,6 +138,7 @@ void link_free(struct link *l)
 	/* link_set_managed(l, false) already removed all peers */
 	shl_htable_clear_str(&l->peers, NULL, NULL);
 
+	free(l->mac_addr);
 	free(l->wfd_subelements);
 	free(l->friendly_name);
 	free(l->ifname);
@@ -323,6 +331,14 @@ bool link_get_p2p_scanning(struct link *l)
 	}
 
 	return supplicant_p2p_scanning(l->s);
+}
+
+const char *link_get_mac_addr(struct link *l)
+{
+	if (!l)
+		return NULL;
+
+    return l->mac_addr;
 }
 
 void link_supplicant_started(struct link *l)
