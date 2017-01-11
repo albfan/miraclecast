@@ -1,3 +1,4 @@
+# vim: set tabstop=4 softtabstop=4 shiftwidth=4 noexpandtab :
 
 find_package(Readline)
 ########### next target ###############
@@ -78,6 +79,33 @@ target_link_libraries(miracle-srcctl miracle-shared
 									 sender-iface
 									 ${GIO_LIBRARIES})
 
+########### next target ###############
+set(miracle-wfdctl_SRCS ctl.h
+						ctl-cli.c
+						ctl-src.h
+						ctl-src.c
+						ctl-wifi.c
+						wfdctl.c
+						wfd.c)
+
+include_directories(${CMAKE_BINARY_DIR}
+                    ${CMAKE_SOURCE_DIR}/src
+					${CMAKE_SOURCE_DIR}/src/shared)
+
+add_executable(miracle-wfdctl ${miracle-wfdctl_SRCS})
+
+install(TARGETS miracle-wfdctl DESTINATION bin)
+
+if(READLINE_FOUND)
+	message(STATUS "Compiling with Readline support")
+	set_property(TARGET miracle-wfdctl
+						APPEND
+						PROPERTY COMPILE_DEFINITIONS HAVE_READLINE)
+	target_link_libraries(miracle-wfdctl ${READLINE_LIBRARY})
+endif(READLINE_FOUND)
+
+target_link_libraries(miracle-wfdctl miracle-shared)
+
 ########### install files ###############
 
 
@@ -116,3 +144,4 @@ target_link_libraries(miracle-srcctl miracle-shared
 #	$(DEPS_LIBS)
 #
 #
+
