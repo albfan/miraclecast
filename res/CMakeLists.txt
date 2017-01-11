@@ -2,10 +2,11 @@
 ########### install files ###############
 
 execute_process(
-    COMMAND ${PKG_CONFIG_EXECUTABLE} --variable=session_bus_services_dir dbus-1
-    OUTPUT_VARIABLE DBUS_SESSION_SERVICES_DIR
+    COMMAND ${PKG_CONFIG_EXECUTABLE} --variable=system_bus_services_dir dbus-1
+    OUTPUT_VARIABLE DBUS_SYSTEM_SERVICES_DIR
     OUTPUT_STRIP_TRAILING_WHITESPACE
 )
+
 execute_process(
     COMMAND ${PKG_CONFIG_EXECUTABLE} --variable=systemdsystemunitdir systemd
     OUTPUT_VARIABLE SYSTEMD_SYSTEM_UNIT_DIR
