@@ -121,7 +121,6 @@ static int ctl_peer_parse_properties(struct ctl_peer *p,
 						   'e',
 						   "sv")) > 0) {
 		r = sd_bus_message_read(m, "s", &t);
-        log_info("==== sd_bus_message name: %s", t);
 		if (r < 0)
 			return cli_log_parser(r);
 
@@ -830,8 +829,6 @@ static int ctl_wifi_parse_peer(struct ctl_wifi *w,
 	if (r < 0)
 		return r;
 
-    log_info("======= peer created: p=%p, l=%p, label=%s", p, l, label);
-
 	r = sd_bus_message_enter_container(m, 'a', "{sa{sv}}");
 	if (r < 0)
 		return cli_log_parser(r);
@@ -842,9 +839,6 @@ static int ctl_wifi_parse_peer(struct ctl_wifi *w,
 		r = sd_bus_message_read(m, "s", &t);
 		if (r < 0)
 			return cli_log_parser(r);
-
-        log_info("ctl_wifi_parse_peer: %p, %t", m, t);
-
 		if (strcmp(t, "org.freedesktop.miracle.wifi.Peer")) {
 			r = sd_bus_message_skip(m, "a{sv}");
 			if (r < 0)
@@ -885,8 +879,6 @@ static int ctl_wifi_parse_object(struct ctl_wifi *w,
 	struct ctl_peer *p;
 	const char *t;
 	int r;
-
-    log_info("======== ctl_wifi_parse_object");
 
 	r = sd_bus_message_read(m, "o", &t);
 	if (r < 0)
@@ -941,8 +933,6 @@ static int ctl_wifi_object_fn(sd_bus_message *m,
 {
 	struct ctl_wifi *w = data;
 	bool added;
-
-    log_info("ooooooo");
 
 	added = !strcmp(sd_bus_message_get_member(m), "InterfacesAdded");
 
