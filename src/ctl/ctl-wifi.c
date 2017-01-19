@@ -900,6 +900,9 @@ static int ctl_wifi_parse_object(struct ctl_wifi *w,
 		}
 	}
 
+	free(label);
+	label = NULL;
+
 	r = sd_bus_path_decode(t,
 			       "/org/freedesktop/miracle/wifi/peer",
 			       &label);
