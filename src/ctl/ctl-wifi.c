@@ -823,7 +823,7 @@ static int ctl_wifi_parse_peer(struct ctl_wifi *w,
 
 	l = ctl_wifi_find_link_by_peer(w, label);
 	if (!l)
-		return cli_EINVAL();
+		return -EINVAL;
 
 	r = ctl_peer_new(&p, l, label);
 	if (r < 0)
@@ -1149,6 +1149,42 @@ void ctl_wifi_free(struct ctl_wifi *w)
 	free(w);
 }
 
+static int ctl_wifi_parse_objects(struct ctl_wifi *w,
+				sd_bus_message *m,
+				bool ignore_link_not_found)
+{
+	bool again = false;
+	int r = sd_bus_message_enter_container(m, 'a', "{oa{sa{sv}}}");
+	if (r < 0)
+		return cli_log_parser(r);
+
+	while ((r = sd_bus_message_enter_container(m,
+						   'e',
+						   "oa{sa{sv}}")) > 0) {
+		r = ctl_wifi_parse_object(w, m, true);
+		if(ignore_link_not_found && -EINVAL == r) {
+			r = sd_bus_message_skip(m, "a{sa{sv}}");
+			if(0 > r)
+				return cli_log_parser(r);
+			again = true;
+		}
+		if (r < 0)
+			return r;
+
+		r = sd_bus_message_exit_container(m);
+		if (r < 0)
+			return cli_log_parser(r);
+	}
+	if (r < 0)
+		return cli_log_parser(r);
+
+	r = sd_bus_message_exit_container(m);
+	if (r < 0)
+		return cli_log_parser(r);
+
+	return again ? -EAGAIN : 0;
+}
+
 int ctl_wifi_fetch(struct ctl_wifi *w)
 {
 	_sd_bus_message_unref_ sd_bus_message *m = NULL;
@@ -1172,29 +1208,20 @@ int ctl_wifi_fetch(struct ctl_wifi *w)
 		return r;
 	}
 
-	r = sd_bus_message_enter_container(m, 'a', "{oa{sa{sv}}}");
-	if (r < 0)
-		return cli_log_parser(r);
-
-	while ((r = sd_bus_message_enter_container(m,
-						   'e',
-						   "oa{sa{sv}}")) > 0) {
-		r = ctl_wifi_parse_object(w, m, true);
-		if (r < 0)
-			return r;
-
-		r = sd_bus_message_exit_container(m);
-		if (r < 0)
-			return cli_log_parser(r);
+	r = ctl_wifi_parse_objects(w, m, true);
+	if(0 <= r || -EAGAIN != r) {
+		goto end;
 	}
-	if (r < 0)
-		return cli_log_parser(r);
 
-	r = sd_bus_message_exit_container(m);
-	if (r < 0)
-		return cli_log_parser(r);
+	r = sd_bus_message_rewind(m, true);
+	if(0 > r) {
+		return r;
+	}
 
-	return 0;
+	r = ctl_wifi_parse_objects(w, m, false);
+
+end:
+	return r;
 }
 
 struct ctl_link *ctl_wifi_find_link(struct ctl_wifi *w,
