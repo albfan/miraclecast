@@ -21,6 +21,15 @@
 #ifndef WFD_H
 #define WFD_H
 
+struct wfd_resolution
+{
+	uint16_t index;
+	uint16_t hres;
+	uint16_t vres;
+	uint16_t fps;
+	bool progressive: 1;
+};
+
 void wfd_print_resolutions(char * prefix);
 int vfd_get_cea_resolution(uint32_t mask, int *hres, int *vres);
 int vfd_get_vesa_resolution(uint32_t mask, int *hres, int *vres);
