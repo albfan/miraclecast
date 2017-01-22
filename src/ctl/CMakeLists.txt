@@ -54,43 +54,11 @@ target_link_libraries(miracle-sinkctl miracle-shared)
 include_directories(${CMAKE_BINARY_DIR} ${CMAKE_SOURCE_DIR}/src ${CMAKE_SOURCE_DIR}/src/shared)
 
 ########### next target ###############
-pkg_check_modules(GIO REQUIRED gio-2.0>=2.30)
-
-set(miracle-srcctl_SRCS ctl.h
-						ctl-cli.c
-						ctl-src.h
-						ctl-src.c
-						ctl-wifi.c
-						srcctl.c
-						wfd.c)
-
-include_directories(${CMAKE_BINARY_DIR} ${CMAKE_SOURCE_DIR}/src
-										${CMAKE_SOURCE_DIR}/src/shared
-										${CMAKE_BINARY_DIR}/src/stream
-										${GIO_INCLUDE_DIRS})
-
-add_executable(miracle-srcctl ${miracle-srcctl_SRCS})
-
-install(TARGETS miracle-srcctl DESTINATION bin)
-
-if(READLINE_FOUND)
-	message(STATUS "Compiling with Readline support")
-	set_property(TARGET miracle-srcctl
-						APPEND
-						PROPERTY COMPILE_DEFINITIONS HAVE_READLINE)
-	target_link_libraries(miracle-srcctl ${READLINE_LIBRARY})
-endif(READLINE_FOUND)
-
-target_link_libraries(miracle-srcctl miracle-shared
-									 sender-iface
-									 ${GIO_LIBRARIES})
-
 ########### next target ###############
 set(miracle-wfdctl_SRCS ctl.h
 						ctl-cli.c
-						ctl-src.h
-						ctl-src.c
 						ctl-wifi.c
+						wfd-src.c
 						wfdctl.c
 						wfd.c)
 
