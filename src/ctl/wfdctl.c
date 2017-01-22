@@ -421,4 +421,3 @@ end:
 	return r < 0 ? EXIT_FAILURE : EXIT_SUCCESS;
 }
 
-/* vim: set tabstop=4 softtabstop=4 shiftwidth=4 noexpandtab : */
