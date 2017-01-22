@@ -22,7 +22,6 @@
 #include <stdint.h>
 #include "ctl.h"
 
-#define N_ELEMENTS(a)		(sizeof(a) / sizeof(a[0]))
 
 struct resolution_bitmap {
 	int index;
@@ -107,21 +106,21 @@ void wfd_print_resolutions(void)
 	int i;
 
 	printf("CEA resolutions:\n");
-	for (i = 0; i < N_ELEMENTS(resolutions_cea); i++) {
+	for (i = 0; i < SHL_ARRAY_LENGTH(resolutions_cea); i++) {
 		printf("\t%2d %08x %4dx%4d@%d\n",
 			resolutions_cea[i].index, 1 << resolutions_cea[i].index,
 			resolutions_cea[i].hres, resolutions_cea[i].vres,
 			resolutions_cea[i].fps);
 	}
 	printf("VESA resolutions:\n");
-	for (i = 0; i < N_ELEMENTS(resolutions_vesa); i++) {
+	for (i = 0; i < SHL_ARRAY_LENGTH(resolutions_vesa); i++) {
 		printf("\t%2d %08x %4dx%4d@%d\n",
 			resolutions_vesa[i].index, 1 << resolutions_vesa[i].index,
 			resolutions_vesa[i].hres, resolutions_vesa[i].vres,
 			resolutions_vesa[i].fps);
 	}
 	printf("HH resolutions:\n");
-	for (i = 0; i < N_ELEMENTS(resolutions_hh); i++) {
+	for (i = 0; i < SHL_ARRAY_LENGTH(resolutions_hh); i++) {
 		printf("\t%2d %08x %4dx%4d@%d\n",
 			resolutions_hh[i].index, 1 << resolutions_hh[i].index,
 			resolutions_hh[i].hres, resolutions_hh[i].vres,
@@ -140,7 +139,7 @@ void vfd_dump_resolutions(uint32_t cea_mask, uint32_t vesa_mask, uint32_t hh_mas
 
 	if (cea_mask) {
 		cli_debug("CEA resolutions:");
-		for (i = 0; i < N_ELEMENTS(resolutions_cea); i++)
+		for (i = 0; i < SHL_ARRAY_LENGTH(resolutions_cea); i++)
 			if ((1 << resolutions_cea[i].index) & cea_mask)
 				cli_debug("\t%2d %08x %4dx%4d@%d\n",
 					resolutions_cea[i].index, 1 << resolutions_cea[i].index,
@@ -149,7 +148,7 @@ void vfd_dump_resolutions(uint32_t cea_mask, uint32_t vesa_mask, uint32_t hh_mas
 	}
 	if (vesa_mask) {
 		cli_debug("VESA resolutions:");
-		for (i = 0; i < N_ELEMENTS(resolutions_vesa); i++)
+		for (i = 0; i < SHL_ARRAY_LENGTH(resolutions_vesa); i++)
 			if ((1 << resolutions_vesa[i].index) & vesa_mask)
 				cli_debug("\t%2d %08x %4dx%4d@%d\n",
 					resolutions_vesa[i].index, 1 << resolutions_vesa[i].index,
@@ -158,7 +157,7 @@ void vfd_dump_resolutions(uint32_t cea_mask, uint32_t vesa_mask, uint32_t hh_mas
 	}
 	if (hh_mask) {
 		cli_debug("HH resolutions:");
-		for (i = 0; i < N_ELEMENTS(resolutions_hh); i++)
+		for (i = 0; i < SHL_ARRAY_LENGTH(resolutions_hh); i++)
 			if ((1 << resolutions_hh[i].index) & hh_mask)
 				cli_debug("\t%2d %08x %4dx%4d@%d\n",
 					resolutions_hh[i].index, 1 << resolutions_hh[i].index,
@@ -174,7 +173,7 @@ int vfd_get_cea_resolution(uint32_t mask, int *hres, int *vres)
 	if (!mask)
 		return -EINVAL;
 
-	for (i = N_ELEMENTS(resolutions_cea) - 1; i >= 0; --i) {
+	for (i = SHL_ARRAY_LENGTH(resolutions_cea) - 1; i >= 0; --i) {
 		if ((1 << resolutions_cea[i].index) & mask) {
 			*vres = resolutions_cea[i].vres;
 			*hres = resolutions_cea[i].hres;
@@ -191,7 +190,7 @@ int vfd_get_vesa_resolution(uint32_t mask, int *hres, int *vres)
 	if (!mask)
 		return -EINVAL;
 
-	for (i = N_ELEMENTS(resolutions_vesa) - 1; i >= 0; --i) {
+	for (i = SHL_ARRAY_LENGTH(resolutions_vesa) - 1; i >= 0; --i) {
 		if ((1 << resolutions_vesa[i].index) & mask) {
 			*vres = resolutions_vesa[i].vres;
 			*hres = resolutions_vesa[i].hres;
@@ -208,7 +207,7 @@ int vfd_get_hh_resolution(uint32_t mask, int *hres, int *vres)
 	if (!mask)
 		return -EINVAL;
 
-	for (i = N_ELEMENTS(resolutions_hh); i >= 0; --i) {
+	for (i = SHL_ARRAY_LENGTH(resolutions_hh); i >= 0; --i) {
 		if ((1 << resolutions_hh[i].index) & mask) {
 			*vres = resolutions_hh[i].vres;
 			*hres = resolutions_hh[i].hres;
