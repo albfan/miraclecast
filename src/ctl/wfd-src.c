@@ -17,7 +17,7 @@
  * along with MiracleCast; If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "ctl-src.h"
+#include "wfd-src.h"
 #include "util.h"
 
 #define DEFAULT_RTSP_PORT		(7236)
@@ -26,7 +26,7 @@
  * RTSP Session
  */
 
-static void src_handle_options(struct ctl_src *s,
+static void src_handle_options(struct wfd_src *s,
 				struct rtsp_message *m)
 {
 	_rtsp_message_unref_ struct rtsp_message *rep = NULL;
@@ -61,8 +61,8 @@ static void src_handle_options(struct ctl_src *s,
 	return;
 
 error:
-	ctl_src_close(s);
-	ctl_fn_src_disconnected(s);
+	wfd_src_close(s);
+	wfd_fn_src_disconnected(s);
 }
 
 static int src_trigger_play_rep_fn(struct rtsp *bus,
@@ -74,7 +74,7 @@ static int src_trigger_play_rep_fn(struct rtsp *bus,
     return 0;
 }
 
-static void src_handle_setup(struct ctl_src *s,
+static void src_handle_setup(struct wfd_src *s,
 				struct rtsp_message *m)
 {
 	_rtsp_message_unref_ struct rtsp_message *rep = NULL;
@@ -138,16 +138,16 @@ static void src_handle_setup(struct ctl_src *s,
 		goto error;
 	}
 
-	ctl_fn_src_setup(s);
+	wfd_fn_src_setup(s);
 
 	return;
 
 error:
-	ctl_src_close(s);
-	ctl_fn_src_disconnected(s);
+	wfd_src_close(s);
+	wfd_fn_src_disconnected(s);
 }
 
-static void src_handle_play(struct ctl_src *s,
+static void src_handle_play(struct wfd_src *s,
 				struct rtsp_message *m)
 {
 	_rtsp_message_unref_ struct rtsp_message *rep = NULL;
@@ -185,22 +185,22 @@ static void src_handle_play(struct ctl_src *s,
 		goto error;
 	}
 
-	ctl_fn_src_playing(s);
+	wfd_fn_src_playing(s);
 
 	return;
 
 error:
-	ctl_src_close(s);
-	ctl_fn_src_disconnected(s);
+	wfd_src_close(s);
+	wfd_fn_src_disconnected(s);
 }
 
-static void src_handle_pause(struct ctl_src *s,
+static void src_handle_pause(struct wfd_src *s,
 				struct rtsp_message *m)
 {
 	cli_debug("INCOMING (M9): %s\n", rtsp_message_get_raw(m));
 }
 
-static void src_handle_teardown(struct ctl_src *s,
+static void src_handle_teardown(struct wfd_src *s,
 				struct rtsp_message *m)
 {
 	cli_debug("INCOMING (M8): %s\n", rtsp_message_get_raw(m));
@@ -322,7 +322,7 @@ static int src_trigger_setup_rep_fn(struct rtsp *bus,
 				struct rtsp_message *m,
 				void *data)
 {
-	struct ctl_src *s = data;
+	struct wfd_src *s = data;
 	_rtsp_message_unref_ struct rtsp_message *req = NULL;
 
 	cli_debug("INCOMING (M5): %s\n", rtsp_message_get_raw(m));
@@ -333,8 +333,8 @@ static int src_trigger_setup_rep_fn(struct rtsp *bus,
 
 	cli_printf("[" CLI_RED "ERROR" CLI_DEFAULT "] Sink failed to SETUP\n");
 
-	ctl_src_close(s);
-	ctl_fn_src_disconnected(s);
+	wfd_src_close(s);
+	wfd_fn_src_disconnected(s);
 
 	return 0;
 }
@@ -343,7 +343,7 @@ static int src_set_parameter_rep_fn(struct rtsp *bus,
 				struct rtsp_message *m,
 				void *data)
 {
-	struct ctl_src *s = data;
+	struct wfd_src *s = data;
 	_rtsp_message_unref_ struct rtsp_message *req = NULL;
 	int r;
 
@@ -387,7 +387,7 @@ error:
 
 char buf[1024];
 
-static int src_send_set_parameter(struct ctl_src *s)
+static int src_send_set_parameter(struct wfd_src *s)
 {
 	_rtsp_message_unref_ struct rtsp_message *req;
 	int r;
@@ -429,8 +429,8 @@ static int src_send_set_parameter(struct ctl_src *s)
 	return 0;
 
 error:
-	ctl_src_close(s);
-	ctl_fn_src_disconnected(s);
+	wfd_src_close(s);
+	wfd_fn_src_disconnected(s);
 
 	return r;
 }
@@ -439,15 +439,15 @@ static int src_get_parameter_rep_fn(struct rtsp *bus,
 				struct rtsp_message *m,
 				void *data)
 {
-	struct ctl_src *s = data;
+	struct wfd_src *s = data;
 
 	cli_debug("INCOMING (M3): %s\n", rtsp_message_get_raw(m));
 
 	if (!rtsp_message_is_reply(m, RTSP_CODE_OK, NULL)) {
 		cli_printf("[" CLI_RED "ERROR" CLI_DEFAULT "] GET_PARAMETER failed\n");
 
-        ctl_src_close(s);
-        ctl_fn_src_disconnected(s);
+        wfd_src_close(s);
+        wfd_fn_src_disconnected(s);
 
         return -EINVAL;
 	}
@@ -466,7 +466,7 @@ static int src_options_rep_fn(struct rtsp *bus,
 				struct rtsp_message *m,
 				void *data)
 {
-	struct ctl_src *s = data;
+	struct wfd_src *s = data;
 	_rtsp_message_unref_ struct rtsp_message *req = NULL;
 	int r;
 
@@ -509,20 +509,20 @@ static int src_options_rep_fn(struct rtsp *bus,
 	return 0;
 
 error:
-	ctl_src_close(s);
-	ctl_fn_src_disconnected(s);
+	wfd_src_close(s);
+	wfd_fn_src_disconnected(s);
 
 	return r;
 }
 
-static void src_handle(struct ctl_src *s,
+static void src_handle(struct wfd_src *s,
 			struct rtsp_message *m)
 {
 	const char *method;
 
 	if(!m) {
-		ctl_src_close(s);
-		ctl_fn_src_disconnected(s);
+		wfd_src_close(s);
+		wfd_fn_src_disconnected(s);
 		return;
 	}
 
@@ -549,7 +549,7 @@ static int src_rtsp_fn(struct rtsp *bus,
 			struct rtsp_message *m,
 			void *data)
 {
-	struct ctl_src *s = data;
+	struct wfd_src *s = data;
 
 	if (!m)
 		s->hup = true;
@@ -557,14 +557,14 @@ static int src_rtsp_fn(struct rtsp *bus,
 		src_handle(s, m);
 
 	if (s->hup) {
-		ctl_src_close(s);
-		ctl_fn_src_disconnected(s);
+		wfd_src_close(s);
+		wfd_fn_src_disconnected(s);
 	}
 
 	return 0;
 }
 
-static void src_send_options(struct ctl_src *s)
+static void src_send_options(struct wfd_src *s)
 {
 	_rtsp_message_unref_ struct rtsp_message *req = NULL;
 	int r;
@@ -595,7 +595,7 @@ static void src_send_options(struct ctl_src *s)
  * Source I/O
  */
 
-static void src_connected(struct ctl_src *s)
+static void src_connected(struct wfd_src *s)
 {
 	int r, val;
 	struct sockaddr_storage addr;
@@ -643,7 +643,7 @@ static void src_connected(struct ctl_src *s)
 		goto error;
 
 	s->connected = true;
-	ctl_fn_src_connected(s);
+	wfd_fn_src_connected(s);
 
 	src_send_options(s);
 
@@ -654,7 +654,7 @@ error:
 	cli_vERR(r);
 }
 
-static void src_io(struct ctl_src *s, uint32_t mask)
+static void src_io(struct wfd_src *s, uint32_t mask)
 {
 	cli_notice("src_io: %u", mask);
 
@@ -668,8 +668,8 @@ static void src_io(struct ctl_src *s, uint32_t mask)
 	}
 
 	if (s->hup) {
-		ctl_src_close(s);
-		ctl_fn_src_disconnected(s);
+		wfd_src_close(s);
+		wfd_fn_src_disconnected(s);
 	}
 }
 
@@ -682,7 +682,7 @@ static int src_io_fn(sd_event_source *source,
 	return 0;
 }
 
-static int src_listen(struct ctl_src *s)
+static int src_listen(struct wfd_src *s)
 {
 	int fd, r, enable = 1;
 
@@ -743,7 +743,7 @@ err_close:
 	return r;
 }
 
-static void src_close(struct ctl_src *s)
+static void src_close(struct wfd_src *s)
 {
 	if (!s || s->fd < 0)
 		return;
@@ -766,10 +766,10 @@ static void src_close(struct ctl_src *s)
  * Source Management
  */
 
-int ctl_src_new(struct ctl_src **out,
+int wfd_src_new(struct wfd_src **out,
 		 sd_event *event)
 {
-	struct ctl_src *s;
+	struct wfd_src *s;
 
 	if (!out || !event)
 		return cli_EINVAL();
@@ -785,19 +785,19 @@ int ctl_src_new(struct ctl_src **out,
 	return 0;
 }
 
-void ctl_src_free(struct ctl_src *s)
+void wfd_src_free(struct wfd_src *s)
 {
 	if (!s)
 		return;
 
-	ctl_src_close(s);
+	wfd_src_close(s);
 	free(s->local);
 	free(s->session);
 	sd_event_unref(s->event);
 	free(s);
 }
 
-int ctl_src_listen(struct ctl_src *s, const char *local)
+int wfd_src_listen(struct wfd_src *s, const char *local)
 {
 	struct sockaddr_in addr = { };
 	char *l;
@@ -827,7 +827,7 @@ int ctl_src_listen(struct ctl_src *s, const char *local)
 	return src_listen(s);
 }
 
-void ctl_src_close(struct ctl_src *s)
+void wfd_src_close(struct wfd_src *s)
 {
 	if (!s)
 		return;
@@ -835,17 +835,17 @@ void ctl_src_close(struct ctl_src *s)
 	src_close(s);
 }
 
-bool ctl_src_is_connecting(struct ctl_src *s)
+bool wfd_src_is_connecting(struct wfd_src *s)
 {
 	return s && s->fd >= 0 && !s->connected;
 }
 
-bool ctl_src_is_connected(struct ctl_src *s)
+bool wfd_src_is_connected(struct wfd_src *s)
 {
 	return s && s->connected;
 }
 
-bool ctl_src_is_closed(struct ctl_src *s)
+bool wfd_src_is_closed(struct wfd_src *s)
 {
 	return !s || s->fd < 0;
 }

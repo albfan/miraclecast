@@ -74,7 +74,7 @@ struct client_rtp_ports {
 	unsigned short port1;
 };
 
-struct ctl_src {
+struct wfd_src {
 	sd_event *event;
 
 	char *local;

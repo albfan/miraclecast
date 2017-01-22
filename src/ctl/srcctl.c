@@ -479,13 +479,13 @@ static void stop_sender(void)
 	sender = NULL;
 }
 
-void ctl_fn_src_connected(struct ctl_src *s)
+void ctl_fn_wfd_connected(struct ctl_src *s)
 {
 	cli_notice("SOURCE connected");
 	src_connected = true;
 }
 
-void ctl_fn_src_disconnected(struct ctl_src *s)
+void ctl_fn_wfd_disconnected(struct ctl_src *s)
 {
 	if (!src_connected) {
 		/* treat HUP as timeout */
@@ -507,7 +507,7 @@ void ctl_fn_src_disconnected(struct ctl_src *s)
 	}
 }
 
-void ctl_fn_src_setup(struct ctl_src *s)
+void ctl_fn_wfd_setup(struct ctl_src *s)
 {
 	GError *error = NULL;
 
@@ -546,7 +546,7 @@ void ctl_fn_src_setup(struct ctl_src *s)
 	g_info("SRC sender prepared");
 }
 
-void ctl_fn_src_playing(struct ctl_src *s)
+void ctl_fn_wfd_playing(struct ctl_src *s)
 {
 	GError *error = NULL;
 

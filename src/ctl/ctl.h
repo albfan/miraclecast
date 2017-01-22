@@ -108,17 +108,17 @@ struct ctl_peer *ctl_wifi_search_peer(struct ctl_wifi *w,
 
 /* source handling */
 
-struct ctl_src;
+struct wfd_src;
 
-int ctl_src_new(struct ctl_src **out,
+int wfd_src_new(struct wfd_src **out,
 		 sd_event *event);
-void ctl_src_free(struct ctl_src *s);
+void wfd_src_free(struct wfd_src *s);
 
-int ctl_src_listen(struct ctl_src *s, const char *local);
-void ctl_src_close(struct ctl_src *s);
-bool ctl_src_is_connecting(struct ctl_src *s);
-bool ctl_src_is_connected(struct ctl_src *s);
-bool ctl_src_is_closed(struct ctl_src *s);
+int wfd_src_listen(struct wfd_src *s, const char *local);
+void wfd_src_close(struct wfd_src *s);
+bool wfd_src_is_connecting(struct wfd_src *s);
+bool wfd_src_is_connected(struct wfd_src *s);
+bool wfd_src_is_closed(struct wfd_src *s);
 
 /* sink handling */
 
@@ -255,10 +255,10 @@ void ctl_fn_peer_disconnected(struct ctl_peer *p);
 void ctl_fn_link_new(struct ctl_link *l);
 void ctl_fn_link_free(struct ctl_link *l);
 
-void ctl_fn_src_setup(struct ctl_src *s);
-void ctl_fn_src_playing(struct ctl_src *s);
-void ctl_fn_src_connected(struct ctl_src *s);
-void ctl_fn_src_disconnected(struct ctl_src *s);
+void wfd_fn_src_setup(struct wfd_src *s);
+void wfd_fn_src_playing(struct wfd_src *s);
+void wfd_fn_src_connected(struct wfd_src *s);
+void wfd_fn_src_disconnected(struct wfd_src *s);
 
 void ctl_fn_sink_connected(struct ctl_sink *s);
 void ctl_fn_sink_disconnected(struct ctl_sink *s);
