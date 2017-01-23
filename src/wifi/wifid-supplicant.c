@@ -880,7 +880,13 @@ static void supplicant_parse_peer(struct supplicant *s,
 		 * parse it we _definitely_ have to provide proper data. */
 		r = wpas_message_dict_read(m, "wfd_dev_info", 's', &val);
 		if (r >= 0) {
-			t = strdup(val);
+			/* remove "0x" from the start of wfd_dev_info and prepend
+			 * subelement ID and lenght to it to make it compliant
+			 * with the format of wfd_subelems */
+			char buf[19] = "000006";
+			t = strdup(strncmp("0x", val, 2)
+							? val
+							: strncat(buf, val + 2, sizeof(buf) - 7));
 			if (!t) {
 				log_vENOMEM();
 			} else {
