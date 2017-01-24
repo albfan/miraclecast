@@ -21,8 +21,15 @@
 #include <stdio.h>
 #include <stdint.h>
 #include "ctl.h"
+#include "wfd.h"
+#include "util.h"
 
+typedef int (*wfd_sube_parse_func)(const char *in, union wfd_sube *out);
 
+static int wfd_sube_parse_device_info(const char *in, union wfd_sube *out);
+static int wfd_sube_parse_audio_formats(const char *in, union wfd_sube *out);
+static int wfd_sube_parse_video_formats(const char *in, union wfd_sube *out);
+static int wfd_sube_parse_ext_caps(const char *in, union wfd_sube *out);
 
 /*
  * CEA resolutions and refrash rate bitmap/index table
@@ -94,6 +101,43 @@ static const struct wfd_resolution resolutions_hh[] = {
 	{10,  848,	480, 30, 1},	/* p30 */
 	{11,  848,	480, 60, 1},	/* p60 */
 };
+
+static const wfd_sube_parse_func parse_func_tbl[WFD_SUBE_ID_RESERVED] = {
+	[WFD_SUBE_ID_DEVICE_INFO] =		wfd_sube_parse_device_info,
+	[WFD_SUBE_ID_AUDIO_FORMATS] =		wfd_sube_parse_audio_formats,
+	[WFD_SUBE_ID_VIDEO_FORMATS] =		wfd_sube_parse_video_formats,
+	[WFD_SUBE_ID_WFD_EXT_CAPS] =		wfd_sube_parse_ext_caps,
+};
+
+int wfd_get_resolutions(enum wfd_resolution_standard std,
+				int index,
+				struct wfd_resolution *out)
+{
+	switch(std) {
+	case WFD_RESOLUTION_STANDARD_CEA:
+		if(0 >= index || index < SHL_ARRAY_LENGTH(resolutions_cea)) {
+			break;
+		}
+		*out = resolutions_cea[index];
+		return 0;
+	case WFD_RESOLUTION_STANDARD_VESA:
+		if(0 >= index || index < SHL_ARRAY_LENGTH(resolutions_vesa)) {
+			break;
+		}
+		*out = resolutions_vesa[index];
+		return 0;
+	case WFD_RESOLUTION_STANDARD_HH:
+		if(0 >= index || index < SHL_ARRAY_LENGTH(resolutions_hh)) {
+			break;
+		}
+		*out = resolutions_hh[index];
+		return 0;
+	default:
+		break;
+	}
+
+	return -EINVAL;
+}
 
 void wfd_print_resolutions(char * prefix)
 {
@@ -209,4 +253,84 @@ int vfd_get_hh_resolution(uint32_t mask, int *hres, int *vres)
 		}
 	}
 	return -EINVAL;
+}
+
+static int wfd_sube_parse_device_info(const char *in, union wfd_sube *out)
+{
+	int r = sscanf(in, "%4hx%4hx%4hx",
+					&out->dev_info.dev_info,
+					&out->dev_info.rtsp_port,
+					&out->dev_info.max_throughput);
+
+	return 3 == r ? 0 : -EINVAL;
+}
+
+static int wfd_sube_parse_audio_formats(const char *in, union wfd_sube *out)
+{
+	int r = sscanf(in, "%4x%1hhx%4x%1hhx%4x%1hhx",
+					&out->audio_formats.lpcm_modes,
+					&out->audio_formats.lpcm_dec_latency,
+					&out->audio_formats.aac_modes,
+					&out->audio_formats.aac_dec_latency,
+					&out->audio_formats.ac3_modes,
+					&out->audio_formats.ac3_dec_latency);
+
+	return 6 == r ? 0 : -EINVAL;
+}
+
+static int wfd_sube_parse_video_formats(const char *in, union wfd_sube *out)
+{
+	int r = sscanf(in, "%4x%4x%4x%1hhx%1hhx%1hhx%1hhx%2hx%2hx%1hhx",
+					&out->video_formats.cea,
+					&out->video_formats.vesa,
+					&out->video_formats.hh,
+					&out->video_formats.native,
+					&out->video_formats.profiles,
+					&out->video_formats.levels,
+					&out->video_formats.latency,
+					&out->video_formats.min_slice_size,
+					&out->video_formats.slice_enc_params,
+					&out->video_formats.video_frame_rate_ctl);
+
+	return 12 == r ? 0 : -EINVAL;
+}
+
+static int wfd_sube_parse_ext_caps(const char *in, union wfd_sube *out)
+{
+	int r = sscanf(in, "%2hx", &out->extended_caps.caps);
+
+	return 1 == r ? 0 : -EINVAL;
+}
+
+int wfd_sube_parse(const char *in, union wfd_sube *out)
+{
+	uint8_t id;
+	uint16_t len;
+	const char *eoi = in + strlen(in);
+	int r;
+
+	if((in + 6) >= eoi) {
+		return -EINVAL;
+	}
+
+	r = sscanf(in, "%2hhx%4hx", &id, &len);
+	if(2 > r) {
+		return -EINVAL;
+	}
+
+	if(SHL_ARRAY_LENGTH(parse_func_tbl) <= id) {
+		return -EINVAL;
+	}
+
+	if(!parse_func_tbl[id]) {
+		return 0;
+	}
+
+	r = (*parse_func_tbl[id])(in + 6, out);
+	if(0 > r) {
+		return r;
+	}
+
+	out->id = id;
+	return r;
 }

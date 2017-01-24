@@ -54,11 +54,12 @@ target_link_libraries(miracle-sinkctl miracle-shared)
 include_directories(${CMAKE_BINARY_DIR} ${CMAKE_SOURCE_DIR}/src ${CMAKE_SOURCE_DIR}/src/shared)
 
 ########### next target ###############
-########### next target ###############
-set(miracle-wfdctl_SRCS ctl.h
-						ctl-cli.c
+set(miracle-wfdctl_SRCS ctl-cli.c
 						ctl-wifi.c
 						wfd-src.c
+						wfd-sink.c
+						wfd-dbus.c
+						wfd-session.c
 						wfdctl.c
 						wfd.c)
 

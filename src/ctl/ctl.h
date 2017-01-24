@@ -27,7 +27,9 @@
 #include <sys/types.h>
 #include <systemd/sd-bus.h>
 #include "shl_dlist.h"
+#include "shl_htable.h"
 #include "shl_log.h"
+#include "wfd.h"
 
 #ifndef CTL_CTL_H
 #define CTL_CTL_H
@@ -133,6 +135,89 @@ void ctl_sink_close(struct ctl_sink *s);
 bool ctl_sink_is_connecting(struct ctl_sink *s);
 bool ctl_sink_is_connected(struct ctl_sink *s);
 bool ctl_sink_is_closed(struct ctl_sink *s);
+
+/* wfd session */
+#define wfd_session_to_htable(s)		(&(s)->id)
+#define wfd_session_from_htable(s)	(shl_htable_entry(s, struct wfd_session, id))
+
+struct wfd_sink;
+
+enum wfd_session_dir
+{
+	WFD_SESSION_DIR_OUT,
+	WFD_SESSION_DIR_IN,
+};
+
+struct wfd_session
+{
+	enum wfd_session_dir dir;
+	uint64_t id;
+	char *url;
+	int fd;
+	struct rtsp *rtsp;
+
+	bool connected : 1;
+	bool hup : 1;
+};
+
+int wfd_out_session_new(struct wfd_session **out, struct wfd_sink *sink);
+int wfd_session_start(struct wfd_session *s);
+void wfd_session_free(struct wfd_session *s);
+uint64_t wfd_session_get_id(struct wfd_session *s);
+void wfd_session_set_id(struct wfd_session *s, uint64_t id);
+
+/* wfd sink */
+#define wfd_sink_to_htable(s)		(&(s)->label)
+#define wfd_sink_from_htable(s)		shl_htable_entry(s, struct wfd_sink, label)
+
+struct wfd_sink
+{
+	struct ctl_peer *peer;
+	union wfd_sube dev_info;
+	char *label;
+	struct wfd_session *session;
+};
+
+int wfd_sink_new(struct wfd_sink **out,
+				struct ctl_peer *peer,
+				union wfd_sube *sube);
+
+void wfd_sink_free(struct wfd_sink *sink);
+
+const char * wfd_sink_get_label(struct wfd_sink *sink);
+const union wfd_sube * wfd_sink_get_dev_info(struct wfd_sink *sink);
+int wfd_sink_start_session(struct wfd_sink *sink,
+				struct wfd_session **session);
+bool wfd_sink_is_session_started(struct wfd_sink *sink);
+
+/* wfd handling */
+#define ctl_wfd_foreach_sink(_i, _w) \
+				SHL_HTABLE_FOREACH_MACRO(_i, &(_w)->sinks, wfd_sink_from_htable)
+
+struct ctl_wfd
+{
+	sd_event *loop;
+	struct ctl_wifi *wifi;
+	struct shl_htable sinks;
+	size_t n_sinks;
+	struct shl_htable sessions;
+	size_t n_sessions;
+	uint64_t id_pool;
+};
+
+struct ctl_wfd * ctl_wfd_get();
+int ctl_wfd_new(struct ctl_wfd **out, sd_event *loop, sd_bus *bus);
+void ctl_wfd_free(struct ctl_wfd *wfd);
+int ctl_wfd_find_sink_by_label(struct ctl_wfd *wfd,
+				const char *label,
+				struct wfd_sink **out);
+int ctl_wfd_add_session(struct ctl_wfd *wfd, struct wfd_session *s);
+int ctl_wfd_find_session_by_id(struct ctl_wfd *wfd,
+				unsigned int id,
+				struct wfd_session **out);
+int ctl_wfd_remove_session_by_id(struct ctl_wfd *wfd,
+				uint64_t id,
+				struct wfd_session **out);
 
 /* CLI handling */
 
@@ -267,3 +352,4 @@ void ctl_fn_sink_resolution_set(struct ctl_sink *s);
 void cli_fn_help(void);
 
 #endif /* CTL_CTL_H */
+

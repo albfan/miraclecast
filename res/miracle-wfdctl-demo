@@ -1,0 +1,34 @@
+#!/bin/bash
+PS4="> ${0##*/}: "
+set -x
+set -e
+
+if (( $# < 1 )); then
+	echo Usage: ${0##*/} link-index peer-p2p-mac
+	echo        eg. sudo ${0##*/} 3 ac:a2:13:6e:f8:2f
+	exit 1
+fi
+
+if [[ ${#2} != 17 ]]; then
+	echo Invalid peer-p2p-mac: $2
+	exit 1
+fi
+
+link_index="_3${1:0:1}${1:1}"
+p2p_mac="${2//:/_3a}_40$1"
+wfd_subelems=0000060010107c7032
+
+busctl set-property org.freedesktop.NetworkManager /org/freedesktop/NetworkManager/Devices/2 org.freedesktop.NetworkManager.Device Managed "b" false
+killall miracle-wifid || true
+killall miracle-wfdctl || true
+miracle-wfdctl &
+
+sleep 1
+busctl set-property org.freedesktop.miracle.wifi /org/freedesktop/miracle/wifi/link/$link_index org.freedesktop.miracle.wifi.Link Managed 'b' true
+sleep 1
+busctl set-property org.freedesktop.miracle.wifi /org/freedesktop/miracle/wifi/link/$link_index org.freedesktop.miracle.wifi.Link WfdSubelements "s" "$wfd_subelems"
+busctl set-property org.freedesktop.miracle.wifi /org/freedesktop/miracle/wifi/link/$link_index org.freedesktop.miracle.wifi.Link P2PScanning 'b' true
+sleep 10
+busctl call org.freedesktop.miracle.wifi /org/freedesktop/miracle/wifi/peer/$p2p_mac org.freedesktop.miracle.wifi.Peer Connect ss auto ''
+sleep 10
+busctl call org.freedesktop.miracle.wfd /org/freedesktop/miracle/wfd/sink/$p2p_mac org.freedesktop.miracle.wfd.Sink StartSession
