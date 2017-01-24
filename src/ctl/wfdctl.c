@@ -16,6 +16,7 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with MiracleCast; If not, see <http://www.gnu.org/licenses/>.
  */
+#define LOG_SUBSYSTEM "wfdctl"
 
 #include <errno.h>
 #include <locale.h>
@@ -25,69 +26,215 @@
 #include <stdlib.h>
 #include <string.h>
 #include <strings.h>
-#include <sys/signalfd.h>
 #include <sys/time.h>
-#include <systemd/sd-bus.h>
 #include <systemd/sd-event.h>
 #include <systemd/sd-journal.h>
 #include <time.h>
 #include <unistd.h>
 #include "ctl.h"
 #include "wfd.h"
+#include "util.h"
+#include "wfd-dbus.h"
 #include "shl_macro.h"
+#include "shl_htable.h"
 #include "shl_util.h"
+#include "shl_log.h"
 #include "config.h"
-
-struct ctl_wfd
-{
-	sd_event *loop;
-	sd_bus *bus;
-	struct ctl_wifi *wifi;
-	struct ctl_src *src;
-};
-
-static struct ctl_wfd *ctl_wfd;
 
 void ctl_wfd_free(struct ctl_wfd *wfd);
 
-int ctl_wfd_new(struct ctl_wfd **out)
+static struct ctl_wfd *wfd = NULL;
+static struct wfd_dbus *wfd_dbus = NULL;
+
+struct wfd_dbus * wfd_dbus_get()
+{
+	return wfd_dbus;
+}
+
+struct ctl_wfd * ctl_wfd_get()
+{
+	return wfd;
+}
+
+int ctl_wfd_new(struct ctl_wfd **out, sd_event *loop, sd_bus *bus)
 {
 	int r;
 	struct ctl_wfd *wfd = calloc(1, sizeof(struct ctl_wfd));
 	if(!wfd) {
-		r = -ENOMEM;
-		goto end;
+		return -ENOMEM;
 	}
 
-	r = sd_event_default(&wfd->loop);
+	r = ctl_wifi_new(&wfd->wifi, bus);
 	if(0 > r) {
-		goto free_wfd;
+		ctl_wfd_free(wfd);
+		return -ENOMEM;
 	}
 
-	r = sd_bus_default_system(&wfd->bus);
-	if (r < 0) {
-		goto free_wfd;
-	}
+	shl_htable_init_str(&wfd->sinks);
+	shl_htable_init_u64(&wfd->sessions);
+	wfd->loop = sd_event_ref(loop);
 
 	*out = wfd;
 
-	r = 0;
+	return 0;
+}
 
-	goto end;
+static void ctl_wfd_clear_sink(char **elem, void *ctx)
+{
+	wfd_sink_free(wfd_sink_from_htable(elem));
+}
 
-free_wfd:
-	ctl_wfd_free(wfd);
-end:
-	return r;
+static void ctl_wfd_clear_session(uint64_t *elem, void *ctx)
+{
+	wfd_session_free(wfd_session_from_htable(elem));
 }
 
 void ctl_wfd_free(struct ctl_wfd *wfd)
 {
-	if(wfd->bus) {
-		sd_bus_unref(wfd->bus);
+	if(!wfd) {
+		return;
+	}
+
+	shl_htable_clear_str(&wfd->sinks, ctl_wfd_clear_sink, NULL);
+	shl_htable_clear_u64(&wfd->sessions, ctl_wfd_clear_session, NULL);
+
+	if(wfd->loop) {
+		sd_event_unref(wfd->loop);
 	}
 
 	free(wfd);
+}
+
+static int ctl_wfd_add_sink(struct ctl_wfd *wfd, struct wfd_sink *sink)
+{
+	int r = shl_htable_lookup_str(&wfd->sinks,
+					wfd_sink_get_label(sink),
+					NULL,
+					NULL);
+	if(r) {
+		return -EEXIST;
+	}
+
+	r = shl_htable_insert_str(&wfd->sinks,
+					wfd_sink_to_htable(sink),
+					NULL);
+	if(0 <= r) {
+		++wfd->n_sinks;
+	}
+
+	return r;
+}
+
+int ctl_wfd_find_sink_by_label(struct ctl_wfd *wfd,
+				const char *label,
+				struct wfd_sink **out)
+{
+	char **entry;
+	int r = shl_htable_lookup_str(&wfd->sinks, label, NULL, &entry);
+	if(r) {
+		*out = wfd_sink_from_htable(entry);
+	}
+
+	return r;
+}
+
+static int ctl_wfd_remove_sink_by_label(struct ctl_wfd *wfd, const char *label)
+{
+	char **entry;
+	if(!shl_htable_remove_str(&wfd->sinks, label, NULL, &entry)) {
+		return 0;
+	}
+
+	wfd_sink_free(wfd_sink_from_htable(entry));
+
+	return 1;
+}
+
+int ctl_wfd_add_session(struct ctl_wfd *wfd, struct wfd_session *s)
+{
+	int r;
+
+	assert(wfd);
+	assert(s && !s->id);
+
+	wfd_session_set_id(s, ++wfd->id_pool);
+
+	r = shl_htable_insert_u64(&wfd->sessions, wfd_session_to_htable(s));
+	if(0 > r) {
+		return r;
+	}
+
+	++wfd->n_sessions;
+
+	return r;
+}
+
+int ctl_wfd_find_session_by_id(struct ctl_wfd *wfd,
+				unsigned int id,
+				struct wfd_session **out)
+{
+	uint64_t *entry;
+	int r = shl_htable_lookup_u64(&wfd->sessions, id, &entry);
+	if(r && out) {
+		*out = wfd_session_from_htable(entry);
+	}
+
+	return r;
+}
+
+int ctl_wfd_remove_session_by_id(struct ctl_wfd *wfd,
+				uint64_t id,
+				struct wfd_session **out)
+{
+	uint64_t *entry;
+	int r = shl_htable_remove_u64(&wfd->sessions, id, &entry);
+	if(r && out) {
+		*out = wfd_session_from_htable(entry);
+	}
+
+	return r;
+}
+
+static int ctl_wfd_handle_signal(sd_event_source *s,
+				const struct signalfd_siginfo *si,
+				void *userdata)
+{
+	struct ctl_wfd *wfd = userdata;
+	sd_event_exit(wfd->loop, 0);
+
+	return 0;
+}
+
+int ctl_wfd_init(struct ctl_wfd *wfd)
+{
+	int i;
+	const int signals[] = { SIGINT, SIGHUP, SIGQUIT, SIGTERM };
+	int r = ctl_wifi_fetch(wfd->wifi);
+	if(0 > r) {
+		goto end;
+	}
+
+	for(i = 0; i < SHL_ARRAY_LENGTH(signals); i ++) {
+		sigset_t mask;
+		sigemptyset(&mask);
+		sigaddset(&mask, signals[i]);
+		r = sigprocmask(SIG_BLOCK, &mask, NULL);
+		if(0 > r) {
+			break;
+		}
+
+		r = sd_event_add_signal(wfd->loop,
+						NULL,
+						signals[i],
+						ctl_wfd_handle_signal,
+						wfd);
+		if(0 > r) {
+			break;
+		}
+	}
+
+end:
+	return r;
 }
 
 int ctl_wfd_run(struct ctl_wfd *wfd)
@@ -96,39 +243,81 @@ int ctl_wfd_run(struct ctl_wfd *wfd)
 }
 
 /* Callbacks from ctl-src */
-void ctl_fn_src_connected(struct ctl_src *s)
+void wfd_fn_src_connected(struct wfd_src *s)
 {
 }
 
-void ctl_fn_src_disconnected(struct ctl_src *s)
+void wfd_fn_src_disconnected(struct wfd_src *s)
 {
 }
 
-void ctl_fn_src_setup(struct ctl_src *s)
+void wfd_fn_src_setup(struct wfd_src *s)
 {
 }
 
-void ctl_fn_src_playing(struct ctl_src *s)
+void wfd_fn_src_playing(struct wfd_src *s)
 {
 }
 
 void ctl_fn_peer_new(struct ctl_peer *p)
 {
+	union wfd_sube sube;
+	int r = wfd_sube_parse(p->wfd_subelements, &sube);
+	if(0 > r) {
+		log_debug("invalid subelement: '%s'", p->wfd_subelements);
+		return;
+	}
+
+	if(wfd_sube_device_is_sink(&sube)) {
+		struct wfd_sink *sink;
+		if(0 > wfd_sink_new(&sink, p, &sube)) {
+			log_warning("failed to create sink (%s): %s",
+							p->p2p_mac,
+							strerror(errno));
+			return;
+		}
+		if(0 > ctl_wfd_add_sink(wfd, sink)) {
+			wfd_sink_free(sink);
+			log_warning("failed to add sink (%s): %s",
+							p->p2p_mac,
+							strerror(errno));
+			return;
+		}
+		/*if(0 > wfd_dbus_notify_new_sink(wfd_dbus, p->p2p_mac)) {*/
+			/*log_warning("failed to notify about newly added sink (%s): %s",*/
+							/*p->p2p_mac,*/
+							/*strerror(errno));*/
+			/*return;*/
+		/*}*/
+		log_debug("sink added: %s (%s)",
+						wfd_sink_get_label(sink),
+						p->friendly_name);
+	}
 }
 
 void ctl_fn_peer_free(struct ctl_peer *p)
 {
+	union wfd_sube sube;
+	int r = wfd_sube_parse(p->wfd_subelements, &sube);
+	if(0 > r) {
+		log_debug("invalid subelement: %s", p->wfd_subelements);
+		return;
+	}
+
+	if(wfd_sube_device_is_sink(&sube)) {
+		ctl_wfd_remove_sink_by_label(wfd, p->label);
+	}
 }
 
 void ctl_fn_peer_provision_discovery(struct ctl_peer *p,
-					 const char *prov,
-					 const char *pin)
+				const char *prov,
+				const char *pin)
 {
 }
 
 void ctl_fn_peer_go_neg_request(struct ctl_peer *p,
-					 const char *prov,
-					 const char *pin)
+				const char *prov,
+				const char *pin)
 {
 }
 
@@ -156,267 +345,68 @@ void cli_fn_help()
 {
 }
 
-static int ctl_wfd_enum(sd_bus *bus,
-				const char *path,
-				void *userdata,
-				char ***out,
-				sd_bus_error *out_error)
-{
-	int r = 0, i = 0;
-	char **nodes;
-
-	if(strcmp("/org/freedesktop/miracle/wfd", path)) {
-		return 0;
-	}
-   
-	nodes = malloc(sizeof(char *) * 3);
-	if(!nodes) {
-		r = -ENOMEM;
-		goto end;
-	}
-
-	nodes[i] = strdup("/org/freedesktop/miracle/wfd/sink");
-	if(!nodes[i ++]) {
-		r = -ENOMEM;
-		goto end;
-	}
-
-	nodes[i] = strdup("/org/freedesktop/miracle/wfd/session");
-	if(!nodes[i ++]) {
-		r = -ENOMEM;
-		goto end;
-	}
-
-	nodes[i ++] = NULL;
-	*out = nodes;
-
-	return 0;
-
-free_nodes:
-	while(i --) {
-		free(nodes[i]);
-	}
-	free(nodes);
-end:
-	return r;
-}
-
-static int ctl_wfd_find_sink(sd_bus *bus,
-				const char *path,
-				const char *interface,
-				void *userdata,
-				void **ret_found,
-				sd_bus_error *ret_error)
-{
-	return 0;
-}
-
-static int ctl_wfd_find_session(sd_bus *bus,
-				const char *path,
-				const char *interface,
-				void *userdata,
-				void **ret_found,
-				sd_bus_error *ret_error)
-{
-	return 0;
-}
-
-static int ctl_wfd_sink_start_session(sd_bus_message *m,
-				void *userdata,
-				sd_bus_error *ret_error)
-{
-	return 0;
-}
-
-static int ctl_wfd_sink_get_audio_formats(sd_bus *bus,
-				const char *path,
-				const char *interface,
-				const char *property,
-				sd_bus_message *reply,
-				void *userdata,
-				sd_bus_error *ret_error)
-{
-	return 0;
-}
-
-static int ctl_wfd_sink_get_video_formats(sd_bus *bus,
-				const char *path,
-				const char *interface,
-				const char *property,
-				sd_bus_message *reply,
-				void *userdata,
-				sd_bus_error *ret_error)
-{
-	return 0;
-}
-
-static int ctl_wfd_sink_has_video(sd_bus *bus,
-				const char *path,
-				const char *interface,
-				const char *property,
-				sd_bus_message *reply,
-				void *userdata,
-				sd_bus_error *ret_error)
-{
-	return 0;
-}
-
-static int ctl_wfd_sink_get_peer(sd_bus *bus,
-				const char *path,
-				const char *interface,
-				const char *property,
-				sd_bus_message *reply,
-				void *userdata,
-				sd_bus_error *ret_error)
-{
-	return 0;
-}
-
-static int ctl_wfd_sink_has_audio(sd_bus *bus,
-				const char *path,
-				const char *interface,
-				const char *property,
-				sd_bus_message *reply,
-				void *userdata,
-				sd_bus_error *ret_error)
-{
-	return 0;
-}
-
-static int ctl_wfd_session_end(sd_bus_message *m,
-				void *userdata,
-				sd_bus_error *ret_error)
-{
-	return 0;
-}
-
-static int ctl_wfd_session_get_sink(sd_bus *bus,
-				const char *path,
-				const char *interface,
-				const char *property,
-				sd_bus_message *reply,
-				void *userdata,
-				sd_bus_error *ret_error)
-{
-	return 0;
-}
-
-static int ctl_wfd_session_get_state(sd_bus *bus,
-				const char *path,
-				const char *interface,
-				const char *property,
-				sd_bus_message *reply,
-				void *userdata,
-				sd_bus_error *ret_error)
-{
-	return 0;
-}
-
-static const sd_bus_vtable ctl_wfd_vtable[] = {
-	SD_BUS_VTABLE_START(0),
-	SD_BUS_VTABLE_END,
-};
-
-static const sd_bus_vtable ctl_wfd_sink_vtable[] = {
-	SD_BUS_VTABLE_START(0),
-	SD_BUS_METHOD("StartSession", NULL, "o", ctl_wfd_sink_start_session, 0),
-	SD_BUS_PROPERTY("AudioFormats", "a{sv}", ctl_wfd_sink_get_audio_formats, 0, SD_BUS_VTABLE_PROPERTY_CONST),
-	SD_BUS_PROPERTY("VideoFormats", "a{sv}", ctl_wfd_sink_get_video_formats, 0, SD_BUS_VTABLE_PROPERTY_CONST),
-	SD_BUS_PROPERTY("HasAudio", "b", ctl_wfd_sink_has_audio, 0, SD_BUS_VTABLE_PROPERTY_CONST),
-	SD_BUS_PROPERTY("HasVideo", "b", ctl_wfd_sink_has_video, 0, SD_BUS_VTABLE_PROPERTY_CONST),
-	SD_BUS_PROPERTY("Peer", "o", ctl_wfd_sink_get_peer, 0, SD_BUS_VTABLE_PROPERTY_CONST),
-	SD_BUS_VTABLE_END,
-};
-
-static const sd_bus_vtable ctl_wfd_session_vtable[] = {
-	SD_BUS_VTABLE_START(0),
-	SD_BUS_METHOD("End", NULL, NULL, ctl_wfd_session_end, 0),
-	SD_BUS_PROPERTY("Sink", "o", ctl_wfd_session_get_sink, 0, SD_BUS_VTABLE_PROPERTY_CONST),
-	SD_BUS_PROPERTY("State", "i", ctl_wfd_session_get_state, 0, SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
-	SD_BUS_VTABLE_END,
-};
-
-int ctl_wfd_expose(struct ctl_wfd *wfd)
-{
-	int r;
-
-	r = sd_bus_add_object_vtable(wfd->bus,
-					NULL,
-					"/org/freedesktop/miracle/wfd",
-					"org.freedesktop.miracle.wfd.Display",
-					ctl_wfd_vtable,
-					NULL);
-	if(0 > r) {
-		goto end;
-	}
-
-	r = sd_bus_add_fallback_vtable(wfd->bus,
-					NULL,
-					"/org/freedesktop/miracle/wfd/sink",
-					"org.freedesktop.miracle.wfd.Sink",
-					ctl_wfd_sink_vtable,
-					ctl_wfd_find_sink,
-					NULL);
-	if(0 > r) {
-		goto end;
-	}
-
-	r = sd_bus_add_fallback_vtable(wfd->bus,
-					NULL,
-					"/org/freedesktop/miracle/wfd/session",
-					"org.freedesktop.miracle.wfd.Session",
-					ctl_wfd_session_vtable,
-					ctl_wfd_find_session,
-					NULL);
-	if(0 > r) {
-		goto end;
-	}
-
-	r = sd_bus_add_node_enumerator(wfd->bus,
-					NULL,
-					"/org/freedesktop/miracle/wfd",
-					ctl_wfd_enum,
-					NULL);
-	if(0 > r) {
-		goto end;
-	}
-
-	r = sd_bus_add_object_manager(wfd->bus, NULL, "/org/freedesktop/miracle/wfd");
-	if(0 > r) {
-		goto end;
-	}
-
-	r = sd_bus_attach_event(wfd->bus, wfd->loop, SD_EVENT_PRIORITY_NORMAL);
-	if(0 > r) {
-		goto end;
-	}
-
-	r = sd_bus_request_name(wfd->bus, "org.freedesktop.miracle.wfd", 0);
-
-end:
-	return r;
-}
-
 int main(int argc, char **argv)
 {
 	int r;
+	sd_event *loop;
+	sd_bus *bus;
 
 	setlocale(LC_ALL, "");
 
-	r = ctl_wfd_new(&ctl_wfd);
+	if(getenv("LOG_LEVEL")) {
+		log_max_sev = log_parse_arg(getenv("LOG_LEVEL"));
+	}
+
+	r = sd_event_default(&loop);
 	if(0 > r) {
 		goto end;
 	}
 
-	r = ctl_wfd_expose(ctl_wfd);
+	r = sd_bus_default_system(&bus);
 	if(0 > r) {
-		goto free_wfd;
+		goto unref_loop;
 	}
 
-	r = ctl_wfd_run(ctl_wfd);
+	r = sd_bus_attach_event(bus, loop, 0);
+	if(0 > r) {
+		goto unref_bus;
+	}
 
-free_wfd:
-	ctl_wfd_free(ctl_wfd);
+	r = ctl_wfd_new(&wfd, loop, bus);
+	if(0 > r) {
+		goto bus_detach_event;;
+	}
+
+	r = ctl_wfd_init(wfd);
+	if(0 > r) {
+		goto free_ctl_wfd;
+	}
+
+	r = wfd_dbus_new(&wfd_dbus, loop, bus);
+	if(0 > r) {
+		goto free_ctl_wfd;
+	}
+
+	r = wfd_dbus_expose(wfd_dbus);
+	if(0 > r) {
+		goto free_ctl_wfd;
+	}
+
+	r = ctl_wfd_run(wfd);
+	if(0 > r) {
+		log_warning("%s\n", strerror(errno));
+	}
+
+	wfd_dbus_free(wfd_dbus);
+
+free_ctl_wfd:
+	ctl_wfd_free(wfd);
+bus_detach_event:
+	sd_bus_detach_event(bus);
+unref_bus:
+	sd_bus_unref(bus);
+unref_loop:
+	sd_event_unref(loop);
 end:
 	return r < 0 ? EXIT_FAILURE : EXIT_SUCCESS;
 }
