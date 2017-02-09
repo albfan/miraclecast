@@ -4,31 +4,110 @@ set -x
 set -e
 
 if (( $# < 1 )); then
-	echo Usage: ${0##*/} link-index peer-p2p-mac
-	echo        eg. sudo ${0##*/} 3 ac:a2:13:6e:f8:2f
-	exit 1
+    echo Usage: ${0##*/} link-index peer-p2p-mac
+    echo        eg. sudo ${0##*/} 3 ac:a2:13:6e:f8:2f
+    exit 1
 fi
 
 if [[ ${#2} != 17 ]]; then
-	echo Invalid peer-p2p-mac: $2
-	exit 1
+    echo Invalid peer-p2p-mac: $2
+    exit 1
 fi
+
+# $1: service
+# $2: object
+# $3: interface
+# $4: member
+# $5: property value
+wait_prop_change()
+{
+    for ((i=0; i<60; i++)); do
+        read -a cols < <(busctl get-property "${@:1:4}")
+        if [[ s == "${cols[0]}" ]]; then
+            cols[1]="${cols[1]:1:${#cols[1]}-2}"
+        fi
+        if [[ "$5" == "${cols[1]}" ]]; then
+            return 0
+        fi
+        sleep 1
+    done
+
+    echo !!!timeout!!!
+    return 1
+}
+
+# $1: service
+# $2: object
+# $3: interface
+# $4: member
+wait_object()
+{
+    while ! busctl get-property "$1" "$2" "$3" "$4" &>/dev/null; do
+        sleep 1
+    done
+}
+
+# $1: service
+# $2: object
+# $3: interface
+# $4: property
+# $5: expected property value
+# $6: method
+# $...: arguments
+invoke()
+{
+    wait_object "${@:1:4}"
+    busctl call "${@:1:3}" "${@:6}"
+    wait_prop_change "${@:1:5}"
+}
+
+# $1: service
+# $2: object
+# $3: interface
+# $4: member
+# $5: property spec
+# $6: property values
+set_prop()
+{
+    busctl set-property "$@"
+    wait_prop_change "${@:1:4}" "${@:6:1}"
+}
 
 link_index="_3${1:0:1}${1:1}"
 p2p_mac="${2//:/_3a}_40$1"
-wfd_subelems=0000060010107c7032
+wfd_subelems=00000600101c4400c8
 
-busctl set-property org.freedesktop.NetworkManager /org/freedesktop/NetworkManager/Devices/2 org.freedesktop.NetworkManager.Device Managed "b" false
-killall miracle-wifid || true
-killall miracle-wfdctl || true
-miracle-wfdctl &
+killall miracle-wifid &>/dev/null || true
+killall miracle-wfwctl &>/dev/null || true
 
-sleep 1
-busctl set-property org.freedesktop.miracle.wifi /org/freedesktop/miracle/wifi/link/$link_index org.freedesktop.miracle.wifi.Link Managed 'b' true
-sleep 1
-busctl set-property org.freedesktop.miracle.wifi /org/freedesktop/miracle/wifi/link/$link_index org.freedesktop.miracle.wifi.Link WfdSubelements "s" "$wfd_subelems"
-busctl set-property org.freedesktop.miracle.wifi /org/freedesktop/miracle/wifi/link/$link_index org.freedesktop.miracle.wifi.Link P2PScanning 'b' true
-sleep 10
-busctl call org.freedesktop.miracle.wifi /org/freedesktop/miracle/wifi/peer/$p2p_mac org.freedesktop.miracle.wifi.Peer Connect ss auto ''
-sleep 10
-busctl call org.freedesktop.miracle.wfd /org/freedesktop/miracle/wfd/sink/$p2p_mac org.freedesktop.miracle.wfd.Sink StartSession
+set_prop org.freedesktop.NetworkManager \
+    /org/freedesktop/NetworkManager/Devices/$1 \
+    org.freedesktop.NetworkManager.Device \
+    Managed b false
+set_prop org.freedesktop.miracle.wifi \
+    /org/freedesktop/miracle/wifi/link/$link_index \
+    org.freedesktop.miracle.wifi.Link \
+    Managed b true
+set_prop org.freedesktop.miracle.wifi \
+    /org/freedesktop/miracle/wifi/link/$link_index \
+    org.freedesktop.miracle.wifi.Link \
+    WfdSubelements s "$wfd_subelems"
+# this one is tricky, we wait for wpa_supplicant fully started then start 
+# P2P scaning, or "Invalid argument" will return
+sleep 0.5
+set_prop org.freedesktop.miracle.wifi \
+    /org/freedesktop/miracle/wifi/link/$link_index \
+    org.freedesktop.miracle.wifi.Link \
+    P2PScanning b true
+invoke org.freedesktop.miracle.wifi \
+    /org/freedesktop/miracle/wifi/peer/$p2p_mac \
+    org.freedesktop.miracle.wifi.Peer \
+    Connected true \
+    Connect ss auto ''
+invoke org.freedesktop.miracle.wfd \
+    /org/freedesktop/miracle/wfd/sink/$p2p_mac \
+    org.freedesktop.miracle.wfd.Sink \
+    Started true \
+    StartSession
+
+exec busctl monitor org.freedesktop.miracle.wfd
