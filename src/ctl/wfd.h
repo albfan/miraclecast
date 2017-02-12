@@ -114,6 +114,9 @@ int vfd_get_cea_resolution(uint32_t mask, int *hres, int *vres);
 int vfd_get_vesa_resolution(uint32_t mask, int *hres, int *vres);
 int vfd_get_hh_resolution(uint32_t mask, int *hres, int *vres);
 int wfd_sube_parse(const char *in, union wfd_sube *out);
+int wfd_sube_parse_with_id(enum wfd_sube_id id,
+				const char *in,
+				union wfd_sube *out);
 
 static inline int wfd_sube_device_get_type(const union wfd_sube *sube)
 {

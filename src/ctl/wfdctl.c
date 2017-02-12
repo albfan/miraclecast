@@ -41,7 +41,8 @@
 #include "shl_log.h"
 #include "config.h"
 
-void ctl_wfd_free(struct ctl_wfd *wfd);
+static int ctl_wfd_init(struct ctl_wfd *wfd, sd_bus *bus);
+static void ctl_wfd_free(struct ctl_wfd *wfd);
 
 static struct ctl_wfd *wfd = NULL;
 static struct wfd_dbus *wfd_dbus = NULL;
@@ -61,42 +62,51 @@ int ctl_wfd_new(struct ctl_wfd **out, sd_event *loop, sd_bus *bus)
 	int r;
 	struct ctl_wfd *wfd = calloc(1, sizeof(struct ctl_wfd));
 	if(!wfd) {
-		return -ENOMEM;
-	}
-
-	r = ctl_wifi_new(&wfd->wifi, bus);
-	if(0 > r) {
-		ctl_wfd_free(wfd);
-		return -ENOMEM;
+		r = -ENOMEM;
+		goto error;
 	}
 
 	shl_htable_init_str(&wfd->sinks);
 	shl_htable_init_u64(&wfd->sessions);
 	wfd->loop = sd_event_ref(loop);
 
+	r = ctl_wfd_init(wfd, bus);
+	if(0 > r) {
+		goto error;
+	}
+
 	*out = wfd;
 
 	return 0;
+
+error:
+	ctl_wfd_free(wfd);
+	return r;
 }
 
 static void ctl_wfd_clear_sink(char **elem, void *ctx)
 {
+	if(*elem == ctx) {
+		return;
+	}
 	wfd_sink_free(wfd_sink_from_htable(elem));
 }
 
-static void ctl_wfd_clear_session(uint64_t *elem, void *ctx)
+static void ctl_wfd_destroy(struct ctl_wfd *wfd)
 {
-	wfd_session_free(wfd_session_from_htable(elem));
+	ctl_wifi_free(wfd->wifi);
+	wfd->wifi = NULL;
+	shl_htable_clear_str(&wfd->sinks, NULL, NULL);
+	shl_htable_clear_u64(&wfd->sessions, NULL, NULL);
 }
 
-void ctl_wfd_free(struct ctl_wfd *wfd)
+static void ctl_wfd_free(struct ctl_wfd *wfd)
 {
 	if(!wfd) {
 		return;
 	}
 
-	shl_htable_clear_str(&wfd->sinks, ctl_wfd_clear_sink, NULL);
-	shl_htable_clear_u64(&wfd->sessions, ctl_wfd_clear_session, NULL);
+	ctl_wfd_destroy(wfd);
 
 	if(wfd->loop) {
 		sd_event_unref(wfd->loop);
@@ -105,24 +115,37 @@ void ctl_wfd_free(struct ctl_wfd *wfd)
 	free(wfd);
 }
 
-static int ctl_wfd_add_sink(struct ctl_wfd *wfd, struct wfd_sink *sink)
+int ctl_wfd_add_sink(struct ctl_wfd *wfd,
+				struct ctl_peer *p,
+				union wfd_sube *sube,
+				struct wfd_sink **out)
 {
+	_wfd_sink_free_ struct wfd_sink *s;
 	int r = shl_htable_lookup_str(&wfd->sinks,
-					wfd_sink_get_label(sink),
+					p->label,
 					NULL,
 					NULL);
 	if(r) {
 		return -EEXIST;
 	}
 
-	r = shl_htable_insert_str(&wfd->sinks,
-					wfd_sink_to_htable(sink),
-					NULL);
-	if(0 <= r) {
-		++wfd->n_sinks;
+	r = wfd_sink_new(&s, p, sube);
+	if(0 > r) {
+		return r;
 	}
 
-	return r;
+	r = shl_htable_insert_str(&wfd->sinks,
+					wfd_sink_to_htable(s),
+					NULL);
+	if(0 > r) {
+		return r;
+	}
+
+	++wfd->n_sinks;
+	*out = s;
+	s = NULL;
+
+	return 0;
 }
 
 int ctl_wfd_find_sink_by_label(struct ctl_wfd *wfd,
@@ -138,16 +161,29 @@ int ctl_wfd_find_sink_by_label(struct ctl_wfd *wfd,
 	return r;
 }
 
-static int ctl_wfd_remove_sink_by_label(struct ctl_wfd *wfd, const char *label)
+static int ctl_wfd_remove_sink_by_label(struct ctl_wfd *wfd,
+				const char *label,
+				struct wfd_sink **out)
 {
 	char **entry;
-	if(!shl_htable_remove_str(&wfd->sinks, label, NULL, &entry)) {
-		return 0;
+	int r = shl_htable_remove_str(&wfd->sinks, label, NULL, &entry);
+	if(!r) {
+		goto end;
 	}
 
-	wfd_sink_free(wfd_sink_from_htable(entry));
+	--wfd->n_sinks;
 
-	return 1;
+	if(out) {
+		*out = wfd_sink_from_htable(entry);
+	}
+
+end:
+	return r;
+}
+
+uint64_t ctl_wfd_alloc_session_id(struct ctl_wfd *wfd)
+{
+	return ++wfd->id_pool;
 }
 
 int ctl_wfd_add_session(struct ctl_wfd *wfd, struct wfd_session *s)
@@ -155,9 +191,8 @@ int ctl_wfd_add_session(struct ctl_wfd *wfd, struct wfd_session *s)
 	int r;
 
 	assert(wfd);
-	assert(s && !s->id);
-
-	wfd_session_set_id(s, ++wfd->id_pool);
+	assert(s && s->id);
+	assert(!ctl_wfd_find_session_by_id(wfd, s->id, NULL));
 
 	r = shl_htable_insert_u64(&wfd->sessions, wfd_session_to_htable(s));
 	if(0 > r) {
@@ -166,11 +201,13 @@ int ctl_wfd_add_session(struct ctl_wfd *wfd, struct wfd_session *s)
 
 	++wfd->n_sessions;
 
+	wfd_fn_session_new(s);
+
 	return r;
 }
 
 int ctl_wfd_find_session_by_id(struct ctl_wfd *wfd,
-				unsigned int id,
+				uint64_t id,
 				struct wfd_session **out)
 {
 	uint64_t *entry;
@@ -187,9 +224,31 @@ int ctl_wfd_remove_session_by_id(struct ctl_wfd *wfd,
 				struct wfd_session **out)
 {
 	uint64_t *entry;
+	struct wfd_session *s;
 	int r = shl_htable_remove_u64(&wfd->sessions, id, &entry);
-	if(r && out) {
-		*out = wfd_session_from_htable(entry);
+	if(!r) {
+		return 0;
+	}
+
+	--wfd->n_sessions;
+
+	s = wfd_session_from_htable(entry);
+	wfd_fn_session_free(s);
+	if(out) {
+		*out = s;
+	}
+
+	return 1;
+}
+
+static int ctl_wfd_fetch_info(sd_event_source *s, void *userdata)
+{
+	struct ctl_wfd *wfd = userdata;
+	int r = ctl_wifi_fetch(wfd->wifi);
+	if(0 > r) {
+		log_warning("failed to fetch information about links and peers: %s",
+						strerror(errno));
+		sd_event_exit(wfd->loop, r);
 	}
 
 	return r;
@@ -199,20 +258,23 @@ static int ctl_wfd_handle_signal(sd_event_source *s,
 				const struct signalfd_siginfo *si,
 				void *userdata)
 {
+	int r;
+	sd_event_source *exit_source;
 	struct ctl_wfd *wfd = userdata;
+	ctl_wfd_destroy(wfd);
+
 	sd_event_exit(wfd->loop, 0);
+
+	sd_event_source_unref(s);
 
 	return 0;
 }
 
-int ctl_wfd_init(struct ctl_wfd *wfd)
+static int ctl_wfd_init(struct ctl_wfd *wfd, sd_bus *bus)
 {
-	int i;
+	int i, r;
 	const int signals[] = { SIGINT, SIGHUP, SIGQUIT, SIGTERM };
-	int r = ctl_wifi_fetch(wfd->wifi);
-	if(0 > r) {
-		goto end;
-	}
+	struct ctl_wifi *wifi;
 
 	for(i = 0; i < SHL_ARRAY_LENGTH(signals); i ++) {
 		sigset_t mask;
@@ -232,6 +294,20 @@ int ctl_wfd_init(struct ctl_wfd *wfd)
 			break;
 		}
 	}
+
+	r = ctl_wifi_new(&wifi, bus);
+	if(0 > r) {
+		r = -ENOMEM;
+		goto end;
+	}
+
+	r = sd_event_add_defer(wfd->loop, NULL, ctl_wfd_fetch_info, wfd);
+	if(0 > r) {
+		ctl_wifi_free(wifi);
+		goto end;
+	}
+
+	wfd->wifi = wifi;
 
 end:
 	return r;
@@ -261,52 +337,59 @@ void wfd_fn_src_playing(struct wfd_src *s)
 
 void ctl_fn_peer_new(struct ctl_peer *p)
 {
+	struct wfd_sink *s;
 	union wfd_sube sube;
-	int r = wfd_sube_parse(p->wfd_subelements, &sube);
+	int r = wfd_sube_parse_with_id(WFD_SUBE_ID_DEVICE_INFO,
+					p->wfd_subelements,
+					&sube);
 	if(0 > r) {
 		log_debug("invalid subelement: '%s'", p->wfd_subelements);
 		return;
 	}
 
 	if(wfd_sube_device_is_sink(&sube)) {
-		struct wfd_sink *sink;
-		if(0 > wfd_sink_new(&sink, p, &sube)) {
-			log_warning("failed to create sink (%s): %s",
+		r = ctl_wfd_add_sink(ctl_wfd_get(), p, &sube, &s);
+		if(0 > r) {
+			log_warning("failed to add sink (%s, '%s'): %s",
+							p->friendly_name,
 							p->p2p_mac,
 							strerror(errno));
 			return;
 		}
-		if(0 > ctl_wfd_add_sink(wfd, sink)) {
-			wfd_sink_free(sink);
-			log_warning("failed to add sink (%s): %s",
-							p->p2p_mac,
+
+		r = wfd_fn_sink_new(s);
+		if(0 > r) {
+			log_warning("failed to publish newly added sink (%s): %s",
+							wfd_sink_get_label(s),
 							strerror(errno));
 			return;
 		}
-		/*if(0 > wfd_dbus_notify_new_sink(wfd_dbus, p->p2p_mac)) {*/
-			/*log_warning("failed to notify about newly added sink (%s): %s",*/
-							/*p->p2p_mac,*/
-							/*strerror(errno));*/
-			/*return;*/
-		/*}*/
-		log_debug("sink added: %s (%s)",
-						wfd_sink_get_label(sink),
-						p->friendly_name);
+
+		log_info("sink %s added", s->label);
 	}
 }
 
 void ctl_fn_peer_free(struct ctl_peer *p)
 {
-	union wfd_sube sube;
-	int r = wfd_sube_parse(p->wfd_subelements, &sube);
-	if(0 > r) {
-		log_debug("invalid subelement: %s", p->wfd_subelements);
+	struct wfd_sink *s;
+	_shl_free_ char *label;
+	int r = ctl_wfd_remove_sink_by_label(wfd, p->label, &s);
+	if(!r) {
 		return;
 	}
 
-	if(wfd_sube_device_is_sink(&sube)) {
-		ctl_wfd_remove_sink_by_label(wfd, p->label);
+	label = strdup(s->label);
+
+	r = wfd_fn_sink_free(s);
+	if(0 > r) {
+		log_warning("failed to unpublish removed sink (%s): %s",
+						wfd_sink_get_label(s),
+						strerror(errno));
 	}
+
+	wfd_sink_free(s);
+
+	log_info("sink %s removed", label);
 }
 
 void ctl_fn_peer_provision_discovery(struct ctl_peer *p,
@@ -364,22 +447,20 @@ int main(int argc, char **argv)
 
 	r = sd_bus_default_system(&bus);
 	if(0 > r) {
+		log_warning("unabled to connect to system DBus: %s", strerror(errno));
 		goto unref_loop;
 	}
 
 	r = sd_bus_attach_event(bus, loop, 0);
 	if(0 > r) {
+		log_warning("unabled to attache DBus event source to loop: %s",
+						strerror(errno));
 		goto unref_bus;
 	}
 
 	r = ctl_wfd_new(&wfd, loop, bus);
 	if(0 > r) {
 		goto bus_detach_event;;
-	}
-
-	r = ctl_wfd_init(wfd);
-	if(0 > r) {
-		goto free_ctl_wfd;
 	}
 
 	r = wfd_dbus_new(&wfd_dbus, loop, bus);
@@ -389,18 +470,21 @@ int main(int argc, char **argv)
 
 	r = wfd_dbus_expose(wfd_dbus);
 	if(0 > r) {
+		log_warning("unabled to publish WFD service: %s", strerror(errno));
 		goto free_ctl_wfd;
 	}
 
 	r = ctl_wfd_run(wfd);
 	if(0 > r) {
-		log_warning("%s\n", strerror(errno));
+		log_warning("unabled to keep WFD service running: %s", strerror(errno));
 	}
 
 	wfd_dbus_free(wfd_dbus);
+	wfd_dbus = NULL;
 
 free_ctl_wfd:
 	ctl_wfd_free(wfd);
+	wfd = NULL;
 bus_detach_event:
 	sd_bus_detach_event(bus);
 unref_bus:

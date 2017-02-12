@@ -22,12 +22,25 @@
 #ifndef CTL_WFD_DBUS_H
 #define CTL_WFD_DBUS_H
 
-struct wfd_dbus;
+#define wfd_fn_sink_properties_changed(s, namev...)	({				\
+				char *names[] = { namev, NULL };					\
+				_wfd_fn_sink_properties_changed((s), names);		\
+})
 
+#define wfd_fn_session_properties_changed(s, namev...)	({			\
+				char *names[] = { namev, NULL };					\
+				_wfd_fn_session_properties_changed((s), names);		\
+})
+
+struct wfd_dbus;
+struct wfd_session;
+
+struct wfd_dbus * wfd_dbus_get();
 int wfd_dbus_new(struct wfd_dbus **out, sd_event *loop, sd_bus *bus);
 void wfd_dbus_free(struct wfd_dbus *wfd_dbus);
 int wfd_dbus_expose(struct wfd_dbus *wfd_dbus);
-int wfd_dbus_notify_new_sink(struct wfd_dbus *wfd_dbus, const char *p2p_mac);
+int _wfd_fn_sink_properties_changed(struct wfd_sink *s, char **names);
+int _wfd_fn_session_properties_changed(struct wfd_session *s, char **names);
 
 #endif
 

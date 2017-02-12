@@ -305,16 +305,28 @@ static int wfd_sube_parse_ext_caps(const char *in, union wfd_sube *out)
 int wfd_sube_parse(const char *in, union wfd_sube *out)
 {
 	uint8_t id;
-	uint16_t len;
 	const char *eoi = in + strlen(in);
 	int r;
 
-	if((in + 6) >= eoi) {
+	if((in + 2) >= eoi) {
 		return -EINVAL;
 	}
 
-	r = sscanf(in, "%2hhx%4hx", &id, &len);
-	if(2 > r) {
+	r = sscanf(in, "%2hhx", &id);
+	if(1 > r) {
+		return -EINVAL;
+	}
+
+	return wfd_sube_parse_with_id(id, in + 2, out);
+}
+
+int wfd_sube_parse_with_id(enum wfd_sube_id id,
+				const char *in,
+				union wfd_sube *out)
+{
+	uint16_t len;
+	int r = sscanf(in, "%4hx", &len);
+	if(1 > r) {
 		return -EINVAL;
 	}
 
@@ -326,7 +338,7 @@ int wfd_sube_parse(const char *in, union wfd_sube *out)
 		return 0;
 	}
 
-	r = (*parse_func_tbl[id])(in + 6, out);
+	r = (*parse_func_tbl[id])(in + 4, out);
 	if(0 > r) {
 		return r;
 	}
