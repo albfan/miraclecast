@@ -16,15 +16,17 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with MiracleCast; If not, see <http://www.gnu.org/licenses/>.
  */
+#define LOG_SUBSYSTEM "wfd-session"
+
 #include <assert.h>
 #include "ctl.h"
+#include "wfd-dbus.h"
 
 int wfd_sink_new(struct wfd_sink **out,
 				struct ctl_peer *peer,
 				union wfd_sube *sube)
 {
 	struct wfd_sink *sink;
-	int r;
 
 	assert(out);
 	assert(peer);
@@ -84,7 +86,7 @@ struct ctl_peer * wfd_sink_get_peer(struct wfd_sink *sink)
 int wfd_sink_start_session(struct wfd_sink *sink, struct wfd_session **out)
 {
 	int r;
-	struct wfd_session *session = NULL;
+	_wfd_session_free_ struct wfd_session *s = NULL;
 
 	assert(sink);
 	assert(out);
@@ -93,25 +95,43 @@ int wfd_sink_start_session(struct wfd_sink *sink, struct wfd_session **out)
 		return -EALREADY;
 	}
 
-	r = wfd_out_session_new(&session, sink);
+	r = wfd_out_session_new(&s, sink);
 	if(0 > r) {
 		return r;
 	}
 
-	r = wfd_session_start(session);
+	r = wfd_session_start(s, ctl_wfd_alloc_session_id(ctl_wfd_get()));
 	if(0 > r) {
-		goto free_session;
+		return r;
 	}
 
-	sink->session = session;
-	*out = session;
+	r = ctl_wfd_add_session(ctl_wfd_get(), s);
+	if(0 > r) {
+		return r;
+	}
 
-	goto end;
+	wfd_fn_sink_properties_changed(sink, "Session");
 
-free_session:
-	wfd_session_free(session);
-end:
-	return r;
+	sink->session = s;
+	*out = s;
+	s = NULL;
+
+	return 0;
+}
+
+int wfd_fn_out_session_ended(struct wfd_session *s)
+{
+	assert(wfd_is_out_session(s));
+
+	struct wfd_sink *sink = wfd_out_session_get_sink(s);
+	if(sink) {
+		wfd_fn_sink_properties_changed(sink, "Session");
+		ctl_wfd_remove_session_by_id(ctl_wfd_get(), s->id, NULL);
+		sink->session = NULL;
+		wfd_session_free(s);
+	}
+
+	return 0;
 }
 
 bool wfd_sink_is_session_started(struct wfd_sink *sink)

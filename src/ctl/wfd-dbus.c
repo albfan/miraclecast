@@ -24,6 +24,21 @@
 #include "util.h"
 #include "wfd-dbus.h"
 
+#define wfd_dbus_object_added(o, argv...)					({		\
+				const char *ifaces[] = { argv };					\
+				_wfd_dbus_object_added(wfd_dbus_get(),				\
+								(o),								\
+								ifaces,								\
+								SHL_ARRAY_LENGTH(ifaces));			\
+})
+#define wfd_dbus_object_removed(o, argv...)				({			\
+				const char *ifaces[] = { argv };					\
+				_wfd_dbus_object_removed(wfd_dbus_get(),			\
+								(o),								\
+								ifaces,								\
+								SHL_ARRAY_LENGTH(ifaces));			\
+})
+
 struct wfd_dbus
 {
 	sd_bus *bus;
@@ -43,6 +58,7 @@ int wfd_dbus_new(struct wfd_dbus **out, sd_event *loop, sd_bus *bus)
 	wfd_dbus->loop = sd_event_ref(loop);
 
 	*out = wfd_dbus;
+
 	return 0;
 }
 
@@ -95,9 +111,9 @@ static int wfd_dbus_enum(sd_bus *bus,
 {
 	int r = 0, i = 0;
 	char **nodes, *node;
-	struct wfd_dbus *wfd_dbus = userdata;
-	struct ctl_wfd *wfd = ctl_wfd_get();
 	struct wfd_sink *sink;
+	struct wfd_session *session;
+	struct ctl_wfd *wfd = ctl_wfd_get();
 
 	if(strcmp("/org/freedesktop/miracle/wfd", path)) {
 		return 0;
@@ -107,13 +123,21 @@ static int wfd_dbus_enum(sd_bus *bus,
 		return 0;
 	}
    
-	nodes = malloc((wfd->n_sinks + 1) * sizeof(char *));
+	nodes = malloc((wfd->n_sinks + wfd->n_sessions + 1) * sizeof(char *));
 	if(!nodes) {
 		return -ENOMEM;
 	}
 
 	ctl_wfd_foreach_sink(sink, wfd) {
 		r = wfd_dbus_get_sink_path(sink, &node);
+		if(0 > r) {
+			goto free_nodes;
+		}
+		nodes[i ++] = node;
+	}
+
+	ctl_wfd_foreach_session(session, wfd) {
+		r = wfd_dbus_get_session_path(session, &node);
 		if(0 > r) {
 			goto free_nodes;
 		}
@@ -133,20 +157,69 @@ free_nodes:
 	return r;
 }
 
-int wfd_dbus_notify_new_sink(struct wfd_dbus *wfd_dbus, const char *p2p_mac)
+int _wfd_dbus_object_removed(struct wfd_dbus *wfd_dbus,
+				const char *path,
+				const char **ifaces,
+				size_t n_ifaces)
 {
-	_shl_free_ char *path;
+	int i, r;
 	_sd_bus_message_unref_ sd_bus_message *m;
-	int r = sd_bus_message_new_signal(wfd_dbus->bus,
+
+	if(!wfd_dbus) {
+		return -ECANCELED;
+	}
+	
+	r = sd_bus_message_new_signal(wfd_dbus->bus,
 					&m,
 					"/org/freedesktop/miracle/wfd",
 					"org.freedesktop.DBus.ObjectManager",
-					"InterfaceAdded");
+					"InterfaceRemoved");
 	if(0 > r) {
 		return r;
 	}
 
-	r = sd_bus_path_encode("/org/freedesktop/miracle/wfd/sink", p2p_mac, &path);
+	r = sd_bus_message_append(m, "o", path);
+	if(0 > r) {
+		return r;
+	}
+
+	r = sd_bus_message_open_container(m, 'a', "s");
+	if(0 > r) {
+		return r;
+	}
+
+	for(i = 0; i < n_ifaces; i ++) {
+		r = sd_bus_message_append(m, "s", ifaces[i]);
+		if(0 > r) {
+			return r;
+		}
+	}
+
+	r = sd_bus_message_close_container(m);
+	if(0 > r) {
+		return r;
+	}
+
+	return sd_bus_send(wfd_dbus->bus, m, NULL);
+}
+
+int _wfd_dbus_object_added(struct wfd_dbus *wfd_dbus,
+				const char *path,
+				const char **ifaces,
+				size_t n_ifaces)
+{
+	int i, r;
+	_sd_bus_message_unref_ sd_bus_message *m;
+
+	if(!wfd_dbus) {
+		return -ECANCELED;
+	}
+	
+	r = sd_bus_message_new_signal(wfd_dbus->bus,
+					&m,
+					"/org/freedesktop/miracle/wfd",
+					"org.freedesktop.DBus.ObjectManager",
+					"InterfaceAdded");
 	if(0 > r) {
 		return r;
 	}
@@ -161,30 +234,66 @@ int wfd_dbus_notify_new_sink(struct wfd_dbus *wfd_dbus, const char *p2p_mac)
 		return r;
 	}
 
-	r = sd_bus_message_append(m, "{sa{sv}}", "org.freedesktop.miracle.wfd.Sink", 0);
+	for(i = 0; i < n_ifaces; i ++) {
+		r = sd_bus_message_append(m, "{sa{sv}}", ifaces[i], 0);
+		if(0 > r) {
+			return r;
+		}
+	}
+
+	r = sd_bus_message_close_container(m);
 	if(0 > r) {
 		return r;
 	}
 
-	r = sd_bus_message_open_container(m, 'e', "sa{sv}");
+	return sd_bus_send(wfd_dbus->bus, m, NULL);
+}
+
+int wfd_fn_sink_new(struct wfd_sink *s)
+{
+	_shl_free_ char *path;
+	int r = sd_bus_path_encode("/org/freedesktop/miracle/wfd/sink",
+					wfd_sink_get_label(s),
+					&path);
 	if(0 > r) {
 		return r;
 	}
 
-	/*r = sd_bus_message_append(m, "{sa{sv}}", "org.freedesktop.DBus.Peer", 0);*/
-	/*if (r < 0)*/
-			/*return r;*/
-	/*r = sd_bus_message_append(m, "{sa{sv}}", "org.freedesktop.DBus.Introspectable", 0);*/
-	/*if (r < 0)*/
-			/*return r;*/
-	/*r = sd_bus_message_append(m, "{sa{sv}}", "org.freedesktop.DBus.Properties", 0);*/
-	/*if (r < 0)*/
-			/*return r;*/
-	/*r = sd_bus_message_append(m, "{sa{sv}}", "org.freedesktop.DBus.ObjectManager", 0);*/
-	/*if (r < 0)*/
-			/*return r;*/
+	return wfd_dbus_object_added(path, "org.freedesktop.miracle.wfd.Sink");
+}
 
-	return 0;
+int wfd_fn_sink_free(struct wfd_sink *s)
+{
+	_shl_free_ char *path;
+	int r = sd_bus_path_encode("/org/freedesktop/miracle/wfd/sink",
+					wfd_sink_get_label(s),
+					&path);
+	if(0 > r) {
+		return r;
+	}
+
+	return wfd_dbus_object_added(path, "org.freedesktop.miracle.wfd.Sink");
+}
+
+int _wfd_fn_sink_properties_changed(struct wfd_sink *s, char **names)
+{
+	_shl_free_ char *path;
+	int r;
+	struct wfd_dbus *wfd_dbus = wfd_dbus_get();
+
+	if(!wfd_dbus) {
+		return -ECANCELED;
+	}
+	
+	r = wfd_dbus_get_sink_path(s, &path);
+	if(0 > r) {
+		return r;
+	}
+
+	return sd_bus_emit_properties_changed_strv(wfd_dbus->bus,
+					path,
+					"org.freedesktop.miracle.wfd.Sink",
+					names);
 }
 
 static int wfd_dbus_find_sink(sd_bus *bus,
@@ -195,7 +304,6 @@ static int wfd_dbus_find_sink(sd_bus *bus,
 				sd_bus_error *ret_error)
 {
 	_shl_free_ char *node = NULL;
-	struct wfd_dbus *wfd_dbus = userdata;
 	struct wfd_sink *sink;
 	int r = sd_bus_path_decode(path,
 					"/org/freedesktop/miracle/wfd/sink",
@@ -212,6 +320,29 @@ static int wfd_dbus_find_sink(sd_bus *bus,
 	return r;
 }
 
+int wfd_fn_session_new(struct wfd_session *s)
+{
+	_shl_free_ char *path;
+	int r = wfd_dbus_get_session_path(s, &path);
+	if(0 > r) {
+		return r;
+	}
+
+	return wfd_dbus_object_added(path, "org.freedesktop.miracle.wfd.Session");
+}
+
+int wfd_fn_session_free(struct wfd_session *s)
+{
+	_shl_free_ char *path;
+	int r = wfd_dbus_get_session_path(s, &path);
+	if(0 > r) {
+		return r;
+	}
+
+	return wfd_dbus_object_removed(path,
+					"org.freedesktop.miracle.wfd.Session");
+}
+
 static int wfd_dbus_find_session(sd_bus *bus,
 				const char *path,
 				const char *interface,
@@ -219,7 +350,23 @@ static int wfd_dbus_find_session(sd_bus *bus,
 				void **ret_found,
 				sd_bus_error *ret_error)
 {
-	return 0;
+	struct wfd_session *s;
+	_shl_free_ char *node = NULL;
+	int r = sd_bus_path_decode(path,
+					"/org/freedesktop/miracle/wfd/session",
+					&node);
+	if(0 > r) {
+		return r;
+	}
+
+	r = ctl_wfd_find_session_by_id(ctl_wfd_get(), 
+					strtoull(node, NULL, 10),
+					&s);
+	if(r) {
+		*ret_found = s;
+	}
+
+	return r;
 }
 
 static int wfd_dbus_sink_start_session(sd_bus_message *m,
@@ -227,7 +374,7 @@ static int wfd_dbus_sink_start_session(sd_bus_message *m,
 				sd_bus_error *ret_error)
 {
 	struct wfd_sink *sink = userdata;
-	struct wfd_session *session;
+	_wfd_session_free_ struct wfd_session *session = NULL;
 	_shl_free_ char *path = NULL;
 	int r = wfd_sink_start_session(sink, &session);
 	if(0 > r) {
@@ -236,52 +383,46 @@ static int wfd_dbus_sink_start_session(sd_bus_message *m,
 
 	r = wfd_dbus_get_session_path(session, &path);
 	if(0 > r) {
-		goto free_session;
-	}
-
-	log_debug("path=%s", path);
-	r = sd_bus_reply_method_return(m, "o", path);
-	if(0 <= r) {
 		return r;
 	}
 
-free_session:
-	wfd_session_free(session);
-	return r;
+	session = NULL;
+
+	return sd_bus_reply_method_return(m, "o", path);
 }
 
-static int wfd_dbus_sink_get_audio_formats(sd_bus *bus,
-				const char *path,
-				const char *interface,
-				const char *property,
-				sd_bus_message *reply,
-				void *userdata,
-				sd_bus_error *ret_error)
-{
-	return 0;
-}
-
-static int wfd_dbus_sink_get_video_formats(sd_bus *bus,
-				const char *path,
-				const char *interface,
-				const char *property,
-				sd_bus_message *reply,
-				void *userdata,
-				sd_bus_error *ret_error)
-{
-	return 0;
-}
-
-static int wfd_dbus_sink_has_video(sd_bus *bus,
-				const char *path,
-				const char *interface,
-				const char *property,
-				sd_bus_message *reply,
-				void *userdata,
-				sd_bus_error *ret_error)
-{
-	return 0;
-}
+//static int wfd_dbus_sink_get_audio_formats(sd_bus *bus,
+//				const char *path,
+//				const char *interface,
+//				const char *property,
+//				sd_bus_message *reply,
+//				void *userdata,
+//				sd_bus_error *ret_error)
+//{
+//	return 0;
+//}
+//
+//static int wfd_dbus_sink_get_video_formats(sd_bus *bus,
+//				const char *path,
+//				const char *interface,
+//				const char *property,
+//				sd_bus_message *reply,
+//				void *userdata,
+//				sd_bus_error *ret_error)
+//{
+//	return 0;
+//}
+//
+//static int wfd_dbus_sink_has_video(sd_bus *bus,
+//				const char *path,
+//				const char *interface,
+//				const char *property,
+//				sd_bus_message *reply,
+//				void *userdata,
+//				sd_bus_error *ret_error)
+//{
+//	return 0;
+//}
 
 static int wfd_dbus_sink_get_peer(sd_bus *bus,
 				const char *path,
@@ -291,25 +432,36 @@ static int wfd_dbus_sink_get_peer(sd_bus *bus,
 				void *userdata,
 				sd_bus_error *ret_error)
 {
-	return 0;
+	struct wfd_sink *s = userdata;
+	_shl_free_ char *peer_path;
+	int r = sd_bus_path_encode("/org/freedesktop/miracle/wifi/peer",
+					s->label,
+					&peer_path);
+	if(0 > r) {
+		return r;
+	}
+
+	return sd_bus_message_append(reply, "o", peer_path);
 }
 
-static int wfd_dbus_sink_has_audio(sd_bus *bus,
-				const char *path,
-				const char *interface,
-				const char *property,
-				sd_bus_message *reply,
-				void *userdata,
-				sd_bus_error *ret_error)
-{
-	return 0;
-}
+//static int wfd_dbus_sink_has_audio(sd_bus *bus,
+//				const char *path,
+//				const char *interface,
+//				const char *property,
+//				sd_bus_message *reply,
+//				void *userdata,
+//				sd_bus_error *ret_error)
+//{
+//	return 0;
+//}
 
 static int wfd_dbus_session_end(sd_bus_message *m,
 				void *userdata,
 				sd_bus_error *ret_error)
 {
-	return 0;
+	wfd_session_end(userdata);
+
+	return sd_bus_reply_method_return(m, NULL);
 }
 
 static int wfd_dbus_session_get_sink(sd_bus *bus,
@@ -320,7 +472,33 @@ static int wfd_dbus_session_get_sink(sd_bus *bus,
 				void *userdata,
 				sd_bus_error *ret_error)
 {
-	return 0;
+	struct wfd_session *s = userdata;
+	_shl_free_ char *sink_path;
+	int r;
+
+	if(s->dir != WFD_SESSION_DIR_OUT) {
+		return 0;
+	}
+
+	r = wfd_dbus_get_sink_path(wfd_out_session_get_sink(s),
+					&sink_path);
+	if(0 > r) {
+		return r;
+	}
+
+	return sd_bus_message_append(reply, "o", sink_path);
+}
+
+static int wfd_dbus_session_get_url(sd_bus *bus,
+				const char *path,
+				const char *interface,
+				const char *property,
+				sd_bus_message *reply,
+				void *userdata,
+				sd_bus_error *ret_error)
+{
+	struct wfd_session *s = userdata;
+	return sd_bus_message_append(reply, "s", s->url);
 }
 
 static int wfd_dbus_session_get_state(sd_bus *bus,
@@ -331,7 +509,29 @@ static int wfd_dbus_session_get_state(sd_bus *bus,
 				void *userdata,
 				sd_bus_error *ret_error)
 {
-	return 0;
+	struct wfd_session *s = userdata;
+	return sd_bus_message_append(reply, "i", s->state);
+}
+
+int _wfd_fn_session_properties_changed(struct wfd_session *s, char **names)
+{
+	_shl_free_ char *path;
+	int r;
+	struct wfd_dbus *wfd_dbus = wfd_dbus_get();
+
+	if(!wfd_dbus) {
+		return -ECANCELED;
+	}
+
+	r = wfd_dbus_get_session_path(s, &path);
+	if(0 > r) {
+		return r;
+	}
+
+	return sd_bus_emit_properties_changed_strv(wfd_dbus_get()->bus,
+					path,
+					"org.freedesktop.miracle.wfd.Session",
+					names);
 }
 
 static const sd_bus_vtable wfd_dbus_vtable[] = {
@@ -346,7 +546,7 @@ static const sd_bus_vtable wfd_dbus_sink_vtable[] = {
 	/*SD_BUS_PROPERTY("VideoFormats", "a{sv}", wfd_dbus_sink_get_video_formats, 0, SD_BUS_VTABLE_PROPERTY_CONST),*/
 	/*SD_BUS_PROPERTY("HasAudio", "b", wfd_dbus_sink_has_audio, 0, SD_BUS_VTABLE_PROPERTY_CONST),*/
 	/*SD_BUS_PROPERTY("HasVideo", "b", wfd_dbus_sink_has_video, 0, SD_BUS_VTABLE_PROPERTY_CONST),*/
-	/*SD_BUS_PROPERTY("Peer", "o", wfd_dbus_sink_get_peer, 0, SD_BUS_VTABLE_PROPERTY_CONST),*/
+	SD_BUS_PROPERTY("Peer", "o", wfd_dbus_sink_get_peer, 0, SD_BUS_VTABLE_PROPERTY_CONST),
 	SD_BUS_VTABLE_END,
 };
 
@@ -354,6 +554,7 @@ static const sd_bus_vtable wfd_dbus_session_vtable[] = {
 	SD_BUS_VTABLE_START(0),
 	SD_BUS_METHOD("End", NULL, NULL, wfd_dbus_session_end, 0),
 	SD_BUS_PROPERTY("Sink", "o", wfd_dbus_session_get_sink, 0, SD_BUS_VTABLE_PROPERTY_CONST),
+	SD_BUS_PROPERTY("Url", "o", wfd_dbus_session_get_url, 0, SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
 	SD_BUS_PROPERTY("State", "i", wfd_dbus_session_get_state, 0, SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
 	SD_BUS_VTABLE_END,
 };
@@ -367,7 +568,7 @@ int wfd_dbus_expose(struct wfd_dbus *wfd_dbus)
 					wfd_dbus_vtable,
 					wfd_dbus);
 	if(0 > r) {
-		goto end;
+		return r;
 	}
 
 	r = sd_bus_add_fallback_vtable(wfd_dbus->bus,
@@ -378,19 +579,19 @@ int wfd_dbus_expose(struct wfd_dbus *wfd_dbus)
 					wfd_dbus_find_sink,
 					wfd_dbus);
 	if(0 > r) {
-		goto end;
+		return r;
 	}
 
-	/*r = sd_bus_add_fallback_vtable(wfd_dbus->bus,*/
-					/*NULL,*/
-					/*"/org/freedesktop/miracle/wfd/session",*/
-					/*"org.freedesktop.miracle.wfd.Session",*/
-					/*wfd_dbus_session_vtable,*/
-					/*wfd_dbus_find_session,*/
-					/*wfd_dbus);*/
-	/*if(0 > r) {*/
-		/*goto end;*/
-	/*}*/
+	r = sd_bus_add_fallback_vtable(wfd_dbus->bus,
+					NULL,
+					"/org/freedesktop/miracle/wfd/session",
+					"org.freedesktop.miracle.wfd.Session",
+					wfd_dbus_session_vtable,
+					wfd_dbus_find_session,
+					wfd_dbus);
+	if(0 > r) {
+		return r;
+	}
 
 	r = sd_bus_add_node_enumerator(wfd_dbus->bus,
 					NULL,
@@ -398,12 +599,12 @@ int wfd_dbus_expose(struct wfd_dbus *wfd_dbus)
 					wfd_dbus_enum,
 					wfd_dbus);
 	if(0 > r) {
-		goto end;
+		return r;
 	}
 
 	r = sd_bus_add_object_manager(wfd_dbus->bus, NULL, "/org/freedesktop/miracle/wfd");
 	if(0 > r) {
-		goto end;
+		return r;
 	}
 
 	r = sd_bus_request_name(wfd_dbus->bus, "org.freedesktop.miracle.wfd", 0);
@@ -411,7 +612,6 @@ int wfd_dbus_expose(struct wfd_dbus *wfd_dbus)
 		wfd_dbus->exposed = true;
 	}
 
-end:
 	return r;
 }
 

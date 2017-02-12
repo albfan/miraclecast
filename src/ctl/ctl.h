@@ -137,10 +137,31 @@ bool ctl_sink_is_connected(struct ctl_sink *s);
 bool ctl_sink_is_closed(struct ctl_sink *s);
 
 /* wfd session */
+#define wfd_session(s)			(assert(s), (struct wfd_session *) (s))
+#define wfd_is_session(s)		(								\
+				(s) &&											\
+				(WFD_SESSION_DIR_OUT == wfd_session(s)->dir ||	\
+				WFD_SESSION_DIR_IN == wfd_session(s)->dir)		\
+)
+#define wfd_is_out_session(s)	(WFD_SESSION_DIR_OUT == wfd_session(s)->dir)
+#define wfd_is_in_session(s)	(WFD_SESSION_DIR_IN == wfd_session(s)->dir)
 #define wfd_session_to_htable(s)		(&(s)->id)
 #define wfd_session_from_htable(s)	(shl_htable_entry(s, struct wfd_session, id))
+#define _wfd_session_free_ _shl_cleanup_(wfd_session_freep)
 
 struct wfd_sink;
+struct wfd_out_session;
+
+enum wfd_session_state
+{
+	WFD_SESSION_STATE_NULL,
+	WFD_SESSION_STATE_CONNECTING,
+	WFD_SESSION_STATE_CAPS_EXCHAING,
+	WFD_SESSION_STATE_SETING_UP,
+	WFD_SESSION_STATE_PLAYING,
+	WFD_SESSION_STATE_PAUSED,
+	WFD_SESSION_STATE_TEARING_DOWN,
+};
 
 enum wfd_session_dir
 {
@@ -151,22 +172,29 @@ enum wfd_session_dir
 struct wfd_session
 {
 	enum wfd_session_dir dir;
+	enum wfd_session_state state;
 	uint64_t id;
 	char *url;
-	int fd;
 	struct rtsp *rtsp;
 
-	bool connected : 1;
-	bool hup : 1;
+	bool hup: 1;
 };
 
 int wfd_out_session_new(struct wfd_session **out, struct wfd_sink *sink);
-int wfd_session_start(struct wfd_session *s);
+int wfd_session_start(struct wfd_session *s, uint64_t id);
+int wfd_session_is_started(struct wfd_session *s);
+void wfd_session_end(struct wfd_session *s);
 void wfd_session_free(struct wfd_session *s);
 uint64_t wfd_session_get_id(struct wfd_session *s);
-void wfd_session_set_id(struct wfd_session *s, uint64_t id);
+struct wfd_sink * wfd_out_session_get_sink(struct wfd_session *s);
+static inline void wfd_session_freep(struct wfd_session **s)
+{
+	wfd_session_free(*s);
+	*s = NULL;
+}
 
 /* wfd sink */
+#define _wfd_sink_free_ _shl_cleanup_(wfd_sink_freep)
 #define wfd_sink_to_htable(s)		(&(s)->label)
 #define wfd_sink_from_htable(s)		shl_htable_entry(s, struct wfd_sink, label)
 
@@ -188,11 +216,23 @@ const char * wfd_sink_get_label(struct wfd_sink *sink);
 const union wfd_sube * wfd_sink_get_dev_info(struct wfd_sink *sink);
 int wfd_sink_start_session(struct wfd_sink *sink,
 				struct wfd_session **session);
+void wfd_sink_handle_session_ended(struct wfd_sink *sink);
 bool wfd_sink_is_session_started(struct wfd_sink *sink);
+static inline void wfd_sink_freep(struct wfd_sink **s)
+{
+	wfd_sink_free(*s);
+	*s = NULL;
+}
 
 /* wfd handling */
 #define ctl_wfd_foreach_sink(_i, _w) \
-				SHL_HTABLE_FOREACH_MACRO(_i, &(_w)->sinks, wfd_sink_from_htable)
+				SHL_HTABLE_FOREACH_MACRO(_i, \
+								&(_w)->sinks, \
+								wfd_sink_from_htable)
+#define ctl_wfd_foreach_session(_i, _w) \
+				SHL_HTABLE_FOREACH_MACRO(_i, \
+								&(_w)->sessions, \
+								wfd_session_from_htable)
 
 struct ctl_wfd
 {
@@ -206,18 +246,21 @@ struct ctl_wfd
 };
 
 struct ctl_wfd * ctl_wfd_get();
-int ctl_wfd_new(struct ctl_wfd **out, sd_event *loop, sd_bus *bus);
-void ctl_wfd_free(struct ctl_wfd *wfd);
 int ctl_wfd_find_sink_by_label(struct ctl_wfd *wfd,
 				const char *label,
 				struct wfd_sink **out);
 int ctl_wfd_add_session(struct ctl_wfd *wfd, struct wfd_session *s);
 int ctl_wfd_find_session_by_id(struct ctl_wfd *wfd,
-				unsigned int id,
+				uint64_t id,
 				struct wfd_session **out);
 int ctl_wfd_remove_session_by_id(struct ctl_wfd *wfd,
 				uint64_t id,
 				struct wfd_session **out);
+uint64_t ctl_wfd_alloc_session_id(struct ctl_wfd *wfd);
+static inline struct sd_event * ctl_wfd_get_loop()
+{
+	return ctl_wfd_get()->loop;
+}
 
 /* CLI handling */
 
@@ -350,6 +393,13 @@ void ctl_fn_sink_disconnected(struct ctl_sink *s);
 void ctl_fn_sink_resolution_set(struct ctl_sink *s);
 
 void cli_fn_help(void);
+
+int wfd_fn_sink_new(struct wfd_sink *s);
+int wfd_fn_sink_free(struct wfd_sink *s);
+
+int wfd_fn_session_new(struct wfd_session *s);
+int wfd_fn_session_free(struct wfd_session *s);
+int wfd_fn_out_session_ended(struct wfd_session *s);
 
 #endif /* CTL_CTL_H */
 
