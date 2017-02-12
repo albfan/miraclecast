@@ -1070,6 +1070,38 @@ static int ctl_wifi_peer_fn(sd_bus_message *m,
 	return 0;
 }
 
+static void ctl_wifi_unlink_all_links(struct ctl_wifi *w)
+{
+	struct ctl_link *l;
+	while (!shl_dlist_empty(&w->links)) {
+		l = shl_dlist_last_entry(&w->links, struct ctl_link, list);
+		ctl_link_free(l);
+	}
+}
+
+static int ctl_wifi_wifid_up_or_down_fn(sd_bus_message *m,
+			    void *data,
+			    sd_bus_error *err)
+{
+	struct ctl_wifi *w = data;
+	char *from = NULL, *to = NULL;
+	int r;
+
+	r = sd_bus_message_read(m, "sss", NULL, &from, &to);
+	if(r < 0) {
+		return r;
+	}
+
+	if(*from && !*to) {
+		ctl_wifi_unlink_all_links(w);
+	}
+	else if(!*from && *to) {
+		r = ctl_wifi_fetch(w);
+	}
+
+	return r;
+}
+
 static int ctl_wifi_init(struct ctl_wifi *w)
 {
 	int r;
@@ -1097,6 +1129,18 @@ static int ctl_wifi_init(struct ctl_wifi *w)
 			     "sender='org.freedesktop.miracle.wifi',"
 			     "interface='org.freedesktop.miracle.wifi.Peer'",
 			     ctl_wifi_peer_fn,
+			     w);
+	if (r < 0)
+		return r;
+
+	r = sd_bus_add_match(w->bus, NULL,
+			     "type='signal',"
+			     "sender='org.freedesktop.DBus',"
+				 "path='/org/freedesktop/DBus',"
+			     "interface='org.freedesktop.DBus',"
+				 "member='NameOwnerChanged',"
+				 "arg0namespace='org.freedesktop.miracle.wifi'",
+			     ctl_wifi_wifid_up_or_down_fn,
 			     w);
 	if (r < 0)
 		return r;
@@ -1137,15 +1181,10 @@ int ctl_wifi_new(struct ctl_wifi **out, sd_bus *bus)
 
 void ctl_wifi_free(struct ctl_wifi *w)
 {
-	struct ctl_link *l;
-
 	if (!w)
 		return;
 
-	while (!shl_dlist_empty(&w->links)) {
-		l = shl_dlist_last_entry(&w->links, struct ctl_link, list);
-		ctl_link_free(l);
-	}
+	ctl_wifi_unlink_all_links(w);
 
 	ctl_wifi_destroy(w);
 	sd_bus_unref(w->bus);
