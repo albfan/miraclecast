@@ -41,3 +41,4 @@ cmake_install.cmake
 CMakeCache.txt
 libmiracle-shared.a
 install_manifest.txt
+.vimrc
