@@ -1,7 +1,8 @@
 #!/bin/bash
-PS4="> ${0##*/}: "
+PS4="\e[34m> ${0##*/}:\e[0m "
 set -x
 set -e
+trap cleanup EXIT
 
 if (( $# < 1 )); then
     echo Usage: ${0##*/} link-index peer-p2p-mac
@@ -14,6 +15,12 @@ if [[ ${#2} != 17 ]]; then
     exit 1
 fi
 
+# since this wfd subelement is used for device info, so no wfd subelemnt
+# id needed (eg. 000600101b4400c8 vs 00000600101b4400c8)
+wfd_subelems=000600101c4400c8
+link_index="_3${1:0:1}${1:1}"
+peer_id="${2//:/_3a}_40$1"
+
 # $1: service
 # $2: object
 # $3: interface
@@ -23,9 +30,9 @@ wait_prop_change()
 {
     for ((i=0; i<60; i++)); do
         read -a cols < <(busctl get-property "${@:1:4}")
-        if [[ s == "${cols[0]}" ]]; then
-            cols[1]="${cols[1]:1:${#cols[1]}-2}"
-        fi
+        case ${cols[0]} in
+            s | o) cols[1]="${cols[1]:1:${#cols[1]}-2}" ;;
+        esac
         if [[ "$5" == "${cols[1]}" ]]; then
             return 0
         fi
@@ -56,9 +63,11 @@ wait_object()
 # $...: arguments
 invoke()
 {
+    set +x
     wait_object "${@:1:4}"
     busctl call "${@:1:3}" "${@:6}"
     wait_prop_change "${@:1:5}"
+    set -x
 }
 
 # $1: service
@@ -69,13 +78,61 @@ invoke()
 # $6: property values
 set_prop()
 {
+    set +x
     busctl set-property "$@"
     wait_prop_change "${@:1:4}" "${@:6:1}"
+    set -x
 }
 
-link_index="_3${1:0:1}${1:1}"
-p2p_mac="${2//:/_3a}_40$1"
-wfd_subelems=00000600101c4400c8
+# $1: service
+# $2: object
+# $3: interface
+# $4: member
+# $5: variable name
+get_prop()
+{
+    read -a l < <(busctl get-property "${@:1:4}")
+    eval $5=\"${l[1]}\"
+}
+
+cleanup()
+{
+    kill 0
+    set -x
+    for (( i=${#cleanup[@]}-1; i>=0; --i )); do
+        eval ${cleanup[$i]} || true
+    done
+}
+
+cleanup_push()
+{
+    cleanup+=("$*")
+}
+
+link_unmanage()
+{
+    set_prop org.freedesktop.miracle.wifi \
+        /org/freedesktop/miracle/wifi/link/$link_index \
+        org.freedesktop.miracle.wifi.Link \
+        Managed b false
+}
+
+link_stop_p2pscan()
+{
+    set_prop org.freedesktop.miracle.wifi \
+        /org/freedesktop/miracle/wifi/link/$link_index \
+        org.freedesktop.miracle.wifi.Link \
+        P2PScanning b false
+}
+
+peer_disconnect()
+{
+    invoke org.freedesktop.miracle.wifi \
+        /org/freedesktop/miracle/wifi/peer/$peer_id \
+        org.freedesktop.miracle.wifi.Peer \
+        Connected false \
+        Disconnect
+}
 
 killall miracle-wifid &>/dev/null || true
 killall miracle-wfwctl &>/dev/null || true
@@ -88,6 +145,7 @@ set_prop org.freedesktop.miracle.wifi \
     /org/freedesktop/miracle/wifi/link/$link_index \
     org.freedesktop.miracle.wifi.Link \
     Managed b true
+cleanup_push link_unmanage
 set_prop org.freedesktop.miracle.wifi \
     /org/freedesktop/miracle/wifi/link/$link_index \
     org.freedesktop.miracle.wifi.Link \
@@ -95,19 +153,33 @@ set_prop org.freedesktop.miracle.wifi \
 # this one is tricky, we wait for wpa_supplicant fully started then start 
 # P2P scaning, or "Invalid argument" will return
 sleep 0.5
+echo wait for peer...
 set_prop org.freedesktop.miracle.wifi \
     /org/freedesktop/miracle/wifi/link/$link_index \
     org.freedesktop.miracle.wifi.Link \
     P2PScanning b true
+cleanup_push link_stop_p2pscan
+echo connect to peer...
 invoke org.freedesktop.miracle.wifi \
-    /org/freedesktop/miracle/wifi/peer/$p2p_mac \
+    /org/freedesktop/miracle/wifi/peer/$peer_id \
     org.freedesktop.miracle.wifi.Peer \
     Connected true \
     Connect ss auto ''
+cleanup_push peer_disconnect
+get_prop org.freedesktop.miracle.wifi \
+    /org/freedesktop/miracle/wifi/peer/$peer_id \
+    org.freedesktop.miracle.wifi.Peer \
+    Interface p2p_iface
+tcpdump -nnvvXS -s 0 -i $p2p_iface port 7236 or port 67 or port 68 &
+while ! killall -0 miracle-wfdctl && [[ -z "$nocheck" ]] &>/dev/null; do
+    echo please run miracle-wfdctl manually
+    sleep 3
+done
+echo starting WFD session...
 invoke org.freedesktop.miracle.wfd \
-    /org/freedesktop/miracle/wfd/sink/$p2p_mac \
+    /org/freedesktop/miracle/wfd/sink/$peer_id \
     org.freedesktop.miracle.wfd.Sink \
-    Started true \
+    Peer /org/freedesktop/miracle/wifi/peer/$peer_id \
     StartSession
 
-exec busctl monitor org.freedesktop.miracle.wfd
+wait
