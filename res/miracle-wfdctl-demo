@@ -5,8 +5,10 @@ set -e
 trap cleanup EXIT
 
 if (( $# < 1 )); then
-    echo Usage: ${0##*/} link-index peer-p2p-mac
+    echo Usage: ${0##*/} link-index peer-p2p-mac [nm-link-index]
     echo        eg. sudo ${0##*/} 3 ac:a2:13:6e:f8:2f
+    echo        if the index of WNIC in wifid is different from NM, then
+    echo        eg. sudo ${0##*/} 4 ac:a2:13:6e:f8:2f 3
     exit 1
 fi
 
@@ -20,6 +22,12 @@ fi
 wfd_subelems=000600101c4400c8
 link_index="_3${1:0:1}${1:1}"
 peer_id="${2//:/_3a}_40$1"
+
+if [[ -z "$3" ]]; then
+    nm_link_index="$1"
+else
+    nm_link_index="$3"
+fi
 
 # $1: service
 # $2: object
@@ -138,7 +146,7 @@ killall miracle-wifid &>/dev/null || true
 killall miracle-wfwctl &>/dev/null || true
 
 set_prop org.freedesktop.NetworkManager \
-    /org/freedesktop/NetworkManager/Devices/$1 \
+    /org/freedesktop/NetworkManager/Devices/"$nm_link_index" \
     org.freedesktop.NetworkManager.Device \
     Managed b false
 set_prop org.freedesktop.miracle.wifi \
