@@ -1,0 +1,12 @@
+Source: miraclecast
+Section: utils
+Priority: optional
+Maintainer: Deepin Packages Builder <packages@deepin.com>
+Build-Depends: debhelper (>= 9), cmake, check, libsystemd-dev, libglib2.0-dev, libgstreamer1.0-dev, libreadline-dev, libgstreamer-plugins-base1.0-dev
+Standards-Version: 3.9.8
+Homepage: https://github.com/derekdai/miraclecast
+
+Package: miraclecast
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: Connect external monitors to your system via Wifi-Display specification also known as Miracast
