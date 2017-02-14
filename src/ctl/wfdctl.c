@@ -191,8 +191,8 @@ int ctl_wfd_add_session(struct ctl_wfd *wfd, struct wfd_session *s)
 	int r;
 
 	assert(wfd);
-	assert(s && s->id);
-	assert(!ctl_wfd_find_session_by_id(wfd, s->id, NULL));
+	assert(s && wfd_session_get_id(s));
+	assert(!ctl_wfd_find_session_by_id(wfd, wfd_session_get_id(s), NULL));
 
 	r = shl_htable_insert_u64(&wfd->sessions, wfd_session_to_htable(s));
 	if(0 > r) {
@@ -258,16 +258,10 @@ static int ctl_wfd_handle_signal(sd_event_source *s,
 				const struct signalfd_siginfo *si,
 				void *userdata)
 {
-	int r;
-	sd_event_source *exit_source;
 	struct ctl_wfd *wfd = userdata;
 	ctl_wfd_destroy(wfd);
 
-	sd_event_exit(wfd->loop, 0);
-
-	sd_event_source_unref(s);
-
-	return 0;
+	return sd_event_exit(wfd->loop, 0);
 }
 
 static int ctl_wfd_init(struct ctl_wfd *wfd, sd_bus *bus)
@@ -372,7 +366,7 @@ void ctl_fn_peer_new(struct ctl_peer *p)
 void ctl_fn_peer_free(struct ctl_peer *p)
 {
 	struct wfd_sink *s;
-	_shl_free_ char *label;
+	_shl_free_ char *label = NULL;
 	int r = ctl_wfd_remove_sink_by_label(wfd, p->label, &s);
 	if(!r) {
 		return;

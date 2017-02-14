@@ -137,31 +137,20 @@ bool ctl_sink_is_connected(struct ctl_sink *s);
 bool ctl_sink_is_closed(struct ctl_sink *s);
 
 /* wfd session */
-#define wfd_session(s)			(assert(s), (struct wfd_session *) (s))
+#define wfd_session(s)			((struct wfd_session *) (s))
 #define wfd_is_session(s)		(								\
 				(s) &&											\
 				(WFD_SESSION_DIR_OUT == wfd_session(s)->dir ||	\
 				WFD_SESSION_DIR_IN == wfd_session(s)->dir)		\
 )
-#define wfd_is_out_session(s)	(WFD_SESSION_DIR_OUT == wfd_session(s)->dir)
-#define wfd_is_in_session(s)	(WFD_SESSION_DIR_IN == wfd_session(s)->dir)
-#define wfd_session_to_htable(s)		(&(s)->id)
-#define wfd_session_from_htable(s)	(shl_htable_entry(s, struct wfd_session, id))
+#define wfd_session_has_id(s)	(0 < wfd_session_get_id(s))
+#define wfd_is_out_session(s)	(WFD_SESSION_DIR_OUT == wfd_session_get_dir(s))
+#define wfd_is_in_session(s)	(WFD_SESSION_DIR_IN == wfd_session_get_dir(s))
 #define _wfd_session_free_ _shl_cleanup_(wfd_session_freep)
 
 struct wfd_sink;
-struct wfd_out_session;
-
-enum wfd_session_state
-{
-	WFD_SESSION_STATE_NULL,
-	WFD_SESSION_STATE_CONNECTING,
-	WFD_SESSION_STATE_CAPS_EXCHAING,
-	WFD_SESSION_STATE_SETING_UP,
-	WFD_SESSION_STATE_PLAYING,
-	WFD_SESSION_STATE_PAUSED,
-	WFD_SESSION_STATE_TEARING_DOWN,
-};
+struct wfd_session;
+struct rtsp_dispatch_entry;
 
 enum wfd_session_dir
 {
@@ -169,29 +158,32 @@ enum wfd_session_dir
 	WFD_SESSION_DIR_IN,
 };
 
-struct wfd_session
+enum wfd_session_state
 {
-	enum wfd_session_dir dir;
-	enum wfd_session_state state;
-	uint64_t id;
-	char *url;
-	struct rtsp *rtsp;
-
-	bool hup: 1;
+	WFD_SESSION_STATE_NULL,
+	WFD_SESSION_STATE_CONNECTING,
+	WFD_SESSION_STATE_CAPS_EXCHAING,
+	WFD_SESSION_STATE_ESTABLISHED,
+	WFD_SESSION_STATE_SETING_UP,
+	WFD_SESSION_STATE_PLAYING,
+	WFD_SESSION_STATE_PAUSED,
+	WFD_SESSION_STATE_TEARING_DOWN,
 };
 
 int wfd_out_session_new(struct wfd_session **out, struct wfd_sink *sink);
 int wfd_session_start(struct wfd_session *s, uint64_t id);
+enum wfd_session_dir wfd_session_get_dir(struct wfd_session *s);
+uint64_t wfd_session_get_id(struct wfd_session *s);
+const char * wfd_session_get_url(struct wfd_session *s);
+enum wfd_session_state wfd_session_get_state(struct wfd_session *s);
 int wfd_session_is_started(struct wfd_session *s);
 void wfd_session_end(struct wfd_session *s);
 void wfd_session_free(struct wfd_session *s);
 uint64_t wfd_session_get_id(struct wfd_session *s);
 struct wfd_sink * wfd_out_session_get_sink(struct wfd_session *s);
-static inline void wfd_session_freep(struct wfd_session **s)
-{
-	wfd_session_free(*s);
-	*s = NULL;
-}
+void wfd_session_freep(struct wfd_session **s);
+uint64_t * wfd_session_to_htable(struct wfd_session *s);
+struct wfd_session * wfd_session_from_htable(uint64_t *e);
 
 /* wfd sink */
 #define _wfd_sink_free_ _shl_cleanup_(wfd_sink_freep)

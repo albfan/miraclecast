@@ -34,6 +34,7 @@
 
 struct wfd_dbus;
 struct wfd_session;
+struct wfd_sink;
 
 struct wfd_dbus * wfd_dbus_get();
 int wfd_dbus_new(struct wfd_dbus **out, sd_event *loop, sd_bus *bus);
