@@ -23,7 +23,7 @@
 #include "wfd-session.h"
 #include "shl_macro.h"
 
-#define wfd_message_id_valide(id) ( \
+#define rtsp_message_id_is_valid(id) ( \
 		(id) >= RTSP_M1_REQUEST_SINK_OPTIONS && \
 		(id) <= RTSP_M16_KEEPALIVE \
 )
@@ -36,7 +36,9 @@ static inline int wfd_session_do_request(struct wfd_session *s,
 				enum rtsp_message_id id,
 				struct rtsp_message **out)
 {
-	assert(wfd_message_id_valide(id));
+	if(!rtsp_message_id_is_valid(id)) {
+		return -EINVAL;
+	}
 	assert(s->rtsp_disp_tbl[id].request);
 
 	return (*s->rtsp_disp_tbl[id].request)(s, out);
@@ -47,7 +49,9 @@ static inline int wfd_session_do_handle_request(struct wfd_session *s,
 				struct rtsp_message *req,
 				struct rtsp_message **out_rep)
 {
-	assert(wfd_message_id_valide(id));
+	if(!rtsp_message_id_is_valid(id)) {
+		return -EINVAL;
+	}
 	assert(s->rtsp_disp_tbl[id].handle_request);
 
 	return (*s->rtsp_disp_tbl[id].handle_request)(s, req, out_rep);
@@ -57,7 +61,9 @@ static inline int wfd_session_do_handle_reply(struct wfd_session *s,
 				enum rtsp_message_id id,
 				struct rtsp_message *m)
 {
-	assert(wfd_message_id_valide(id));
+	if(!rtsp_message_id_is_valid(id)) {
+		return -EINVAL;
+	}
 	assert(s->rtsp_disp_tbl[id].handle_reply);
 
 	return (*s->rtsp_disp_tbl[id].handle_reply)(s, m);
@@ -476,9 +482,11 @@ void wfd_session_freep(struct wfd_session **s)
 
 const char * rtsp_message_id_to_string(enum rtsp_message_id id)
 {
-	assert(id >= 0 && 16 >= id);
+	if(rtsp_message_id_is_valid(id)) {
+		return rtsp_message_names[id];
+	}
 
-	return rtsp_message_names[id];
+	return rtsp_message_names[0];
 }
 
 static const char *rtsp_message_names[] = {
