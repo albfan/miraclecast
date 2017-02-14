@@ -1,4 +1,5 @@
 cmake_minimum_required(VERSION 2.8)
+
 project(Miraclecast)
 
 SET(PACKAGE_NAME miraclecast)
@@ -8,7 +9,7 @@ SET(PACKAGE_STRING "${PACKAGE_NAME} ${PACKAGE_VERSION}")
 set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake
                       ${CMAKE_MODULE_PATH})
 
-set(CMAKE_C_FLAGS "-std=gnu11 -Wall ${CMAKE_C_FLAGS}")
+set(CMAKE_C_FLAGS "-std=gnu11 -Wall -fstack-protector-strong ${CMAKE_C_FLAGS}")
 add_definitions(-D_GNU_SOURCE)
 
 SET(BUILD_BINDIR "${CMAKE_INSTALL_PREFIX}/bin")
