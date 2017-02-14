@@ -93,7 +93,7 @@ static inline int wfd_dbus_get_sink_path(struct wfd_sink *s, char **out)
 static inline int wfd_dbus_get_session_path(struct wfd_session *s, char **out)
 {
 	char buf[64];
-	int r = snprintf(buf, sizeof(buf), "%" PRIu64, s->id);
+	int r = snprintf(buf, sizeof(buf), "%" PRIu64, wfd_session_get_id(s));
 	if(0 > r) {
 		return r;
 	}
@@ -476,7 +476,7 @@ static int wfd_dbus_session_get_sink(sd_bus *bus,
 	_shl_free_ char *sink_path;
 	int r;
 
-	if(s->dir != WFD_SESSION_DIR_OUT) {
+	if(wfd_session_get_id(s) != WFD_SESSION_DIR_OUT) {
 		return 0;
 	}
 
@@ -498,7 +498,7 @@ static int wfd_dbus_session_get_url(sd_bus *bus,
 				sd_bus_error *ret_error)
 {
 	struct wfd_session *s = userdata;
-	return sd_bus_message_append(reply, "s", s->url);
+	return sd_bus_message_append(reply, "s", wfd_session_get_url(s));
 }
 
 static int wfd_dbus_session_get_state(sd_bus *bus,
@@ -510,7 +510,7 @@ static int wfd_dbus_session_get_state(sd_bus *bus,
 				sd_bus_error *ret_error)
 {
 	struct wfd_session *s = userdata;
-	return sd_bus_message_append(reply, "i", s->state);
+	return sd_bus_message_append(reply, "i", wfd_session_get_state(s));
 }
 
 int _wfd_fn_session_properties_changed(struct wfd_session *s, char **names)

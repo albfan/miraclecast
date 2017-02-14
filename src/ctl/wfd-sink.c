@@ -121,15 +121,17 @@ int wfd_sink_start_session(struct wfd_sink *sink, struct wfd_session **out)
 
 int wfd_fn_out_session_ended(struct wfd_session *s)
 {
+	struct wfd_sink *sink;
+
 	assert(wfd_is_out_session(s));
 
-	struct wfd_sink *sink = wfd_out_session_get_sink(s);
-	if(sink) {
-		wfd_fn_sink_properties_changed(sink, "Session");
-		ctl_wfd_remove_session_by_id(ctl_wfd_get(), s->id, NULL);
-		sink->session = NULL;
-		wfd_session_free(s);
-	}
+	sink = wfd_out_session_get_sink(s);
+	wfd_fn_sink_properties_changed(sink, "Session");
+	ctl_wfd_remove_session_by_id(ctl_wfd_get(),
+					wfd_session_get_id(s),
+					NULL);
+	sink->session = NULL;
+	wfd_session_free(s);
 
 	return 0;
 }

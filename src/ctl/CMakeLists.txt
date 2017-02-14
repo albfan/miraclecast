@@ -60,6 +60,7 @@ set(miracle-wfdctl_SRCS ctl-cli.c
 						wfd-sink.c
 						wfd-dbus.c
 						wfd-session.c
+						wfd-out-session.c
 						wfdctl.c
 						wfd.c)
 
