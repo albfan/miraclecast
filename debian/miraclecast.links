@@ -1,2 +1,2 @@
-miracle-wfdctl.service /lib/systemd/system/dbus-org.freedesktop.miracle.wfd.service
-miracle-wifid.service /lib/systemd/system/dbus-org.freedesktop.miracle.wifi.service
+/lib/systemd/system/miracle-wfdctl.service /lib/systemd/system/dbus-org.freedesktop.miracle.wfd.service
+/lib/systemd/system/miracle-wifid.service /lib/systemd/system/dbus-org.freedesktop.miracle.wifi.service
