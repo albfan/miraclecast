@@ -18,27 +18,14 @@
  */
 #define LOG_SUBSYSTEM "wfdctl"
 
-#include <errno.h>
 #include <locale.h>
 #include <signal.h>
-#include <stdarg.h>
-#include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
-#include <strings.h>
-#include <sys/time.h>
 #include <systemd/sd-event.h>
-#include <systemd/sd-journal.h>
-#include <time.h>
-#include <unistd.h>
 #include "ctl.h"
 #include "wfd.h"
-#include "util.h"
 #include "wfd-dbus.h"
-#include "shl_macro.h"
-#include "shl_htable.h"
-#include "shl_util.h"
-#include "shl_log.h"
 #include "config.h"
 
 static int ctl_wfd_init(struct ctl_wfd *wfd, sd_bus *bus);
