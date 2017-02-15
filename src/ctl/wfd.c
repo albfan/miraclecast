@@ -20,6 +20,7 @@
 
 #include <stdio.h>
 #include <stdint.h>
+#include <string.h>
 #include "ctl.h"
 #include "wfd.h"
 #include "util.h"
@@ -345,4 +346,289 @@ int wfd_sube_parse_with_id(enum wfd_sube_id id,
 
 	out->id = id;
 	return r;
+}
+
+int wfd_video_formats_from_string(const char *l,
+				struct wfd_video_formats **out)
+{
+	_shl_free_ struct wfd_video_formats *f = NULL;
+	uint8_t native, pref_disp_mode_sup;
+	int r, i, n_codecs;
+	const char *p;
+	char max_hres[5], max_vres[5];
+
+	assert(l);
+
+	if(!strncmp("none", l, 4)) {
+		if(out) {
+			*out = NULL;
+		}
+
+		return 0;
+	}
+
+	r = sscanf(l, "%2hhx %2hhx", &native, &pref_disp_mode_sup);
+	if(2 != r) {
+		return -EINVAL;
+	}
+
+	l += 6;
+
+	for(p = l, n_codecs = 1; (p = strchrnul(p, ','), *p); ++ n_codecs, ++ p);
+
+	f = malloc(sizeof(*f) + (sizeof(f->h264_codecs[0]) * n_codecs));
+	if(!f) {
+		return -ENOMEM;
+	}
+
+	for(i = 0; i < n_codecs; i ++) {
+		r = sscanf(l,
+						"%2hhx %2hhx %8x %8x %8x %2hhx %4hx %4hx %2hhx %4s %4s",
+						&f->h264_codecs[i].profile,
+						&f->h264_codecs[i].level,
+						&f->h264_codecs[i].cea_sup,
+						&f->h264_codecs[i].vesa_sup,
+						&f->h264_codecs[i].hh_sup,
+						&f->h264_codecs[i].latency,
+						&f->h264_codecs[i].min_slice_size,
+						&f->h264_codecs[i].slice_enc_params,
+						&f->h264_codecs[i].frame_rate_ctrl_sup,
+						max_hres,
+						max_vres);
+		if(11 != r) {
+			return -EINVAL;
+		}
+
+		errno = 0;
+
+		f->h264_codecs[i].max_hres = !strncmp("none", max_hres, 4)
+						? 0
+						: strtoul(max_hres, NULL, 16);
+		if(errno) {
+			return -errno;
+		}
+
+		f->h264_codecs[i].max_vres = !strncmp("none", max_vres, 4)
+						? 0
+						: strtoul(max_vres, NULL, 16);
+		if(errno) {
+			return -errno;
+		}
+
+		l += 60;
+	}
+
+	f->native = native;
+	f->pref_disp_mode_sup = pref_disp_mode_sup;
+	f->n_h264_codecs = n_codecs;
+
+	if(out) {
+		*out = f;
+		f = NULL;
+	}
+
+	return 0;
+}
+
+static inline const char * int16_to_res(int16_t v, char *b)
+{
+	if(!v) {
+		return "none";
+	}
+
+	sprintf(b, "%04hX", v);
+
+	return b;
+}
+
+int wfd_video_formats_to_string(struct wfd_video_formats *f, char **out)
+{
+	_shl_free_ char *s = NULL;
+	char *p, b1[5], b2[5];
+	size_t len = 6;
+	int r, i;
+
+	assert(f);
+	assert(out);
+
+	len += (f->n_h264_codecs ? f->n_h264_codecs * 60 : 6);
+	p = s = malloc(len);
+	if(!s) {
+		return -ENOMEM;
+	}
+
+	r = snprintf(p, len, "%02hhX %02hhX ", f->native, f->pref_disp_mode_sup);
+	if(0 > r) {
+		return r;
+	}
+
+	p += r;
+	len -= r;
+
+	if(!f->n_h264_codecs) {
+		strcat(p, " none");
+		goto end;
+	}
+
+	for(i = 0; i < f->n_h264_codecs; ++ i) {
+		r = snprintf(p, len,
+						"%02hhX %02hhX %08X %08X %08X %02hhX %04hX %04hX %02hhX %s %s, ",
+						f->h264_codecs[i].profile,
+						f->h264_codecs[i].level,
+						f->h264_codecs[i].cea_sup,
+						f->h264_codecs[i].vesa_sup,
+						f->h264_codecs[i].hh_sup,
+						f->h264_codecs[i].latency,
+						f->h264_codecs[i].min_slice_size,
+						f->h264_codecs[i].slice_enc_params,
+						f->h264_codecs[i].frame_rate_ctrl_sup,
+						int16_to_res(f->h264_codecs[i].max_hres, b1),
+						int16_to_res(f->h264_codecs[i].max_vres, b2));
+		if(0 > r) {
+			return r;
+		}
+
+		p += r;
+		len -= r;
+	}
+
+	p[-2] = '\0';
+
+end:
+	*out = s;
+	s = NULL;
+
+	return 0;
+}
+
+int wfd_audio_format_from_string(const char *s, enum wfd_audio_format *f)
+{
+	enum wfd_audio_format t = WFD_AUDIO_FORMAT_UNKNOWN;
+	if(s) {
+		if(!strncmp("LPCM", s, 4)) {
+			t = WFD_AUDIO_FORMAT_LPCM;
+		}
+		else if(!strncmp("AAC", s, 3)) {
+			t = WFD_AUDIO_FORMAT_AAC;
+		}
+		else if(!strncmp("AC3", s, 3)) {
+			t = WFD_AUDIO_FORMAT_AC3;
+		}
+
+		if(WFD_AUDIO_FORMAT_UNKNOWN != t) {
+			if(f) {
+				*f = t;
+			}
+
+			return 0;
+		}
+	}
+
+	return -EINVAL;
+}
+
+const char * wfd_audio_format_to_string(enum wfd_audio_format f)
+{
+	switch(f) {
+		case WFD_AUDIO_FORMAT_LPCM:
+			return "LPCM";
+		case WFD_AUDIO_FORMAT_AAC:
+			return "AAC";
+		case WFD_AUDIO_FORMAT_AC3:
+			return "AC3";
+		default:
+			return NULL;
+	}
+}
+
+int wfd_audio_codecs_from_string(const char *l,
+			struct wfd_audio_codecs **out)
+{
+	_shl_free_ struct wfd_audio_codecs *c = NULL;
+	_shl_free_ char *f = NULL;
+	int r, i, n_caps;
+	const char *p;
+
+	assert(l);
+
+	if(!strncmp("none", l, 4)) {
+		if(out) {
+			*out = NULL;
+		}
+
+		return 0;
+	}
+
+	for(p = l, n_caps = 1; (p = strchrnul(p, ','), *p); ++ n_caps, ++ p);
+
+	c = malloc(sizeof(struct wfd_audio_codecs)
+					+ (sizeof(c->caps[0]) * n_caps));
+
+	for(i = 0; i < n_caps; i ++) {
+		r = sscanf(l, "%ms %8x %2hhx",
+						&f,
+						&c->caps[i].modes,
+						&c->caps[i].latency);
+		if(r != 3) {
+			return -EINVAL;
+		}
+
+		r = wfd_audio_format_from_string(f, &c->caps[i].format);
+		if(0 > r) {
+			return r;
+		}
+
+		l += 16;
+		if(WFD_AUDIO_FORMAT_LPCM == c->caps[i].format) {
+			++ l;
+		}
+
+		free(f);
+		f = NULL;
+	}
+
+	c->n_caps = n_caps;
+
+	if(out) {
+		*out = c;
+		c = NULL;
+	}
+
+	return 0;
+}
+
+int wfd_audio_codecs_to_string(struct wfd_audio_codecs *c, char **out)
+{
+	_shl_free_ char *s = NULL;
+	char *p;
+	int r, i;
+	size_t len;
+
+	assert(c);
+	assert(out);
+
+	len = c->n_caps * 18;
+	p = s = malloc(len);
+	if(!s) {
+		return -ENOMEM;
+	}
+
+	for(i = 0; i < c->n_caps; i ++) {
+		r = snprintf(p, len, "%s %08X %02hhX, ",
+						wfd_audio_format_to_string(c->caps[i].format),
+						c->caps[i].modes,
+						c->caps[i].latency);
+		if(0 > r) {
+			return r;
+		}
+
+		p += r;
+		len -= r;
+	}
+
+	p[-2] = '\n';
+	*out = s;
+	s = NULL;
+
+	return 0;
 }
