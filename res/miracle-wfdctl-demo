@@ -2,7 +2,6 @@
 PS4="\e[34m> ${0##*/}:\e[0m "
 set -x
 set -e
-trap cleanup EXIT
 
 if (( $# < 1 )); then
     echo Usage: ${0##*/} link-index peer-p2p-mac [nm-link-index]
@@ -144,6 +143,8 @@ peer_disconnect()
 
 killall miracle-wifid &>/dev/null || true
 killall miracle-wfwctl &>/dev/null || true
+
+trap cleanup EXIT
 
 set_prop org.freedesktop.NetworkManager \
     /org/freedesktop/NetworkManager/Devices/"$nm_link_index" \
