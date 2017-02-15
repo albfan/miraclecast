@@ -51,16 +51,26 @@ enum rtsp_message_id
 	RTSP_M16_KEEPALIVE,
 };
 
+enum wfd_stream_id
+{
+	WFD_STREAM_ID_PRIMARY,
+	WFD_STREAM_ID_SECONDARY,
+};
+
 struct rtsp_dispatch_entry
 {
 	union {
 		int (*request)(struct wfd_session *s, struct rtsp_message **out);
 		int (*handle_request)(struct wfd_session *s,
 						struct rtsp_message *req,
-						struct rtsp_message **out_rep);
+						struct rtsp_message **out_rep,
+						enum wfd_session_state *new_state,
+						enum rtsp_message_id *next_request);
 	};
-	int (*handle_reply)(struct wfd_session *s, struct rtsp_message *m);
-	enum rtsp_message_id next_request;
+	int (*handle_reply)(struct wfd_session *s,
+					struct rtsp_message *m,
+					enum wfd_session_state *new_state,
+					enum rtsp_message_id *next_request);
 };
 
 struct wfd_session_vtable
@@ -76,10 +86,20 @@ struct wfd_session
 {
 	enum wfd_session_dir dir;
 	enum wfd_session_state state;
-	uint64_t id;
-	char *url;
-	struct rtsp *rtsp;
+	enum rtsp_message_id last_request;
 	const struct rtsp_dispatch_entry *rtsp_disp_tbl;
+
+	uint64_t id;
+	struct rtsp *rtsp;
+	uint16_t rtp_ports[2];
+	struct wfd_video_formats *vformats;
+	struct wfd_audio_codecs *acodecs;
+
+	struct {
+		enum wfd_stream_id id;
+		char *url;
+		uint16_t rtp_port;
+	} stream;
 
 	bool destructed: 1;
 };
@@ -87,5 +107,8 @@ struct wfd_session
 const char * rtsp_message_id_to_string(enum rtsp_message_id id);
 struct wfd_sink * wfd_out_session_get_sink(struct wfd_session *s);
 int wfd_session_request(struct wfd_session *s, enum rtsp_message_id id);
+int wfd_session_gen_stream_url(struct wfd_session *s,
+				const char *local_addr,
+				enum wfd_stream_id id);
 
 #endif /* MIRACLE_OUT_SESSION_H */
