@@ -22,6 +22,7 @@
 #define WFD_H
 
 #include <assert.h>
+#include <stdlib.h>
 
 #define wfd_sube_is_device_info(w) (WFD_SUBE_ID_DEVICE_INFO == (w)->id)
 
@@ -54,6 +55,14 @@ enum wfd_resolution_standard
 	WFD_RESOLUTION_STANDARD_CEA,
 	WFD_RESOLUTION_STANDARD_VESA,
 	WFD_RESOLUTION_STANDARD_HH,
+};
+
+enum wfd_audio_format
+{
+	WFD_AUDIO_FORMAT_UNKNOWN,
+	WFD_AUDIO_FORMAT_LPCM,
+	WFD_AUDIO_FORMAT_AAC,
+	WFD_AUDIO_FORMAT_AC3
 };
 
 union wfd_sube
@@ -97,6 +106,36 @@ union wfd_sube
 	} extended_caps;
 };
 
+struct wfd_video_formats
+{
+	uint8_t native;
+	uint8_t pref_disp_mode_sup;
+	size_t n_h264_codecs;
+	struct {
+		uint8_t profile;
+		uint8_t level;
+		uint32_t cea_sup;
+		uint32_t vesa_sup;
+		uint32_t hh_sup;
+		uint8_t latency;
+		uint16_t min_slice_size;
+		uint16_t slice_enc_params;
+		uint8_t frame_rate_ctrl_sup;
+		uint16_t max_hres;
+		uint16_t max_vres;
+	} h264_codecs[0];
+};
+
+struct wfd_audio_codecs
+{
+	size_t n_caps;
+	struct {
+		enum wfd_audio_format format;
+		uint32_t modes;
+		uint8_t latency;
+	} caps[0];
+};
+
 struct wfd_resolution
 {
 	uint16_t index;
@@ -117,6 +156,16 @@ int wfd_sube_parse(const char *in, union wfd_sube *out);
 int wfd_sube_parse_with_id(enum wfd_sube_id id,
 				const char *in,
 				union wfd_sube *out);
+int wfd_video_formats_from_string(const char *l,
+			struct wfd_video_formats **out);
+static inline void wfd_video_formats_free(struct wfd_video_formats *f) { free(f); }
+int wfd_video_formats_to_string(struct wfd_video_formats *f, char **out);
+int wfd_audio_codecs_from_string(const char *l,
+			struct wfd_audio_codecs **out);
+static inline void wfd_audio_codecs_free(struct wfd_audio_codecs *c) { free(c); }
+int wfd_audio_codecs_to_string(struct wfd_audio_codecs *c, char **out);
+int wfd_audio_format_from_string(const char *s, enum wfd_audio_format *f);
+const char * wfd_audio_format_to_string(enum wfd_audio_format f);
 
 static inline int wfd_sube_device_get_type(const union wfd_sube *sube)
 {
