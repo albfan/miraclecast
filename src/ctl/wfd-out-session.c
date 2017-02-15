@@ -186,67 +186,104 @@ static int wfd_out_session_initiate_request(struct wfd_session *s)
 	return wfd_session_request(s, RTSP_M1_REQUEST_SINK_OPTIONS);
 }
 
-/*static int wfd_out_session_handle_get_parameter_reply(struct rtsp *bus,*/
-				/*struct rtsp_message *m,*/
-				/*void *userdata)*/
-/*{*/
-	/*struct wfd_session *s = userdata;*/
+static int wfd_out_session_handle_get_parameter_reply(struct wfd_session *s,
+				struct rtsp_message *m,
+				enum wfd_session_state *new_state,
+				enum rtsp_message_id *next_request)
+{
+	struct wfd_video_formats *vformats;
+	struct wfd_audio_codecs *acodecs;
+	uint16_t rtp_ports[2];
+	_shl_free_ char *t = NULL;
+	const char *l;
+	int r;
 
-	/*log_debug("received GET_PARAMETER reply (M3): %s\n",*/
-					/*(char *) rtsp_message_get_raw(m));*/
-	/*if(RTSP_CODE_OK != rtsp_message_get_code(m)) {*/
-		/*wfd_session_end(wfd_session(userdata));*/
-		/*return -EPROTO;*/
-	/*}*/
+	if(!rtsp_message_read(m, "{<&>}", "wfd_video_formats", &l)) {
+		r = wfd_video_formats_from_string(l, &vformats);
+		if(0 > r) {
+			return r;
+		}
 
-	/*return 0;*/
-/*}*/
+		if(s->vformats) {
+			free(s->vformats);
+		}
+		s->vformats = vformats;
+	}
 
-/*static int wfd_out_session_send_get_parameter(sd_event_source *source,*/
-				/*void *userdata)*/
-/*{*/
-	/*struct wfd_session *s = userdata;*/
-	/*_rtsp_message_unref_ struct rtsp_message *m = NULL;*/
-	/*int r = rtsp_message_new_request(s->rtsp,*/
-					/*&m,*/
-					/*"GET_PARAMETER",*/
-					/*s->url);*/
-	/*if (0 > r) {*/
-		/*goto error;*/
-	/*}*/
+	if(!rtsp_message_read(m, "{<&>}", "wfd_audio_codecs", &l)) {
+		r = wfd_audio_codecs_from_string(l, &acodecs);
+		if(0 > r) {
+			return r;
+		}
+		
+		if(s->acodecs) {
+			free(s->acodecs);
+		}
+		s->acodecs = acodecs;
+	}
 
-	/*r = rtsp_message_append(m, "{&}",*/
-			/*"wfd_video_formats\n"*/
-			/*"wfd_audio_codecs\n"*/
-			/*"wfd_client_rtp_ports"*/
-			/*//"wfd_uibc_capability"*/
-	/*);*/
-	/*if (0 > r) {*/
-		/*goto error;*/
-	/*}*/
+	if(!rtsp_message_read(m, "{<&>}", "wfd_client_rtp_ports", &l)) {
+		if(strncmp("RTP/AVP/UDP;unicast", l, 19)) {
+			return -EPROTO;
+		}
 
-	/*rtsp_message_seal(m);*/
+		r = sscanf(l + 20, "%hd %hd %ms",
+						&rtp_ports[0],
+						&rtp_ports[1],
+						&t);
+		if(3 != r) {
+			return -EPROTO;
+		}
 
-	/*r = rtsp_call_async(s->rtsp,*/
-					/*m,*/
-					/*wfd_out_session_handle_get_parameter_reply,*/
-					/*s,*/
-					/*0,*/
-					/*NULL);*/
-	/*if (r < 0) {*/
-		/*goto error;*/
-	/*}*/
+		if(strncmp("mode=play", t, 9)) {
+			return -EPROTO;
+		}
 
-	/*log_debug("Sending GET_PARAMETER (M3): %s\n",*/
-					/*(char *) rtsp_message_get_raw(m));*/
+		if(!rtp_ports[0] && !rtp_ports[1]) {
+			return -EPROTO;
+		}
 
-	/*return 0;*/
+		s->rtp_ports[0] = rtp_ports[0];
+		s->rtp_ports[1] = rtp_ports[1];
+	}
 
-/*error:*/
-	/*wfd_session_end(s);*/
+	*next_request = RTSP_M4_SET_PARAMETER;
 
-	/*return r;*/
-/*}*/
+	return 0;
+}
+
+static int wfd_out_session_request_get_parameter(struct wfd_session *s,
+				struct rtsp_message **out)
+{
+	_rtsp_message_unref_ struct rtsp_message *m = NULL;
+	int r = rtsp_message_new_request(s->rtsp,
+					&m,
+					"GET_PARAMETER",
+					"rtsp://localhost/wfd1.0");
+	if (0 > r) {
+		goto error;
+	}
+
+	r = rtsp_message_append(m, "{&}",
+			"wfd_video_formats\n"
+			"wfd_audio_codecs\n"
+			"wfd_client_rtp_ports"
+			//"wfd_uibc_capability"
+	);
+	if (0 > r) {
+		goto error;
+	}
+
+	*out = m;
+	m = NULL;
+
+	return 0;
+
+error:
+	wfd_session_end(s);
+
+	return r;
+}
 
 static bool find_strv(const char *str, char **strv)
 {
@@ -262,7 +299,9 @@ static bool find_strv(const char *str, char **strv)
 
 static int wfd_out_session_handle_options_request(struct wfd_session *s,
 				struct rtsp_message *req,
-				struct rtsp_message **out_rep)
+				struct rtsp_message **out_rep,
+				enum wfd_session_state *new_state,
+				enum rtsp_message_id *next_request)
 {
 	const char *require;
 	_rtsp_message_unref_ struct rtsp_message *rep = NULL;
@@ -298,11 +337,15 @@ static int wfd_out_session_handle_options_request(struct wfd_session *s,
 	*out_rep = rep;
 	rep = NULL;
 
+	*next_request = RTSP_M3_GET_PARAMETER;
+
 	return 0;
 }
 
-static int wfd_out_session_check_options_reply(struct wfd_session *s,
-				struct rtsp_message *m)
+static int wfd_out_session_handle_options_reply(struct wfd_session *s,
+					struct rtsp_message *m,
+					enum wfd_session_state *new_state,
+					enum rtsp_message_id *next_request)
 {
 	int r;
 	const char *public;
@@ -356,102 +399,198 @@ static int wfd_out_session_request_options(struct wfd_session *s,
 	return 0;
 }
 
-/*static int wfd_out_session_handle_options_request(struct rtsp *bus,*/
-				/*struct rtsp_message *request,*/
-				/*struct wfd_session *s)*/
-/*{*/
-/*}*/
-
-static int wfd_out_session_handle_play_reply(struct rtsp *bus,
-				struct rtsp_message *m,
-				void *userdata)
+static int wfd_out_session_handle_play_request(struct wfd_session *s,
+						struct rtsp_message *req,
+						struct rtsp_message **out_rep,
+						enum wfd_session_state *new_state,
+						enum rtsp_message_id *next_request)
 {
-	/*struct wfd_session *s = userdata;*/
-	/*log_trace("received SETUP (M5) reply: %s",*/
-					/*(char *) rtsp_message_get_raw(m));*/
-
-	/*wfd_out_session_send_play(s);*/
-
-	return 0;
-}
-
-static int wfd_out_session_send_play(struct wfd_session *s)
-{
-	return 0;
-}
-
-static int wfd_out_session_handle_setup_reply(struct rtsp *bus,
-				struct rtsp_message *m,
-				void *userdata)
-{
-	/*struct wfd_session *s = userdata;*/
-	/*log_trace("received SETUP (M5) reply: %s",*/
-					/*(char *) rtsp_message_get_raw(m));*/
-
-	/*wfd_out_session_send_play(s);*/
-
-	return 0;
-}
-
-static int wfd_out_session_handle_set_parameter_reply(struct rtsp *bus,
-				struct rtsp_message *m,
-				void *userdata)
-{
-	/*struct wfd_session *s = userdata;*/
-	/*log_trace("received SET_PARAMETER (M4) reply: %s",*/
-					/*(char *) rtsp_message_get_raw(m));*/
-
-	/*wfd_out_session_send_setup(s);*/
-
-	return 0;
-}
-
-static int wfd_out_session_send_set_parameter_request(struct wfd_session *s)
-{
-	/*_rtsp_message_unref_ struct rtsp_message *req;*/
+	_rtsp_message_unref_ struct rtsp_message *m = NULL;
 	int r;
-	/*const static char tmp[] =*/
-			/*"wfd_video_formats: 38 00 02 10 00000080 00000000 00000000 00 0000 0000 11 none none\n"*/
-			/*//"wfd_audio_codecs: AAC 00000001 00\n"*/
-			/*//"wfd_uibc_capability: input_category_list=GENERIC\n;generic_cap_list=SingleTouch;hidc_cap_list=none;port=5100\n"*/
-			/*//"wfd_uibc_setting: disable\n"*/
-			/*"wfd_presentation_URL: %s/streamid=0 none\n"*/
-			/*"wfd_client_rtp_ports: %s %d %d mode=play";*/
 
-	/*r = rtsp_message_new_request(s->rtsp,*/
-					 /*&req,*/
-					 /*"SET_PARAMETER",*/
-					 /*s->url);*/
-	/*if (r < 0) {*/
-		/*cli_vERR(r);*/
-		/*goto error;*/
-	/*}*/
+	r = rtsp_message_new_reply_for(req,
+					&m,
+					RTSP_CODE_OK,
+					NULL);
+	if(0 > r) {
+		return r;
+	}
+	
+	r = rtsp_message_append(m, "<u>", "Session", (uint32_t) s->id);
+	if(0 > r) {
+		return r;
+	}
 
-	/*snprintf(buf, sizeof(buf), tmp, s->url, s->sink.rtp_ports.profile,*/
-			/*s->sink.rtp_ports.port0, s->sink.rtp_ports.port1);*/
+	*out_rep = m;
+	m = NULL;
 
-	/*r = rtsp_message_append(req, "{&}", buf);*/
-	/*if (r < 0) {*/
-		/*cli_vERR(r);*/
-		/*goto error;*/
-	/*}*/
+	*new_state = WFD_SESSION_STATE_PLAYING;
 
-	/*rtsp_message_seal(req);*/
-	/*cli_debug("OUTGOING (M4): %s\n", rtsp_message_get_raw(req));*/
+	return 0;
+}
 
-	/*r = rtsp_call_async(s->rtsp, req, src_set_parameter_rep_fn, s, 0, NULL);*/
-	/*if (r < 0) {*/
-		/*cli_vERR(r);*/
-		/*goto error;*/
-	/*}*/
+static int wfd_out_session_handle_setup_request(struct wfd_session *s,
+						struct rtsp_message *req,
+						struct rtsp_message **out_rep,
+						enum wfd_session_state *new_state,
+						enum rtsp_message_id *next_request)
+{
+	int r;
+	const char *l;
+	_rtsp_message_unref_ struct rtsp_message *m = NULL;
+	_shl_free_ char *sess = NULL, *trans = NULL;
 
-	/*return 0;*/
+	r = rtsp_message_read(req, "<s>", "Transport", &l);
+	if(0 > r) {
+		return -EPROTO;
+	}
 
-/*error:*/
-	/*wfd_src_close(s);*/
-	/*wfd_fn_src_disconnected(s);*/
+	if(strncmp("RTP/AVP/UDP;unicast;", l, 20)) {
+		return -EPROTO;
+	}
 
-	return r;
+	l += 20;
+
+	if(strncmp("client_port=", l, 12)) {
+		return -EPROTO;
+	}
+
+	l += 12;
+
+	errno = 0;
+	s->stream.rtp_port = strtoul(l, NULL, 10);
+	if(errno) {
+		return -errno;
+	}
+
+	r = rtsp_message_new_reply_for(req,
+					&m,
+					RTSP_CODE_OK,
+					NULL);
+	if(0 > r) {
+		return r;
+	}
+
+	r = asprintf(&sess, "%" PRIu64 ";timeout=30", s->id);
+	if(0 > r) {
+		return r;
+	}
+
+	r = rtsp_message_append(m, "<&>", "Session", sess);
+	if(0 > r) {
+		return r;
+	}
+
+	r = asprintf(&trans, "RTP/AVP/UDP;unicast;client_port=%hd",
+					s->stream.rtp_port);
+	if(0 > r) {
+		return r;
+	}
+
+	r = rtsp_message_append(m, "<&>", "Transport", trans);
+	if(0 > r) {
+		return r;
+	}
+
+	*out_rep = m;
+	m = NULL;
+
+	return 0;
+}
+
+static int wfd_out_session_request_trigger(struct wfd_session *s,
+				struct rtsp_message **out)
+{
+	_rtsp_message_unref_ struct rtsp_message *m = NULL;
+	int r;
+
+	switch(wfd_session_get_state(s)) {
+		case WFD_SESSION_STATE_ESTABLISHED:
+			r = rtsp_message_new_request(s->rtsp,
+							 &m,
+							 "SET_PARAMETER",
+							 wfd_session_get_stream_url(s));
+			if(0 > r) {
+				return r;
+			}
+
+			r = rtsp_message_append(m, "{<s>}",
+							"wfd_trigger_method",
+							"SETUP");
+			if(0 > r) {
+				return r;
+			}
+			break;
+		default:
+			break;
+	}
+
+	if(m) {
+		*out = m;
+		m = NULL;
+	}
+
+	return 0;
+}
+
+static int wfd_out_session_handle_set_parameter_reply(struct wfd_session *s,
+				struct rtsp_message *m,
+				enum wfd_session_state *new_state,
+				enum rtsp_message_id *next_request)
+{
+	*new_state = WFD_SESSION_STATE_ESTABLISHED;
+	*next_request = RTSP_M5_TRIGGER;
+
+	return 0;
+}
+
+static int wfd_out_session_request_set_parameter(struct wfd_session *s,
+				struct rtsp_message **out)
+{
+	_rtsp_message_unref_ struct rtsp_message *m;
+	_shl_free_ char *body = NULL;
+	int r;
+
+	r = wfd_session_gen_stream_url(s,
+					wfd_out_session(s)->sink->peer->local_address,
+					WFD_STREAM_ID_PRIMARY);
+	if(0 > r) {
+		return r;
+	}
+
+	s->stream.id = WFD_STREAM_ID_PRIMARY;
+
+	r = asprintf(&body,
+					"wfd_video_formats: 38 00 02 10 00000080 00000000 00000000 00 0000 0000 11 none none\n"
+					"wfd_audio_codecs: AAC 00000001 00\n"
+					"wfd_presentation_URL: %s none\n"
+					"wfd_client_rtp_ports: %u %u mode=play",
+					//"wfd_uibc_capability: input_category_list=GENERIC\n;generic_cap_list=SingleTouch;hidc_cap_list=none;port=5100\n"
+					//"wfd_uibc_setting: disable\n",
+					wfd_session_get_stream_url(s),
+					s->rtp_ports[0],
+					s->rtp_ports[1]);
+	if(0 > r) {
+		return r;
+	}
+
+	r = rtsp_message_new_request(s->rtsp,
+					&m,
+					"SET_PARAMETER",
+					"rtsp://localhost/wfd1.0");
+	if (0 > r) {
+		return r;
+	}
+
+	r = rtsp_message_append(m, "{&}", body);
+	if (0 > r) {
+		return r;
+	}
+
+	*out = m;
+	m = NULL;
+
+	return 0;
 }
 
 const struct wfd_session_vtable session_vtables[] = {
@@ -467,20 +606,27 @@ const struct wfd_session_vtable session_vtables[] = {
 static const struct rtsp_dispatch_entry out_session_rtsp_disp_tbl[] = {
 	[RTSP_M1_REQUEST_SINK_OPTIONS]	= {
 		.request = wfd_out_session_request_options,
-		.handle_reply = wfd_out_session_check_options_reply
+		.handle_reply = wfd_out_session_handle_options_reply
 	},
 	[RTSP_M2_REQUEST_SRC_OPTIONS]	= {
 		.handle_request = wfd_out_session_handle_options_request
 	},
 	[RTSP_M3_GET_PARAMETER]			= {
+		.request = wfd_out_session_request_get_parameter,
+		.handle_reply = wfd_out_session_handle_get_parameter_reply
 	},
 	[RTSP_M4_SET_PARAMETER]			= {
+		.request = wfd_out_session_request_set_parameter,
+		.handle_reply = wfd_out_session_handle_set_parameter_reply
 	},
 	[RTSP_M5_TRIGGER]				= {
+		.request = wfd_out_session_request_trigger,
 	},
 	[RTSP_M6_SETUP]					= {
+		.handle_request = wfd_out_session_handle_setup_request,
 	},
 	[RTSP_M7_PLAY]					= {
+		.handle_request = wfd_out_session_handle_play_request,
 	},
 	[RTSP_M8_TEARDOWN]				= {
 	},

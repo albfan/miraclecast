@@ -162,7 +162,7 @@ enum wfd_session_state
 {
 	WFD_SESSION_STATE_NULL,
 	WFD_SESSION_STATE_CONNECTING,
-	WFD_SESSION_STATE_CAPS_EXCHAING,
+	WFD_SESSION_STATE_CAPS_EXCHANGING,
 	WFD_SESSION_STATE_ESTABLISHED,
 	WFD_SESSION_STATE_SETING_UP,
 	WFD_SESSION_STATE_PLAYING,
@@ -174,7 +174,7 @@ int wfd_out_session_new(struct wfd_session **out, struct wfd_sink *sink);
 int wfd_session_start(struct wfd_session *s, uint64_t id);
 enum wfd_session_dir wfd_session_get_dir(struct wfd_session *s);
 uint64_t wfd_session_get_id(struct wfd_session *s);
-const char * wfd_session_get_url(struct wfd_session *s);
+const char * wfd_session_get_stream_url(struct wfd_session *s);
 enum wfd_session_state wfd_session_get_state(struct wfd_session *s);
 int wfd_session_is_started(struct wfd_session *s);
 void wfd_session_end(struct wfd_session *s);

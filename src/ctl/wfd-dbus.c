@@ -489,7 +489,7 @@ static int wfd_dbus_session_get_sink(sd_bus *bus,
 	return sd_bus_message_append(reply, "o", sink_path);
 }
 
-static int wfd_dbus_session_get_url(sd_bus *bus,
+static int wfd_dbus_get_session_presentation_url(sd_bus *bus,
 				const char *path,
 				const char *interface,
 				const char *property,
@@ -498,10 +498,12 @@ static int wfd_dbus_session_get_url(sd_bus *bus,
 				sd_bus_error *ret_error)
 {
 	struct wfd_session *s = userdata;
-	return sd_bus_message_append(reply, "s", wfd_session_get_url(s));
+	return sd_bus_message_append(reply,
+					"s",
+					wfd_session_get_stream_url(s));
 }
 
-static int wfd_dbus_session_get_state(sd_bus *bus,
+static int wfd_dbus_get_session_state(sd_bus *bus,
 				const char *path,
 				const char *interface,
 				const char *property,
@@ -554,8 +556,8 @@ static const sd_bus_vtable wfd_dbus_session_vtable[] = {
 	SD_BUS_VTABLE_START(0),
 	SD_BUS_METHOD("End", NULL, NULL, wfd_dbus_session_end, 0),
 	SD_BUS_PROPERTY("Sink", "o", wfd_dbus_session_get_sink, 0, SD_BUS_VTABLE_PROPERTY_CONST),
-	SD_BUS_PROPERTY("Url", "o", wfd_dbus_session_get_url, 0, SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
-	SD_BUS_PROPERTY("State", "i", wfd_dbus_session_get_state, 0, SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
+	SD_BUS_PROPERTY("Url", "o", wfd_dbus_get_session_presentation_url, 0, SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
+	SD_BUS_PROPERTY("State", "i", wfd_dbus_get_session_state, 0, SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
 	SD_BUS_VTABLE_END,
 };
 
