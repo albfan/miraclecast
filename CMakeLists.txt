@@ -6,11 +6,7 @@ SET(PACKAGE_NAME miraclecast)
 SET(PACKAGE_VERSION 1)
 SET(PACKAGE_STRING "${PACKAGE_NAME} ${PACKAGE_VERSION}")
 
-set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake
-                      ${CMAKE_MODULE_PATH})
-
-set(CMAKE_C_FLAGS "-std=gnu11 -Wall -fstack-protector-strong ${CMAKE_C_FLAGS}")
-add_definitions(-D_GNU_SOURCE)
+list(APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
 
 SET(BUILD_BINDIR "${CMAKE_INSTALL_PREFIX}/bin")
 OPTION(BUILD_ENABLE_DEBUG "Enable Debug" ON )
@@ -28,6 +24,14 @@ find_package(PkgConfig)
 pkg_check_modules (GLIB2 REQUIRED glib-2.0)
 pkg_check_modules (UDEV REQUIRED libudev)
 pkg_check_modules (SYSTEMD REQUIRED libsystemd)
+
+include(CheckCCompilerFlag)
+check_c_compiler_flag(-fstack-protector-strong HAS_STACK_PROTCTOR_STRONG)
+if(HAS_STACK_PROTCTOR_STRONG)
+	set(CMAKE_C_FLAGS "-fstack-protector-strong ${CMAKE_C_FLAGS}")
+endif()
+set(CMAKE_C_FLAGS "-std=gnu11 -Wall ${CMAKE_C_FLAGS}")
+add_definitions(-D_GNU_SOURCE)
 
 CONFIGURE_FILE(${CMAKE_SOURCE_DIR}/config.h.cmake ${CMAKE_BINARY_DIR}/config.h)
 
