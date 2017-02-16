@@ -19,6 +19,7 @@
 #ifndef MIRACLE_OUT_SESSION_H
 #define MIRACLE_OUT_SESSION_H
 
+#include <unistd.h>
 #include "ctl.h"
 
 #define wfd_out_session(s)		(assert(wfd_is_out_session(s)), (struct wfd_out_session *) (s))
@@ -99,11 +100,13 @@ struct wfd_session
 		enum wfd_stream_id id;
 		char *url;
 		uint16_t rtp_port;
+		pid_t gst;
 	} stream;
 
 	bool destructed: 1;
 };
 
+int wfd_session_init(struct wfd_session *s);
 const char * rtsp_message_id_to_string(enum rtsp_message_id id);
 struct wfd_sink * wfd_out_session_get_sink(struct wfd_session *s);
 int wfd_session_request(struct wfd_session *s, enum rtsp_message_id id);
