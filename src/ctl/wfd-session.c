@@ -124,6 +124,8 @@ void wfd_session_end(struct wfd_session *s)
 
 	log_info("session %lu ended", s->id);
 
+	wfd_session_set_state(s, WFD_SESSION_STATE_TEARING_DOWN);
+
 	(*session_vtables[s->dir].end)(s);
 
 	if(s->rtsp) {
@@ -131,18 +133,24 @@ void wfd_session_end(struct wfd_session *s)
 		s->rtsp = NULL;
 	}
 
-	wfd_video_formats_free(s->vformats);
-	s->vformats = NULL;
-	wfd_audio_codecs_free(s->acodecs);
-	s->acodecs = NULL;
+	if(s->vformats) {
+		wfd_video_formats_free(s->vformats);
+		s->vformats = NULL;
+	}
 
-	free(s->stream.url);
-	s->stream.url = NULL;
+	if(s->acodecs) {
+		wfd_audio_codecs_free(s->acodecs);
+		s->acodecs = NULL;
+	}
 
-	s->last_request = RTSP_M_UNKNOWN;
-	wfd_session_set_state(s, WFD_SESSION_STATE_NULL);
+	if(s->stream.url) {
+		free(s->stream.url);
+		s->stream.url = NULL;
+	}
+
 	s->rtp_ports[0] = 0;
 	s->rtp_ports[1] = 0;
+	s->last_request = RTSP_M_UNKNOWN;
 
 	if(wfd_is_out_session(s)) {
 		wfd_fn_out_session_ended(s);

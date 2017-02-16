@@ -8,5 +8,5 @@ Homepage: https://github.com/derekdai/miraclecast
 
 Package: miraclecast
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}
+Depends: ${shlibs:Depends}, ${misc:Depends}, gstreamer1.0-tools, gstreamer1.0-vaapi
 Description: Connect external monitors to your system via Wifi-Display specification also known as Miracast

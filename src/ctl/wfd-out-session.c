@@ -18,6 +18,8 @@
  */
 #define LOG_SUBSYSTEM "wfd-session"
 
+#include <sys/types.h>
+#include <sys/wait.h>
 #include <arpa/inet.h>
 #include "wfd-session.h"
 #include "shl_log.h"
@@ -171,6 +173,11 @@ static int wfd_out_session_initiate_io(struct wfd_session *s,
 static void wfd_out_session_end(struct wfd_session *s)
 {
 	struct wfd_out_session *os = wfd_out_session(s);
+
+	if(-1 != s->stream.gst) {
+		kill(s->stream.gst, SIGTERM);
+	}
+
 	if(0 <= os->fd) {
 		close(os->fd);
 		os->fd = -1;
@@ -399,6 +406,80 @@ static int wfd_out_session_request_options(struct wfd_session *s,
 	return 0;
 }
 
+static int wfd_out_session_launch_gst(struct wfd_session *s, pid_t *out)
+{
+	sigset_t sigset;
+	char port[10];
+	char * args[] = {
+		"gst-launch-1.0",
+		"-v",
+		"ximagesrc",
+			"use-damage=false",
+			"show-pointer=false",
+			"startx=0",
+			"starty=0",
+			"endx=1279",
+			"endy=719",
+		"!", "vaapipostproc",
+		"!", "video/x-raw,",
+			"format=YV12",
+		"!", "vaapih264enc",
+		/*"!", "video/x-h264,",*/
+			/*"stream-format=byte-steram,",*/
+			/*"profile=high",*/
+		/*"!", "queue",*/
+		"!", "mpegtsmux",
+		"!", "rtpmp2tpay",
+		"!", "udpsink",
+			"host=", wfd_out_session_get_sink(s)->peer->remote_address,
+			"port=", port,
+		NULL
+	};
+
+	snprintf(port, sizeof(port), "%hu", s->stream.rtp_port);
+
+	pid_t p = fork();
+	if(0 > p) {
+		return p;
+	}
+	else if(0 < p) {
+		*out = p;
+		return 0;
+	}
+
+	sigemptyset(&sigset);
+	sigaddset(&sigset, SIGTERM);
+	sigprocmask(SIG_UNBLOCK, &sigset, NULL);
+
+	execvpe(args[0],
+					args,
+					(char *[]) {
+						"XDG_RUNTIME_DIR=/run/user/1000",
+						"GST_DEBUG=3",
+						"DISPLAY=:0",
+						"XAUTHORITY=/run/user/1000/gdm/Xauthority",
+						NULL
+					});
+
+	exit(1);
+}
+
+static int wfd_out_sessoin_handle_gst_term(sd_event_source *source,
+				const siginfo_t *si,
+				void *userdata)
+{
+	struct wfd_session *s = userdata;
+
+	log_trace("gst-launch(%d) terminated", si->si_pid);
+
+	if(WFD_SESSION_STATE_TEARING_DOWN != wfd_session_get_state(s)) {
+		s->stream.gst = -1;
+		wfd_session_end(s);
+	}
+
+	return 0;
+}
+
 static int wfd_out_session_handle_play_request(struct wfd_session *s,
 						struct rtsp_message *req,
 						struct rtsp_message **out_rep,
@@ -407,7 +488,8 @@ static int wfd_out_session_handle_play_request(struct wfd_session *s,
 {
 	_shl_free_ char *v;
 	_rtsp_message_unref_ struct rtsp_message *m = NULL;
-	int r;
+	pid_t gst;
+	int r, status;
 
 	r = rtsp_message_new_reply_for(req,
 					&m,
@@ -431,6 +513,24 @@ static int wfd_out_session_handle_play_request(struct wfd_session *s,
 	if(0 > r) {
 		return r;
 	}
+
+	r = wfd_out_session_launch_gst(s, &gst);
+	if(0 > r) {
+		return r;
+	}
+
+	r = sd_event_add_child(ctl_wfd_get_loop(),
+					NULL,
+					gst, WEXITED,
+					wfd_out_sessoin_handle_gst_term,
+					s);
+	if(0 > r) {
+		kill(gst, SIGKILL);
+		waitpid(gst, &status, WNOHANG);
+		return r;
+	}
+
+	s->stream.gst = gst;
 
 	*out_rep = m;
 	m = NULL;
@@ -572,8 +672,8 @@ static int wfd_out_session_request_set_parameter(struct wfd_session *s,
 	s->stream.id = WFD_STREAM_ID_PRIMARY;
 
 	r = asprintf(&body,
-					"wfd_video_formats: 38 00 02 10 00000080 00000000 00000000 00 0000 0000 11 none none\n"
-					"wfd_audio_codecs: AAC 00000001 00\n"
+					"wfd_video_formats: 00 00 02 10 00001401 00000000 00000000 00 0000 0000 00 none none\n"
+					//"wfd_audio_codecs: AAC 00000001 00\n"
 					"wfd_presentation_URL: %s none\n"
 					"wfd_client_rtp_ports: %u %u mode=play",
 					//"wfd_uibc_capability: input_category_list=GENERIC\n;generic_cap_list=SingleTouch;hidc_cap_list=none;port=5100\n"
