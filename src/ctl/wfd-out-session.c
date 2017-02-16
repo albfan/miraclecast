@@ -405,6 +405,7 @@ static int wfd_out_session_handle_play_request(struct wfd_session *s,
 						enum wfd_session_state *new_state,
 						enum rtsp_message_id *next_request)
 {
+	_shl_free_ char *v;
 	_rtsp_message_unref_ struct rtsp_message *m = NULL;
 	int r;
 
@@ -415,8 +416,18 @@ static int wfd_out_session_handle_play_request(struct wfd_session *s,
 	if(0 > r) {
 		return r;
 	}
+
+	r = asprintf(&v, "%d;timeout=30", s->stream.id);
+	if(0 > r) {
+		return r;
+	}
 	
-	r = rtsp_message_append(m, "<u>", "Session", (uint32_t) s->id);
+	r = rtsp_message_append(m, "<s>", "Session", v);
+	if(0 > r) {
+		return r;
+	}
+
+	r = rtsp_message_append(m, "<s>", "Range", "ntp=now-");
 	if(0 > r) {
 		return r;
 	}
