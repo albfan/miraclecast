@@ -61,7 +61,8 @@ set(miracle-wfdctl_SRCS ctl-cli.c
 						wfd-session.c
 						wfd-out-session.c
 						wfdctl.c
-						wfd.c)
+						wfd.c
+						wfd-arg.c)
 
 include_directories(${CMAKE_BINARY_DIR}
                     ${CMAKE_SOURCE_DIR}/src
