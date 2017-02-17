@@ -367,6 +367,7 @@ static int wfd_session_handle_reply(struct rtsp *bus,
 	enum rtsp_message_id next_request = RTSP_M_UNKNOWN;
 
 	if(!m) {
+		r = 0;
 		goto error;
 	}
 
