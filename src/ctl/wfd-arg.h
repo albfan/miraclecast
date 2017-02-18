@@ -41,6 +41,15 @@
 	.v = (struct wfd_arg[]){_v}		\
 }
 
+#if INT_MAX == INT64_MAX
+#define wfd_arg_i(_v) wfd_arg_i64(_v)
+#define wfd_arg_u(_v) wfd_arg_u64(_v)
+#elif INT_MAX == INT32_MAX
+#define wfd_arg_i(_v) wfd_arg_i32(_v)
+#define wfd_arg_u(_v) wfd_arg_u32(_v)
+#else
+#error unsupported int size
+#endif
 
 #define wfd_arg_type_id(_t) _Generic((_t),	\
 	int8_t: WFD_ARG_I8,						\
