@@ -91,29 +91,39 @@
 	)(_a);									\
 })
 
-#define wfd_arg_getkv(_a, _k, _v) ({				\
+#define wfd_arg_get_dictk(_a, _k) ({				\
 	assert(_a);										\
 	assert(WFD_ARG_DICT == (_a)->type);				\
 	wfd_arg_get((_a)->k, (_k));						\
+})
+
+#define wfd_arg_get_dictv(_a, _v) ({				\
+	assert(_a);										\
+	assert(WFD_ARG_DICT == (_a)->type);				\
 	wfd_arg_get((_a)->v, (_v));						\
 })
 
-#define wfd_arg_list_get(_l, _i, _v) ({		\
-	assert(_l);								\
-	assert((_i) >= 0 && (_i) < (_l)->len);	\
-	struct wfd_arg *arg = (_l)->discrete	\
-					? &(_l)->argv[(_i)]		\
-					: &(_l)->args[(_i)];	\
-	wfd_arg_get(arg, _v);					\
+#define wfd_arg_get_dict(_a, _k, _v) ({				\
+	assert(_a);										\
+	assert(WFD_ARG_DICT == (_a)->type);				\
+	wfd_arg_get_dictk(_a, _k);						\
+	wfd_arg_get_dictv(_a, _v);						\
 })
 
-#define wfd_arg_list_getkv(_l, _i, _k, _v) ({	\
-	assert(_l);									\
-	assert((_i) >= 0 && (_i) < (_l)->len);		\
-	struct wfd_arg *arg = (_l)->discrete		\
-					? &(_l)->argv[(_i)]			\
-					: &(_l)->args[(_i)];		\
-	wfd_arg_getkv(arg, (_k), (_v));				\
+#define wfd_arg_list_get(_l, _i, _v) ({				\
+	wfd_arg_get(wfd_arg_list_at((_l), (_i)), (_v));	\
+})
+
+#define wfd_arg_list_get_dictk(_l, _i, _k) ({				\
+	wfd_arg_get_dictk(wfd_arg_list_at((_l), (_i)), (_k));	\
+})
+
+#define wfd_arg_list_get_dictv(_l, _i, _v) ({				\
+	wfd_arg_get_dictv(wfd_arg_list_at((_l), (_i)), (_v));	\
+})
+
+#define wfd_arg_list_get_dict(_l, _i, _k, _v) ({				\
+	wfd_arg_get_dict(wfd_arg_list_at((_l), (_i)), (_k), (_v));	\
 })
 
 enum wfd_arg_type
