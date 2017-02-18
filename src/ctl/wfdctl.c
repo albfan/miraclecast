@@ -71,14 +71,6 @@ error:
 	return r;
 }
 
-static void ctl_wfd_clear_sink(char **elem, void *ctx)
-{
-	if(*elem == ctx) {
-		return;
-	}
-	wfd_sink_free(wfd_sink_from_htable(elem));
-}
-
 static void ctl_wfd_destroy(struct ctl_wfd *wfd)
 {
 	ctl_wifi_free(wfd->wifi);
@@ -322,9 +314,13 @@ void ctl_fn_peer_new(struct ctl_peer *p)
 	union wfd_sube sube;
 	int r;
 
+	log_debug("new peer %s shows up: '%s'",
+					p->label,
+					p->wfd_subelements);
+
 	r = wfd_sube_parse(p->wfd_subelements, &sube);
 	if(0 > r) {
-		log_debug("invalid subelement: '%s'", p->wfd_subelements);
+		log_debug("peer %s has invalid subelement", p->label);
 		return;
 	}
 
@@ -348,13 +344,21 @@ void ctl_fn_peer_new(struct ctl_peer *p)
 
 		log_info("sink %s added", s->label);
 	}
+
+	if(wfd_sube_device_is_source(&sube)) {
+		log_info("source %s ignired", p->label);
+	}
 }
 
 void ctl_fn_peer_free(struct ctl_peer *p)
 {
 	struct wfd_sink *s;
 	_shl_free_ char *label = NULL;
-	int r = ctl_wfd_remove_sink_by_label(wfd, p->label, &s);
+	int r;
+
+	log_info("peer %s down", p->label);
+
+	r = ctl_wfd_remove_sink_by_label(wfd, p->label, &s);
 	if(!r) {
 		return;
 	}
