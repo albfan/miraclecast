@@ -30,12 +30,6 @@ struct wfd_out_session
 	struct wfd_session parent;
 	struct wfd_sink *sink;
 	int fd;
-
-	bool sink_has_video: 1;
-	bool sink_has_audio: 1;
-	bool sink_has_pref_disp_mode: 1;
-	bool sink_has_3d: 1;
-	bool sink_has_uibc: 1;
 };
 
 static const struct rtsp_dispatch_entry out_session_rtsp_disp_tbl[];
@@ -190,13 +184,13 @@ static void wfd_out_session_distruct(struct wfd_session *s)
 
 static int wfd_out_session_initiate_request(struct wfd_session *s)
 {
-	return wfd_session_request(s, RTSP_M1_REQUEST_SINK_OPTIONS);
+	return wfd_session_request(s,
+					RTSP_M1_REQUEST_SINK_OPTIONS,
+					&(struct wfd_arg_list) wfd_arg_list(wfd_arg_cstr("SETUP")));
 }
 
 static int wfd_out_session_handle_get_parameter_reply(struct wfd_session *s,
-				struct rtsp_message *m,
-				enum wfd_session_state *new_state,
-				enum rtsp_message_id *next_request)
+				struct rtsp_message *m)
 {
 	struct wfd_video_formats *vformats;
 	struct wfd_audio_codecs *acodecs;
@@ -254,12 +248,11 @@ static int wfd_out_session_handle_get_parameter_reply(struct wfd_session *s,
 		s->rtp_ports[1] = rtp_ports[1];
 	}
 
-	*next_request = RTSP_M4_SET_PARAMETER;
-
 	return 0;
 }
 
 static int wfd_out_session_request_get_parameter(struct wfd_session *s,
+				const struct wfd_arg_list *args,
 				struct rtsp_message **out)
 {
 	_rtsp_message_unref_ struct rtsp_message *m = NULL;
@@ -306,9 +299,7 @@ static bool find_strv(const char *str, char **strv)
 
 static int wfd_out_session_handle_options_request(struct wfd_session *s,
 				struct rtsp_message *req,
-				struct rtsp_message **out_rep,
-				enum wfd_session_state *new_state,
-				enum rtsp_message_id *next_request)
+				struct rtsp_message **out_rep)
 {
 	const char *require;
 	_rtsp_message_unref_ struct rtsp_message *rep = NULL;
@@ -344,15 +335,11 @@ static int wfd_out_session_handle_options_request(struct wfd_session *s,
 	*out_rep = rep;
 	rep = NULL;
 
-	*next_request = RTSP_M3_GET_PARAMETER;
-
 	return 0;
 }
 
 static int wfd_out_session_handle_options_reply(struct wfd_session *s,
-					struct rtsp_message *m,
-					enum wfd_session_state *new_state,
-					enum rtsp_message_id *next_request)
+					struct rtsp_message *m)
 {
 	int r;
 	const char *public;
@@ -383,6 +370,7 @@ static int wfd_out_session_handle_options_reply(struct wfd_session *s,
 }
 
 static int wfd_out_session_request_options(struct wfd_session *s,
+				const struct wfd_arg_list *args,
 				struct rtsp_message **out)
 {
 	_rtsp_message_unref_ struct rtsp_message *m = NULL;
@@ -464,7 +452,7 @@ static int wfd_out_session_launch_gst(struct wfd_session *s, pid_t *out)
 	exit(1);
 }
 
-static int wfd_out_sessoin_handle_gst_term(sd_event_source *source,
+static int wfd_out_session_handle_gst_term(sd_event_source *source,
 				const siginfo_t *si,
 				void *userdata)
 {
@@ -482,9 +470,7 @@ static int wfd_out_sessoin_handle_gst_term(sd_event_source *source,
 
 static int wfd_out_session_handle_play_request(struct wfd_session *s,
 						struct rtsp_message *req,
-						struct rtsp_message **out_rep,
-						enum wfd_session_state *new_state,
-						enum rtsp_message_id *next_request)
+						struct rtsp_message **out_rep)
 {
 	_shl_free_ char *v;
 	_rtsp_message_unref_ struct rtsp_message *m = NULL;
@@ -522,7 +508,7 @@ static int wfd_out_session_handle_play_request(struct wfd_session *s,
 	r = sd_event_add_child(ctl_wfd_get_loop(),
 					NULL,
 					gst, WEXITED,
-					wfd_out_sessoin_handle_gst_term,
+					wfd_out_session_handle_gst_term,
 					s);
 	if(0 > r) {
 		kill(gst, SIGKILL);
@@ -535,16 +521,14 @@ static int wfd_out_session_handle_play_request(struct wfd_session *s,
 	*out_rep = m;
 	m = NULL;
 
-	*new_state = WFD_SESSION_STATE_PLAYING;
+	/**new_state = WFD_SESSION_STATE_PLAYING;*/
 
 	return 0;
 }
 
 static int wfd_out_session_handle_setup_request(struct wfd_session *s,
 						struct rtsp_message *req,
-						struct rtsp_message **out_rep,
-						enum wfd_session_state *new_state,
-						enum rtsp_message_id *next_request)
+						struct rtsp_message **out_rep)
 {
 	int r;
 	const char *l;
@@ -610,52 +594,42 @@ static int wfd_out_session_handle_setup_request(struct wfd_session *s,
 }
 
 static int wfd_out_session_request_trigger(struct wfd_session *s,
+				const struct wfd_arg_list *args,
 				struct rtsp_message **out)
 {
 	_rtsp_message_unref_ struct rtsp_message *m = NULL;
 	int r;
+	const char *method;
 
-	switch(wfd_session_get_state(s)) {
-		case WFD_SESSION_STATE_ESTABLISHED:
-			r = rtsp_message_new_request(s->rtsp,
-							 &m,
-							 "SET_PARAMETER",
-							 wfd_session_get_stream_url(s));
-			if(0 > r) {
-				return r;
-			}
+	assert(args);
 
-			r = rtsp_message_append(m, "{<s>}",
-							"wfd_trigger_method",
-							"SETUP");
-			if(0 > r) {
-				return r;
-			}
-			break;
-		default:
-			break;
+	wfd_arg_list_get(args, 0, &method);
+
+	assert(method);
+
+	r = rtsp_message_new_request(s->rtsp,
+					 &m,
+					 "SET_PARAMETER",
+					 wfd_session_get_stream_url(s));
+	if(0 > r) {
+		return r;
 	}
 
-	if(m) {
-		*out = m;
-		m = NULL;
+	r = rtsp_message_append(m, "{<s>}",
+					"wfd_trigger_method",
+					method);
+	if(0 > r) {
+		return r;
 	}
 
-	return 0;
-}
-
-static int wfd_out_session_handle_set_parameter_reply(struct wfd_session *s,
-				struct rtsp_message *m,
-				enum wfd_session_state *new_state,
-				enum rtsp_message_id *next_request)
-{
-	*new_state = WFD_SESSION_STATE_ESTABLISHED;
-	*next_request = RTSP_M5_TRIGGER;
+	*out = m;
+	m = NULL;
 
 	return 0;
 }
 
 static int wfd_out_session_request_set_parameter(struct wfd_session *s,
+				const struct wfd_arg_list *args,
 				struct rtsp_message **out)
 {
 	_rtsp_message_unref_ struct rtsp_message *m;
@@ -715,20 +689,45 @@ const struct wfd_session_vtable session_vtables[] = {
 };
 
 static const struct rtsp_dispatch_entry out_session_rtsp_disp_tbl[] = {
-	[RTSP_M1_REQUEST_SINK_OPTIONS]	= {
+	[RTSP_M1_REQUEST_SINK_OPTIONS] = {
 		.request = wfd_out_session_request_options,
 		.handle_reply = wfd_out_session_handle_options_reply
 	},
-	[RTSP_M2_REQUEST_SRC_OPTIONS]	= {
-		.handle_request = wfd_out_session_handle_options_request
+	[RTSP_M2_REQUEST_SRC_OPTIONS] = {
+		.handle_request = wfd_out_session_handle_options_request,
+		.rule = wfd_arg_list(
+			wfd_arg_dict(
+				wfd_arg_u(WFD_SESSION_ARG_NEXT_REQUEST),
+				wfd_arg_u(RTSP_M3_GET_PARAMETER)
+			),
+		)
 	},
-	[RTSP_M3_GET_PARAMETER]			= {
+	[RTSP_M3_GET_PARAMETER] = {
 		.request = wfd_out_session_request_get_parameter,
-		.handle_reply = wfd_out_session_handle_get_parameter_reply
+		.handle_reply = wfd_out_session_handle_get_parameter_reply,
+		.rule = wfd_arg_list(
+			wfd_arg_dict(
+					wfd_arg_u(WFD_SESSION_ARG_NEXT_REQUEST),
+					wfd_arg_u(RTSP_M4_SET_PARAMETER)
+			),
+		)
 	},
-	[RTSP_M4_SET_PARAMETER]			= {
+	[RTSP_M4_SET_PARAMETER] = {
 		.request = wfd_out_session_request_set_parameter,
-		.handle_reply = wfd_out_session_handle_set_parameter_reply
+		.rule = wfd_arg_list(
+			wfd_arg_dict(
+					wfd_arg_u(WFD_SESSION_ARG_NEXT_REQUEST),
+					wfd_arg_u(RTSP_M5_TRIGGER)
+			),
+			wfd_arg_dict(
+					wfd_arg_u(WFD_SESSION_ARG_NEW_STATE),
+					wfd_arg_u(WFD_SESSION_STATE_ESTABLISHED)
+			),
+			wfd_arg_dict(
+					wfd_arg_u(WFD_SESSION_ARG_REQUEST_ARGS),
+					wfd_arg_arg_list(wfd_arg_cstr("SETUP"))
+			),
+		)
 	},
 	[RTSP_M5_TRIGGER]				= {
 		.request = wfd_out_session_request_trigger,
@@ -758,3 +757,10 @@ static const struct rtsp_dispatch_entry out_session_rtsp_disp_tbl[] = {
 	[RTSP_M16_KEEPALIVE]			= {
 	},
 };
+
+struct X
+{
+	int a;
+	int b;
+};
+

@@ -16,11 +16,12 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with MiracleCast; If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef MIRACLE_OUT_SESSION_H
-#define MIRACLE_OUT_SESSION_H
-
 #include <unistd.h>
 #include "ctl.h"
+#include "wfd-arg.h"
+
+#ifndef CTL_WFD_SESSION_H
+#define CTL_WFD_SESSION_H
 
 #define wfd_out_session(s)		(assert(wfd_is_out_session(s)), (struct wfd_out_session *) (s))
 #define wfd_in_session(s)		(assert(wfd_is_in_session(s)), (struct wfd_in_session *) (s))
@@ -58,20 +59,26 @@ enum wfd_stream_id
 	WFD_STREAM_ID_SECONDARY,
 };
 
+enum wfd_session_arg_id
+{
+	WFD_SESSION_ARG_NEXT_REQUEST,
+	WFD_SESSION_ARG_NEW_STATE,
+	WFD_SESSION_ARG_REQUEST_ARGS,
+};
+
 struct rtsp_dispatch_entry
 {
 	union {
-		int (*request)(struct wfd_session *s, struct rtsp_message **out);
+		int (*request)(struct wfd_session *s,
+						const struct wfd_arg_list *args,
+						struct rtsp_message **out);
 		int (*handle_request)(struct wfd_session *s,
 						struct rtsp_message *req,
-						struct rtsp_message **out_rep,
-						enum wfd_session_state *new_state,
-						enum rtsp_message_id *next_request);
+						struct rtsp_message **out_rep);
 	};
 	int (*handle_reply)(struct wfd_session *s,
-					struct rtsp_message *m,
-					enum wfd_session_state *new_state,
-					enum rtsp_message_id *next_request);
+					struct rtsp_message *m);
+	struct wfd_arg_list rule;
 };
 
 struct wfd_session_vtable
@@ -107,11 +114,15 @@ struct wfd_session
 };
 
 int wfd_session_init(struct wfd_session *s);
-const char * rtsp_message_id_to_string(enum rtsp_message_id id);
-struct wfd_sink * wfd_out_session_get_sink(struct wfd_session *s);
-int wfd_session_request(struct wfd_session *s, enum rtsp_message_id id);
 int wfd_session_gen_stream_url(struct wfd_session *s,
 				const char *local_addr,
 				enum wfd_stream_id id);
+int wfd_session_request(struct wfd_session *s,
+				enum rtsp_message_id id,
+				const struct wfd_arg_list *args);
 
-#endif /* MIRACLE_OUT_SESSION_H */
+struct wfd_sink * wfd_out_session_get_sink(struct wfd_session *s);
+
+const char * rtsp_message_id_to_string(enum rtsp_message_id id);
+
+#endif /* CTL_WFD_SESSION_H */
