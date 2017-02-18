@@ -39,6 +39,7 @@ extern const struct rtsp_dispatch_entry out_session_rtsp_disp_tbl[];
 
 static inline int wfd_session_do_request(struct wfd_session *s,
 				enum rtsp_message_id id,
+				const struct wfd_arg_list *args,
 				struct rtsp_message **out)
 {
 	if(!rtsp_message_id_is_valid(id)) {
@@ -46,15 +47,13 @@ static inline int wfd_session_do_request(struct wfd_session *s,
 	}
 	assert(s->rtsp_disp_tbl[id].request);
 
-	return (*s->rtsp_disp_tbl[id].request)(s, out);
+	return (*s->rtsp_disp_tbl[id].request)(s, args, out);
 }
 
 static inline int wfd_session_do_handle_request(struct wfd_session *s,
 				enum rtsp_message_id id,
 				struct rtsp_message *req,
-				struct rtsp_message **out_rep,
-				enum wfd_session_state *new_state,
-				enum rtsp_message_id *next_request)
+				struct rtsp_message **out_rep)
 {
 	if(!rtsp_message_id_is_valid(id)) {
 		return -EINVAL;
@@ -63,16 +62,12 @@ static inline int wfd_session_do_handle_request(struct wfd_session *s,
 
 	return (*s->rtsp_disp_tbl[id].handle_request)(s,
 					req,
-					out_rep,
-					new_state,
-					next_request);
+					out_rep);
 }
 
 static inline int wfd_session_do_handle_reply(struct wfd_session *s,
 				enum rtsp_message_id id,
-				struct rtsp_message *m,
-				enum wfd_session_state *new_state,
-				enum rtsp_message_id *next_request)
+				struct rtsp_message *m)
 {
 	if(!rtsp_message_id_is_valid(id)) {
 		return -EINVAL;
@@ -82,7 +77,7 @@ static inline int wfd_session_do_handle_reply(struct wfd_session *s,
 		return 0;
 	}
 
-	return (*s->rtsp_disp_tbl[id].handle_reply)(s, m, new_state, next_request);
+	return (*s->rtsp_disp_tbl[id].handle_reply)(s, m);
 }
 
 uint64_t wfd_session_get_id(struct wfd_session *s)
@@ -292,14 +287,51 @@ static enum rtsp_message_id wfd_session_message_to_id(struct wfd_session *s,
 	return RTSP_M_UNKNOWN;
 }
 
+static int wfd_session_post_handle_request_n_reply(struct wfd_session *s,
+                enum rtsp_message_id ror)
+{
+    const struct wfd_arg_list *args = &s->rtsp_disp_tbl[ror].rule;
+	enum rtsp_message_id next_request = RTSP_M_UNKNOWN;
+	enum wfd_session_arg_id arg_id;
+	enum wfd_session_state new_state;
+	const struct wfd_arg_list *req_args;
+	int i;
+
+	if(!args->len) {
+		return 0;
+	}
+
+	for(i = 0; i < args->len; i ++) {
+		wfd_arg_list_get_dictk(args, i, &arg_id);
+		switch(arg_id) {
+			case WFD_SESSION_ARG_NEXT_REQUEST:
+				wfd_arg_list_get_dictv(args, i, &next_request);
+				break;
+			case WFD_SESSION_ARG_NEW_STATE:
+				wfd_arg_list_get_dictv(args, i, &new_state);
+				wfd_session_set_state(s, new_state);
+				break;
+			case WFD_SESSION_ARG_REQUEST_ARGS:
+				wfd_arg_list_get_dictv(args, i, &req_args);
+			default:
+				break;
+		}
+	}
+
+	if(RTSP_M_UNKNOWN != next_request) {
+		return wfd_session_request(s, next_request, req_args);
+	}
+	
+	return 0;
+}
+
 static int wfd_session_handle_request(struct rtsp *bus,
 				struct rtsp_message *m,
 				void *userdata)
 {
 	_rtsp_message_unref_ struct rtsp_message *rep = NULL;
 	struct wfd_session *s = userdata;
-	enum rtsp_message_id id, next_request = RTSP_M_UNKNOWN;
-	enum wfd_session_state new_state = WFD_SESSION_STATE_NULL;
+	enum rtsp_message_id id;
 	int r;
 
 	id = wfd_session_message_to_id(s, m);
@@ -315,9 +347,7 @@ static int wfd_session_handle_request(struct rtsp *bus,
 	r = wfd_session_do_handle_request(s,
 					id,
 					m,
-					&rep,
-					&new_state,
-					&next_request);
+					&rep);
 	if(0 > r) {
 		goto error;
 	}
@@ -336,15 +366,9 @@ static int wfd_session_handle_request(struct rtsp *bus,
 					id,
 					(char *) rtsp_message_get_raw(rep));
 
-	if(WFD_SESSION_STATE_NULL != new_state) {
-		wfd_session_set_state(s, new_state);
-	}
-
-	if(rtsp_message_id_is_valid(next_request)) {
-		r = wfd_session_request(s, next_request);
-		if(0 > r) {
-			goto error;
-		}
+	r = wfd_session_post_handle_request_n_reply(s, id);
+	if(0 > r) {
+		goto error;
 	}
 
 	return 0;
@@ -363,8 +387,6 @@ static int wfd_session_handle_reply(struct rtsp *bus,
 	int r;
 	enum rtsp_message_id id;
 	struct wfd_session *s = userdata;
-	enum wfd_session_state new_state = WFD_SESSION_STATE_NULL;
-	enum rtsp_message_id next_request = RTSP_M_UNKNOWN;
 
 	if(!m) {
 		r = 0;
@@ -383,20 +405,14 @@ static int wfd_session_handle_reply(struct rtsp *bus,
 					id,
 					(char *) rtsp_message_get_raw(m));
 
-	r = wfd_session_do_handle_reply(s, id, m, &new_state, &next_request);
+	r = wfd_session_do_handle_reply(s, id, m);
 	if(0 > r) {
 		goto error;
 	}
 
-	if(WFD_SESSION_STATE_NULL != new_state) {
-		wfd_session_set_state(s, new_state);
-	}
-
-	if(rtsp_message_id_is_valid(next_request)) {
-		r = wfd_session_request(s, next_request);
-		if(0 > r) {
-			goto error;
-		}
+	r = wfd_session_post_handle_request_n_reply(s, id);
+	if(0 > r) {
+		goto error;
 	}
 
 	return 0;
@@ -406,14 +422,16 @@ error:
 	return r;
 }
 
-int wfd_session_request(struct wfd_session *s, enum rtsp_message_id id)
+int wfd_session_request(struct wfd_session *s,
+				enum rtsp_message_id id,
+				const struct wfd_arg_list *args)
 {
 	int r;
 	_rtsp_message_unref_ struct rtsp_message *m = NULL;
 
 	assert(s);
 
-	r = wfd_session_do_request(s, id, &m);
+	r = wfd_session_do_request(s, id, args, &m);
 	if(0 > r) {
 		return r;
 	}
