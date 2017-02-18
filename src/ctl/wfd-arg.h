@@ -24,21 +24,23 @@
 #ifndef CTL_ARG_H
 #define CTL_ARG_H
 
-#define wfd_arg_i8(v) { .type = WFD_ARG_I8, .i8 = (v) }
-#define wfd_arg_u8(v) { .type = WFD_ARG_U8, .u8 = (v) }
-#define wfd_arg_i16(v) { .type = WFD_ARG_I16, .i16 = (v) }
-#define wfd_arg_u16(v) { .type = WFD_ARG_U16, .u16 = (v) }
-#define wfd_arg_i32(v) { .type = WFD_ARG_I32, .i32 = (v) }
-#define wfd_arg_u32(v) { .type = WFD_ARG_U32, .u32 = (v) }
-#define wfd_arg_i64(v) { .type = WFD_ARG_I64, .i64 = (v) }
-#define wfd_arg_u64(v) { .type = WFD_ARG_U64, .u64 = (v) }
-#define wfd_arg_cstr(v) { .type = WFD_ARG_CSTR, .ptr = (v) }
-#define wfd_arg_cptr(v) { .type = WFD_ARG_CPTR, .ptr = (v) }
-#define wfd_arg_dict(_k, _v) { \
-	.type = WFD_ARG_DICT, \
-	.k = (struct wfd_arg[]){_k}, \
-	.v = (struct wfd_arg[]){_v} \
+#define wfd_arg_i8(_v) { .type = WFD_ARG_I8, .i8 = (_v) }
+#define wfd_arg_u8(_v) { .type = WFD_ARG_U8, .u8 = (_v) }
+#define wfd_arg_i16(_v) { .type = WFD_ARG_I16, .i16 = (_v) }
+#define wfd_arg_u16(_v) { .type = WFD_ARG_U16, .u16 = (_v) }
+#define wfd_arg_i32(_v) { .type = WFD_ARG_I32, .i32 = (_v) }
+#define wfd_arg_u32(_v) { .type = WFD_ARG_U32, .u32 = (_v) }
+#define wfd_arg_i64(_v) { .type = WFD_ARG_I64, .i64 = (_v) }
+#define wfd_arg_u64(_v) { .type = WFD_ARG_U64, .u64 = (_v) }
+#define wfd_arg_cstr(_v) { .type = WFD_ARG_CSTR, .ptr = (_v) }
+#define wfd_arg_cptr(_v) { .type = WFD_ARG_CPTR, .ptr = (_v) }
 }
+#define wfd_arg_dict(_k, _v) {		\
+	.type = WFD_ARG_DICT,			\
+	.k = (struct wfd_arg[]){_k},	\
+	.v = (struct wfd_arg[]){_v}		\
+}
+
 
 #define wfd_arg_type_id(_t) _Generic((_t),	\
 	int8_t: WFD_ARG_I8,						\
