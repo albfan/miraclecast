@@ -55,6 +55,14 @@ static inline void wfd_arg_list_free(struct wfd_arg_list *l)
 	free(l);
 }
 
+static inline const struct wfd_arg * wfd_arg_list_at(const struct wfd_arg_list *l,
+				int i)
+{
+	assert(l);
+	assert(i >= 0 && i < l->len);
+	return l->discrete ? &l->argv[i] : &l->args[i];
+}
+
 static inline enum wfd_arg_type wfd_arg_get_type(struct wfd_arg *a)
 {
 	assert(a);
@@ -164,3 +172,21 @@ static inline void wfd_arg_take_ptr(struct wfd_arg *a, void *v, void (*f)(void *
 	*a = (struct wfd_arg) { .type = WFD_ARG_PTR, .ptr = v, .free = f };
 }
 
+static inline void wfd_arg_take_arg_list(struct wfd_arg *a, struct wfd_arg_list *l)
+{
+	assert(a);
+	assert(!a->type || WFD_ARG_ARG_LIST == a->type);
+
+	wfd_arg_free_ptr(a);
+	*a = (struct wfd_arg) { .type = WFD_ARG_ARG_LIST,
+				.ptr = l,
+				.free = (void (*)(void *)) wfd_arg_list_free };
+}
+
+static inline const struct wfd_arg_list * wfd_arg_get_arg_list(const struct wfd_arg *a)
+{
+	assert(a);
+	assert(WFD_ARG_ARG_LIST == a->type);
+
+	return a->ptr;
+}

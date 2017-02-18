@@ -34,6 +34,9 @@
 #define wfd_arg_u64(_v) { .type = WFD_ARG_U64, .u64 = (_v) }
 #define wfd_arg_cstr(_v) { .type = WFD_ARG_CSTR, .ptr = (_v) }
 #define wfd_arg_cptr(_v) { .type = WFD_ARG_CPTR, .ptr = (_v) }
+#define wfd_arg_arg_list(_v) {									\
+				.type = WFD_ARG_ARG_LIST,						\
+				.ptr = &(struct wfd_arg_list) wfd_arg_list(_v)	\
 }
 #define wfd_arg_dict(_k, _v) {		\
 	.type = WFD_ARG_DICT,			\
@@ -61,34 +64,37 @@
 	int64_t: WFD_ARG_I64,					\
 	uint64_t: WFD_ARG_U64,					\
 	const char *: WFD_ARG_CSTR,				\
+	const wfd_arg_list *: WFD_ARG_ARG_LIST,	\
 	char *: WFD_ARG_STR,					\
-	const void *: WFD_ARG_CPTR,				\
-	default: WFD_ARG_PTR)
+	void *: WFD_ARG_PTR,					\
+	default: WFD_ARG_CPTR					\
+)
 
-#define wfd_arg_list(...)							{			\
-	.argv = (struct wfd_arg[]) {								\
-		__VA_ARGS__												\
-	},															\
-	.discrete = true,											\
-	.dynamic = false,											\
-	.len = (sizeof((struct wfd_arg[]){ __VA_ARGS__ })/sizeof(struct wfd_arg)) \
+#define wfd_arg_list(...)							{							\
+	.argv = (struct wfd_arg[]) {												\
+		__VA_ARGS__																\
+	},																			\
+	.discrete = true,															\
+	.dynamic = false,															\
+	.len = (sizeof((struct wfd_arg[]){ __VA_ARGS__ })/sizeof(struct wfd_arg))	\
 }
 
-#define wfd_arg_get(_a, _v) ({				\
-	*(_v) = _Generic((*_v),					\
-		int8_t: wfd_arg_get_i8,				\
-		uint8_t: wfd_arg_get_u8,			\
-		int16_t: wfd_arg_get_i16,			\
-		uint16_t: wfd_arg_get_u16,			\
-		int32_t: wfd_arg_get_i32,			\
-		uint32_t: wfd_arg_get_u32,			\
-		int64_t: wfd_arg_get_i64,			\
-		uint64_t: wfd_arg_get_u64,			\
-		char *: wfd_arg_get_str,			\
-		const char *: wfd_arg_get_cstr,		\
-		const void *: wfd_arg_get_cptr,		\
-		default: wfd_arg_get_ptr			\
-	)(_a);									\
+#define wfd_arg_get(_a, _v) ({								\
+	*(_v) = _Generic(*(_v),									\
+		int8_t: wfd_arg_get_i8,								\
+		uint8_t: wfd_arg_get_u8,							\
+		int16_t: wfd_arg_get_i16,							\
+		uint16_t: wfd_arg_get_u16,							\
+		int32_t: wfd_arg_get_i32,							\
+		uint32_t: wfd_arg_get_u32,							\
+		int64_t: wfd_arg_get_i64,							\
+		uint64_t: wfd_arg_get_u64,							\
+		char *: wfd_arg_get_str,							\
+		const struct wfd_arg_list *: wfd_arg_get_arg_list,	\
+		const char *: wfd_arg_get_cstr,						\
+		void *: wfd_arg_get_ptr,							\
+		default: wfd_arg_get_cptr							\
+	)(_a);													\
 })
 
 #define wfd_arg_get_dictk(_a, _k) ({				\
@@ -142,7 +148,7 @@ enum wfd_arg_type
 	WFD_ARG_PTR,
 	WFD_ARG_CPTR,
 	WFD_ARG_DICT,
-	WFD_ARG_CB,
+	WFD_ARG_ARG_LIST,
 };
 
 struct wfd_arg
@@ -184,6 +190,8 @@ struct wfd_arg_list
 int wfd_arg_list_new(struct wfd_arg_list **out);
 void wfd_arg_list_clear(struct wfd_arg_list *l);
 static inline void wfd_arg_list_free(struct wfd_arg_list *l);
+static inline const struct wfd_arg * wfd_arg_list_at(const struct wfd_arg_list *l,
+				int i);
 
 static inline enum wfd_arg_type wfd_arg_get_type(struct wfd_arg *a);
 static inline void wfd_arg_free_ptr(struct wfd_arg *a);
@@ -225,6 +233,9 @@ static inline void wfd_arg_set_cptr(struct wfd_arg *a, const void * v);
 
 static inline void wfd_arg_take_ptr(struct wfd_arg *a, void *v, void (*f)(void *));
 static inline void * wfd_arg_get_ptr(const struct wfd_arg *a);
+
+static inline void wfd_arg_take_arg_list(struct wfd_arg *a, struct wfd_arg_list *l);
+static inline const struct wfd_arg_list * wfd_arg_get_arg_list(const struct wfd_arg *a);
 
 #include "wfd-arg.inc"
 
