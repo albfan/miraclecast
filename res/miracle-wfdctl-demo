@@ -16,9 +16,8 @@ if [[ ${#2} != 17 ]]; then
     exit 1
 fi
 
-# since this wfd subelement is used for device info, so no wfd subelemnt
-# id needed (eg. 000600101b4400c8 vs 00000600101b4400c8)
-wfd_subelems=000600101c4400c8
+# this wfd_subelems has no ID (00, device info)
+wfd_subelems=000600111c4400c8
 link_index="_3${1:0:1}${1:1}"
 peer_id="${2//:/_3a}_40$1"
 

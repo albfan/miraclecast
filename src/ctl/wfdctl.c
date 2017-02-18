@@ -320,9 +320,9 @@ void ctl_fn_peer_new(struct ctl_peer *p)
 {
 	struct wfd_sink *s;
 	union wfd_sube sube;
-	int r = wfd_sube_parse_with_id(WFD_SUBE_ID_DEVICE_INFO,
-					p->wfd_subelements,
-					&sube);
+	int r;
+
+	r = wfd_sube_parse(p->wfd_subelements, &sube);
 	if(0 > r) {
 		log_debug("invalid subelement: '%s'", p->wfd_subelements);
 		return;

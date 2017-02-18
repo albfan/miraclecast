@@ -27,6 +27,12 @@
 
 typedef int (*wfd_sube_parse_func)(const char *in, union wfd_sube *out);
 
+struct wfd_sube_info
+{
+	wfd_sube_parse_func parser;
+	uint8_t len;
+};
+
 static int wfd_sube_parse_device_info(const char *in, union wfd_sube *out);
 static int wfd_sube_parse_audio_formats(const char *in, union wfd_sube *out);
 static int wfd_sube_parse_video_formats(const char *in, union wfd_sube *out);
@@ -103,11 +109,11 @@ static const struct wfd_resolution resolutions_hh[] = {
 	{11,  848,	480, 60, 1},	/* p60 */
 };
 
-static const wfd_sube_parse_func parse_func_tbl[WFD_SUBE_ID_RESERVED] = {
-	[WFD_SUBE_ID_DEVICE_INFO] =		wfd_sube_parse_device_info,
-	[WFD_SUBE_ID_AUDIO_FORMATS] =		wfd_sube_parse_audio_formats,
-	[WFD_SUBE_ID_VIDEO_FORMATS] =		wfd_sube_parse_video_formats,
-	[WFD_SUBE_ID_WFD_EXT_CAPS] =		wfd_sube_parse_ext_caps,
+static const struct wfd_sube_info parser_tbl[WFD_SUBE_ID_RESERVED] = {
+	[WFD_SUBE_ID_DEVICE_INFO] = { .parser = wfd_sube_parse_device_info, .len = 6 },
+	[WFD_SUBE_ID_AUDIO_FORMATS] = { .parser = wfd_sube_parse_audio_formats, .len = 15 },
+	[WFD_SUBE_ID_VIDEO_FORMATS] = { .parser = wfd_sube_parse_video_formats, .len = 21 },
+	[WFD_SUBE_ID_WFD_EXT_CAPS] = { .parser = wfd_sube_parse_ext_caps, .len = 2 },
 };
 
 int wfd_get_resolutions(enum wfd_resolution_standard std,
@@ -306,12 +312,7 @@ static int wfd_sube_parse_ext_caps(const char *in, union wfd_sube *out)
 int wfd_sube_parse(const char *in, union wfd_sube *out)
 {
 	uint8_t id;
-	const char *eoi = in + strlen(in);
 	int r;
-
-	if((in + 2) >= eoi) {
-		return -EINVAL;
-	}
 
 	r = sscanf(in, "%2hhx", &id);
 	if(1 > r) {
@@ -326,25 +327,37 @@ int wfd_sube_parse_with_id(enum wfd_sube_id id,
 				union wfd_sube *out)
 {
 	uint16_t len;
-	int r = sscanf(in, "%4hx", &len);
+	union wfd_sube sube;
+	int r;
+   
+	if(SHL_ARRAY_LENGTH(parser_tbl) <= id) {
+		return -EINVAL;
+	}
+
+	r = sscanf(in, "%4hx", &len);
 	if(1 > r) {
 		return -EINVAL;
 	}
 
-	if(SHL_ARRAY_LENGTH(parse_func_tbl) <= id) {
+	if(parser_tbl[id].len != len) {
 		return -EINVAL;
 	}
 
-	if(!parse_func_tbl[id]) {
-		return 0;
+	if(!parser_tbl[id].parser) {
+		return -ENOTSUP;
 	}
 
-	r = (*parse_func_tbl[id])(in + 4, out);
+	r = (*parser_tbl[id].parser)(in + 4, &sube);
 	if(0 > r) {
 		return r;
 	}
 
-	out->id = id;
+	sube.id = id;
+
+	if(out) {
+		*out = sube;
+	}
+
 	return r;
 }
 
