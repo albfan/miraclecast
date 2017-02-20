@@ -314,7 +314,8 @@ void ctl_fn_peer_new(struct ctl_peer *p)
 	union wfd_sube sube;
 	int r;
 
-	log_debug("new peer %s shows up: '%s'",
+	log_debug("new peer %s (%s) shows up, wfd_subelems: '%s'",
+					p->friendly_name,
 					p->label,
 					p->wfd_subelements);
 

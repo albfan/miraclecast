@@ -25,7 +25,7 @@ static inline _t wfd_arg_get_##_s(const struct wfd_arg *a) \
 }
 
 #define wfd_arg_setter(_t, _s, _S) \
-static inline void wfd_arg_set_##_t(struct wfd_arg *a, _t v)		\
+static inline void wfd_arg_set_##_s(struct wfd_arg *a, _t v)		\
 {																	\
 	assert(a);														\
 	assert(!a->type || WFD_ARG_##_S == a->type);					\
