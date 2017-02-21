@@ -454,12 +454,55 @@ static int wfd_dbus_sink_get_peer(sd_bus *bus,
 //{
 //	return 0;
 //}
-
-static int wfd_dbus_session_end(sd_bus_message *m,
+static int wfd_dbus_session_resume(sd_bus_message *m,
 				void *userdata,
 				sd_bus_error *ret_error)
 {
-	wfd_session_end(userdata);
+	struct wfd_session *s = userdata;
+	int r;
+
+	if(wfd_session_is_established(s)) {
+		r = wfd_session_resume(s);
+		if(0 > r) {
+			return r;
+		}
+	}
+	else {
+		return -ENOTCONN;
+	}
+
+	return sd_bus_reply_method_return(m, NULL);
+}
+
+static int wfd_dbus_session_pause(sd_bus_message *m,
+				void *userdata,
+				sd_bus_error *ret_error)
+{
+	struct wfd_session *s = userdata;
+	int r;
+
+	if(wfd_session_is_established(s)) {
+		r = wfd_session_pause(s);
+		if(0 > r) {
+			return r;
+		}
+	}
+	else {
+		return -ENOTCONN;
+	}
+
+	return sd_bus_reply_method_return(m, NULL);
+}
+
+static int wfd_dbus_session_teardown(sd_bus_message *m,
+				void *userdata,
+				sd_bus_error *ret_error)
+{
+	struct wfd_session *s = userdata;
+	int r = wfd_session_teardown(s);
+	if(0 > r) {
+		return r;
+	}
 
 	return sd_bus_reply_method_return(m, NULL);
 }
@@ -554,7 +597,9 @@ static const sd_bus_vtable wfd_dbus_sink_vtable[] = {
 
 static const sd_bus_vtable wfd_dbus_session_vtable[] = {
 	SD_BUS_VTABLE_START(0),
-	SD_BUS_METHOD("End", NULL, NULL, wfd_dbus_session_end, 0),
+	SD_BUS_METHOD("Resume", NULL, NULL, wfd_dbus_session_resume, 0),
+	SD_BUS_METHOD("Pause", NULL, NULL, wfd_dbus_session_pause, 0),
+	SD_BUS_METHOD("Teardown", NULL, NULL, wfd_dbus_session_teardown, 0),
 	SD_BUS_PROPERTY("Sink", "o", wfd_dbus_session_get_sink, 0, SD_BUS_VTABLE_PROPERTY_CONST),
 	SD_BUS_PROPERTY("Url", "o", wfd_dbus_get_session_presentation_url, 0, SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
 	SD_BUS_PROPERTY("State", "i", wfd_dbus_get_session_state, 0, SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
