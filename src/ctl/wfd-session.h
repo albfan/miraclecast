@@ -86,6 +86,9 @@ struct wfd_session_vtable
 	int (*initiate_io)(struct wfd_session *s, int *out_fd, uint32_t *out_mask);
 	int (*handle_io)(struct wfd_session *s, int error, int *out_fd);
 	int (*initiate_request)(struct wfd_session *s);
+	int (*resume)(struct wfd_session *);
+	int (*pause)(struct wfd_session *);
+	int (*teardown)(struct wfd_session *);
 	void (*end)(struct wfd_session *s);
 	void (*distruct)(struct wfd_session *s);
 };
@@ -118,6 +121,7 @@ int wfd_session_gen_stream_url(struct wfd_session *s,
 int wfd_session_request(struct wfd_session *s,
 				enum rtsp_message_id id,
 				const struct wfd_arg_list *args);
+void wfd_session_end(struct wfd_session *s);
 
 struct wfd_sink * wfd_out_session_get_sink(struct wfd_session *s);
 

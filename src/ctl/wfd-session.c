@@ -34,8 +34,29 @@
 )
 
 static const char *rtsp_message_names[];
-extern const struct wfd_session_vtable session_vtables[];
 extern const struct rtsp_dispatch_entry out_session_rtsp_disp_tbl[];
+
+extern int wfd_out_session_initiate_io(struct wfd_session *s, int *out_fd, uint32_t *out_mask);
+extern int wfd_out_session_handle_io(struct wfd_session *s, int error, int *out_fd);
+extern int wfd_out_session_initiate_request(struct wfd_session *);
+extern int wfd_out_session_resume(struct wfd_session *);
+extern int wfd_out_session_pause(struct wfd_session *);
+extern int wfd_out_session_teardown(struct wfd_session *);
+extern void wfd_out_session_end(struct wfd_session *);
+extern void wfd_out_session_distruct(struct wfd_session *);
+
+const struct wfd_session_vtable session_vtbl[] = {
+	[WFD_SESSION_DIR_OUT] = {
+		.initiate_io		= wfd_out_session_initiate_io,
+		.handle_io			= wfd_out_session_handle_io,
+		.initiate_request	= wfd_out_session_initiate_request,
+		.resume				= wfd_out_session_resume,
+		.pause				= wfd_out_session_pause,
+		.teardown			= wfd_out_session_teardown,
+		.end				= wfd_out_session_end,
+		.distruct			= wfd_out_session_distruct,
+	}
+};
 
 static inline int wfd_session_do_request(struct wfd_session *s,
 				enum rtsp_message_id id,
@@ -45,7 +66,11 @@ static inline int wfd_session_do_request(struct wfd_session *s,
 	if(!rtsp_message_id_is_valid(id)) {
 		return -EINVAL;
 	}
-	assert(s->rtsp_disp_tbl[id].request);
+
+	if(!s->rtsp_disp_tbl[id].request) {
+		log_warning("!!! request not implemented !!!");
+		return -ENOTSUP;
+	}
 
 	return (*s->rtsp_disp_tbl[id].request)(s, args, out);
 }
@@ -58,7 +83,11 @@ static inline int wfd_session_do_handle_request(struct wfd_session *s,
 	if(!rtsp_message_id_is_valid(id)) {
 		return -EINVAL;
 	}
-	assert(s->rtsp_disp_tbl[id].handle_request);
+
+	if(!s->rtsp_disp_tbl[id].handle_request) {
+		log_warning("!!! request handler not implemented !!!");
+		return -ENOTSUP;
+	}
 
 	return (*s->rtsp_disp_tbl[id].handle_request)(s,
 					req,
@@ -102,11 +131,64 @@ static void wfd_session_set_state(struct wfd_session *s,
 	wfd_fn_session_properties_changed(s, "State");
 }
 
-int wfd_session_is_started(struct wfd_session *s)
+int wfd_session_is_established(struct wfd_session *s)
 {
 	assert(wfd_is_session(s));
 
-	return 0 != s->id;
+	return WFD_SESSION_STATE_ESTABLISHED <= s->state;
+}
+
+int wfd_session_resume(struct wfd_session *s)
+{
+	assert(wfd_is_session(s));
+
+	if(WFD_SESSION_STATE_PLAYING == s->state) {
+		return 0;
+	}
+	else if(WFD_SESSION_STATE_PAUSED != s->state) {
+		return -EINVAL;
+	}
+
+	if(!session_vtbl[s->dir].resume) {
+		return 0;
+	}
+
+	return session_vtbl[s->dir].resume(s);;
+}
+
+int wfd_session_pause(struct wfd_session *s)
+{
+	assert(wfd_is_session(s));
+
+	if(WFD_SESSION_STATE_PAUSED == s->state) {
+		return 0;
+	}
+	else if(WFD_SESSION_STATE_PLAYING != s->state) {
+		return -EINVAL;
+	}
+
+	if(!session_vtbl[s->dir].pause) {
+		return 0;
+	}
+
+	return session_vtbl[s->dir].pause(s);;
+}
+
+int wfd_session_teardown(struct wfd_session *s)
+{
+	assert(wfd_is_session(s));
+
+	if(wfd_session_is_established(s)) {
+		if(!session_vtbl[s->dir].teardown) {
+			return 0;
+		}
+
+		return session_vtbl[s->dir].teardown(s);;
+	}
+
+	wfd_session_end(s);
+
+	return 0;
 }
 
 void wfd_session_end(struct wfd_session *s)
@@ -121,7 +203,7 @@ void wfd_session_end(struct wfd_session *s)
 
 	wfd_session_set_state(s, WFD_SESSION_STATE_NULL);
 
-	(*session_vtables[s->dir].end)(s);
+	(*session_vtbl[s->dir].end)(s);
 
 	if(s->rtsp) {
 		rtsp_unref(s->rtsp);
@@ -160,8 +242,8 @@ void wfd_session_free(struct wfd_session *s)
 
 	wfd_session_end(s);
 
-	if(session_vtables[s->dir].distruct) {
-		(*session_vtables[s->dir].distruct)(s);
+	if(session_vtbl[s->dir].distruct) {
+		(*session_vtbl[s->dir].distruct)(s);
 	}
 
 	free(s);
@@ -479,7 +561,7 @@ static int wfd_session_handle_io(sd_event_source *source,
 	}
 
 	if (mask & EPOLLIN || mask & EPOLLOUT) {
-		r = (*session_vtables[s->dir].handle_io)(s, err, &conn);
+		r = (*session_vtbl[s->dir].handle_io)(s, err, &conn);
 		if(0 > r) {
 			goto end;
 		}
@@ -506,7 +588,7 @@ static int wfd_session_handle_io(sd_event_source *source,
 
 		wfd_session_set_state(s, WFD_SESSION_STATE_CAPS_EXCHANGING);
 
-		r = (*session_vtables[s->dir].initiate_request)(s);
+		r = (*session_vtbl[s->dir].initiate_request)(s);
 	}
 
 	if(mask & EPOLLHUP) {
@@ -530,11 +612,11 @@ int wfd_session_start(struct wfd_session *s, uint64_t id)
 	assert(wfd_is_session(s));
 	assert(id);
 
-	if(wfd_session_is_started(s)) {
+	if(WFD_SESSION_STATE_NULL != s->state) {
 		return -EINPROGRESS;
 	}
 
-	r = (*session_vtables[s->dir].initiate_io)(s, &fd, &mask);
+	r = (*session_vtbl[s->dir].initiate_io)(s, &fd, &mask);
 	if(0 > r) {
 		return r;
 	}
