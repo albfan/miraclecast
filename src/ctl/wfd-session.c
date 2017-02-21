@@ -220,36 +220,36 @@ static enum rtsp_message_id wfd_session_message_to_id(struct wfd_session *s,
 	}
 
 	if(!strcmp(method, "SET_PARAMETER")) {
-		if(0 >= rtsp_message_read(m, "{<>}", "wfd_trigger_method")) {
+		if(!rtsp_message_read(m, "{<>}", "wfd_trigger_method")) {
 			return RTSP_M5_TRIGGER;
 		}
 
-		if(0 >= rtsp_message_read(m, "{<>}", "wfd_route")) {
+		if(!rtsp_message_read(m, "{<>}", "wfd_route")) {
 			return RTSP_M10_SET_ROUTE;
 		}
 
-		if(0 >= rtsp_message_read(m, "{<>}", "wfd_connector_type")) {
+		if(!rtsp_message_read(m, "{<>}", "wfd_connector_type")) {
 			return RTSP_M11_SET_CONNECTOR_TYPE;
 		}
 
-		if(0 >= rtsp_message_read(m, "{<>}", "wfd_standby")) {
+		if(!rtsp_message_read(m, "{<>}", "wfd_standby")) {
 			return RTSP_M12_SET_STANDBY;
 		}
 
-		if(0 >= rtsp_message_read(m, "{<>}", "wfd_idr_request")) {
+		if(!rtsp_message_read(m, "{<>}", "wfd_idr_request")) {
 			return RTSP_M13_REQUEST_IDR;
 		}
 
-		if(0 >= rtsp_message_read(m, "{<>}", "wfd_uibc_capability")) { // && s->url) {
-			return RTSP_M14_ESTABLISH_UIBC;
-		}
-
-		if(0 >= rtsp_message_read(m, "{<>}", "wfd_uibc_capability")) {
+		if(!rtsp_message_read(m, "{<>}", "wfd_uibc_setting")) {
 			return RTSP_M15_ENABLE_UIBC;
 		}
 
 		if(WFD_SESSION_STATE_CAPS_EXCHANGING == s->state) {
 			return RTSP_M4_SET_PARAMETER;
+		}
+
+		if(!rtsp_message_read(m, "{<>}", "wfd_uibc_capability")) {
+			return RTSP_M14_ESTABLISH_UIBC;
 		}
 
 		return RTSP_M_UNKNOWN;
