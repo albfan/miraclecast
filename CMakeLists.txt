@@ -33,6 +33,14 @@ endif()
 set(CMAKE_C_FLAGS "-std=gnu11 -Wall ${CMAKE_C_FLAGS}")
 add_definitions(-D_GNU_SOURCE)
 
+if(CMAKE_COMPILER_IS_GNUCC)
+	execute_process(COMMAND ${CMAKE_C_COMPILER} -dumpversion
+					OUTPUT_VARIABLE GCC_VERSION)
+	if(GCC_VERSION VERSION_LESS 4.9)
+		message(FATAL_ERROR "gcc >= 4.9 is requred")
+	endif()
+endif()
+
 CONFIGURE_FILE(${CMAKE_SOURCE_DIR}/config.h.cmake ${CMAKE_BINARY_DIR}/config.h)
 
 add_subdirectory(src)
