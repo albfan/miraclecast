@@ -119,13 +119,24 @@ void wfd_session_end(struct wfd_session *s)
 
 	log_info("session %lu ended", s->id);
 
-	wfd_session_set_state(s, WFD_SESSION_STATE_TEARING_DOWN);
+	wfd_session_set_state(s, WFD_SESSION_STATE_NULL);
 
 	(*session_vtables[s->dir].end)(s);
 
 	if(s->rtsp) {
 		rtsp_unref(s->rtsp);
 		s->rtsp = NULL;
+	}
+
+	if(wfd_is_out_session(s)) {
+		wfd_fn_out_session_ended(s);
+	}
+}
+
+void wfd_session_free(struct wfd_session *s)
+{
+	if(!s) {
+		return;
 	}
 
 	if(s->vformats) {
@@ -146,19 +157,6 @@ void wfd_session_end(struct wfd_session *s)
 	s->rtp_ports[0] = 0;
 	s->rtp_ports[1] = 0;
 	s->last_request = RTSP_M_UNKNOWN;
-
-	if(wfd_is_out_session(s)) {
-		wfd_fn_out_session_ended(s);
-	}
-}
-
-void wfd_session_free(struct wfd_session *s)
-{
-	if(wfd_session_is_destructed(s)) {
-		return;
-	}
-
-	s->destructed = true;
 
 	wfd_session_end(s);
 
@@ -559,7 +557,7 @@ int wfd_session_start(struct wfd_session *s, uint64_t id)
 	return 0;
 }
 
-void wfd_session_freep(struct wfd_session **s)
+void wfd_session_free_p(struct wfd_session **s)
 {
 	wfd_session_free(*s);
 }

@@ -19,6 +19,8 @@
 #define LOG_SUBSYSTEM "wfd-session"
 
 #include <assert.h>
+#include <time.h>
+#include <systemd/sd-event.h>
 #include "ctl.h"
 #include "wfd-dbus.h"
 
@@ -119,21 +121,43 @@ int wfd_sink_start_session(struct wfd_sink *sink, struct wfd_session **out)
 	return 0;
 }
 
+static int wfd_sink_defered_session_cleanup(sd_event_source *source,
+				uint64_t used,
+				void *userdata)
+{
+	struct wfd_session *s = userdata;
+
+	sd_event_source_set_enabled(source, false);
+
+	ctl_wfd_remove_session_by_id(ctl_wfd_get(),
+					wfd_session_get_id(s),
+					NULL);
+	wfd_session_free(s);
+
+	return 0;
+}
+
 int wfd_fn_out_session_ended(struct wfd_session *s)
 {
 	struct wfd_sink *sink;
+	uint64_t now = 0;
 
 	assert(wfd_is_out_session(s));
 
 	sink = wfd_out_session_get_sink(s);
-	wfd_fn_sink_properties_changed(sink, "Session");
-	ctl_wfd_remove_session_by_id(ctl_wfd_get(),
-					wfd_session_get_id(s),
-					NULL);
 	sink->session = NULL;
-	wfd_session_free(s);
 
-	return 0;
+	wfd_fn_sink_properties_changed(sink, "Session");
+
+	sd_event_now(ctl_wfd_get_loop(), CLOCK_MONOTONIC, &now);
+
+	return sd_event_add_time(ctl_wfd_get_loop(),
+					NULL,
+					CLOCK_MONOTONIC,
+					200 * 1000 + now,
+					0,
+					wfd_sink_defered_session_cleanup,
+					s);
 }
 
 bool wfd_sink_is_session_started(struct wfd_sink *sink)
