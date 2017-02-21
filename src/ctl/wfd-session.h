@@ -109,8 +109,6 @@ struct wfd_session
 		uint16_t rtp_port;
 		pid_t gst;
 	} stream;
-
-	bool destructed: 1;
 };
 
 int wfd_session_init(struct wfd_session *s);

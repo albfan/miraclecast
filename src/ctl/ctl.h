@@ -146,7 +146,7 @@ bool ctl_sink_is_closed(struct ctl_sink *s);
 #define wfd_session_has_id(s)	(0 < wfd_session_get_id(s))
 #define wfd_is_out_session(s)	(WFD_SESSION_DIR_OUT == wfd_session_get_dir(s))
 #define wfd_is_in_session(s)	(WFD_SESSION_DIR_IN == wfd_session_get_dir(s))
-#define _wfd_session_free_ _shl_cleanup_(wfd_session_freep)
+#define _wfd_session_free_ _shl_cleanup_(wfd_session_free_p)
 
 struct wfd_sink;
 struct wfd_session;
@@ -181,7 +181,7 @@ void wfd_session_end(struct wfd_session *s);
 void wfd_session_free(struct wfd_session *s);
 uint64_t wfd_session_get_id(struct wfd_session *s);
 struct wfd_sink * wfd_out_session_get_sink(struct wfd_session *s);
-void wfd_session_freep(struct wfd_session **s);
+void wfd_session_free_p(struct wfd_session **s);
 uint64_t * wfd_session_to_htable(struct wfd_session *s);
 struct wfd_session * wfd_session_from_htable(uint64_t *e);
 

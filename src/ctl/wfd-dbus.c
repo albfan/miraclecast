@@ -473,7 +473,7 @@ static int wfd_dbus_session_get_sink(sd_bus *bus,
 				sd_bus_error *ret_error)
 {
 	struct wfd_session *s = userdata;
-	_shl_free_ char *sink_path;
+	_shl_free_ char *sink_path = NULL;
 	int r;
 
 	if(wfd_session_get_id(s) != WFD_SESSION_DIR_OUT) {
