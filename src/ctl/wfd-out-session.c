@@ -439,15 +439,7 @@ static int wfd_out_session_launch_gst(struct wfd_session *s, pid_t *out)
 	sigaddset(&sigset, SIGTERM);
 	sigprocmask(SIG_UNBLOCK, &sigset, NULL);
 
-	execvpe(args[0],
-					args,
-					(char *[]) {
-						"XDG_RUNTIME_DIR=/run/user/1000",
-						"GST_DEBUG=3",
-						"DISPLAY=:0",
-						"XAUTHORITY=/run/user/1000/gdm/Xauthority",
-						NULL
-					});
+	execvp(args[0], args );
 
 	exit(1);
 }
