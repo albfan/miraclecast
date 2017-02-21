@@ -628,6 +628,16 @@ static int wfd_out_session_request_trigger(struct wfd_session *s,
 	return 0;
 }
 
+static int wfd_out_session_request_not_implement(struct wfd_session *s,
+						struct rtsp_message *req,
+						struct rtsp_message **out_rep)
+{
+	return rtsp_message_new_reply_for(req,
+					out_rep,
+					RTSP_CODE_NOT_IMPLEMENTED,
+					NULL);
+}
+
 static int wfd_out_session_request_set_parameter(struct wfd_session *s,
 				const struct wfd_arg_list *args,
 				struct rtsp_message **out)
@@ -743,16 +753,21 @@ static const struct rtsp_dispatch_entry out_session_rtsp_disp_tbl[] = {
 	[RTSP_M9_PAUSE]					= {
 	},
 	[RTSP_M10_SET_ROUTE]			= {
+		.handle_request = wfd_out_session_request_not_implement
 	},
 	[RTSP_M11_SET_CONNECTOR_TYPE]	= {
+		.handle_request = wfd_out_session_request_not_implement
 	},
 	[RTSP_M12_SET_STANDBY]			= {
+		.handle_request = wfd_out_session_request_not_implement
 	},
 	[RTSP_M13_REQUEST_IDR]			= {
+		.handle_request = wfd_out_session_request_not_implement
 	},
 	[RTSP_M14_ESTABLISH_UIBC]		= {
 	},
 	[RTSP_M15_ENABLE_UIBC]			= {
+		.handle_request = wfd_out_session_request_not_implement
 	},
 	[RTSP_M16_KEEPALIVE]			= {
 	},
