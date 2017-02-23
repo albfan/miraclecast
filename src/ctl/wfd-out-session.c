@@ -30,9 +30,12 @@ struct wfd_out_session
 	struct wfd_session parent;
 	struct wfd_sink *sink;
 	int fd;
+	sd_event_source *gst_term_source;
 };
 
 static const struct rtsp_dispatch_entry out_session_rtsp_disp_tbl[];
+
+#include <unistd.h>
 
 int wfd_out_session_new(struct wfd_session **out, struct wfd_sink *sink)
 {
@@ -164,9 +167,14 @@ int wfd_out_session_initiate_io(struct wfd_session *s,
 
 static void wfd_out_session_kill_gst(struct wfd_session *s)
 {
-	if(-1 != s->stream.gst) {
-		kill(s->stream.gst, SIGTERM);
-		s->stream.gst = -1;
+	pid_t pid;
+	struct wfd_out_session *os = wfd_out_session(s);
+	if(os->gst_term_source) {
+		sd_event_source_get_child_pid(os->gst_term_source, &pid);
+		kill(pid, SIGTERM);
+
+		sd_event_source_set_userdata(os->gst_term_source, NULL);
+		os->gst_term_source = NULL;
 	}
 }
 
@@ -191,20 +199,15 @@ int wfd_out_session_teardown(struct wfd_session *s)
 					&(struct wfd_arg_list) wfd_arg_list(wfd_arg_cstr("TEARDOWN")));
 }
 
-void wfd_out_session_end(struct wfd_session *s)
+void wfd_out_session_destroy(struct wfd_session *s)
 {
 	struct wfd_out_session *os = wfd_out_session(s);
-
-	wfd_out_session_kill_gst(s);
-
 	if(0 <= os->fd) {
 		close(os->fd);
 		os->fd = -1;
 	}
-}
 
-void wfd_out_session_distruct(struct wfd_session *s)
-{
+	wfd_out_session_kill_gst(s);
 }
 
 int wfd_out_session_initiate_request(struct wfd_session *s)
@@ -305,7 +308,6 @@ static int wfd_out_session_request_get_parameter(struct wfd_session *s,
 	return 0;
 
 error:
-	wfd_session_end(s);
 
 	return r;
 }
@@ -425,7 +427,6 @@ static int wfd_out_session_launch_gst(struct wfd_session *s, pid_t *out)
 	char port[10];
 	char * args[] = {
 		"gst-launch-1.0",
-		"-v",
 		"ximagesrc",
 			"use-damage=false",
 			"show-pointer=false",
@@ -473,9 +474,21 @@ static int wfd_out_session_handle_gst_term(sd_event_source *source,
 				const siginfo_t *si,
 				void *userdata)
 {
+	struct wfd_out_session *os = userdata;
+
 	log_trace("gst-launch(%d) terminated", si->si_pid);
 
-	wfd_session_end(userdata);
+	sd_event_source_unref(source);
+
+	if(!os) {
+		return 0;
+	}
+
+	os->gst_term_source = NULL;
+
+	if(WFD_SESSION_STATE_PAUSED != wfd_session(os)->state) {
+		wfd_session_teardown(wfd_session(os));
+	}
 
 	return 0;
 }
@@ -530,7 +543,7 @@ static int wfd_out_session_handle_play_request(struct wfd_session *s,
 						struct rtsp_message *req,
 						struct rtsp_message **out_rep)
 {
-	_shl_free_ char *v;
+	_shl_free_ char *v = NULL;
 	_rtsp_message_unref_ struct rtsp_message *m = NULL;
 	pid_t gst;
 	int r, status;
@@ -564,22 +577,21 @@ static int wfd_out_session_handle_play_request(struct wfd_session *s,
 	}
 
 	r = sd_event_add_child(ctl_wfd_get_loop(),
-					NULL,
+					&wfd_out_session(s)->gst_term_source,
 					gst, WEXITED,
 					wfd_out_session_handle_gst_term,
 					s);
 	if(0 > r) {
 		kill(gst, SIGKILL);
 		waitpid(gst, &status, WNOHANG);
-		return r;
+		wfd_session_teardown(s);
+	}
+	else {
+		*out_rep = m;
+		m = NULL;
 	}
 
-	s->stream.gst = gst;
-
-	*out_rep = m;
-	m = NULL;
-
-	return 0;
+	return r;
 }
 
 static int wfd_out_session_handle_setup_request(struct wfd_session *s,
@@ -698,7 +710,7 @@ static int wfd_out_session_request_set_parameter(struct wfd_session *s,
 				const struct wfd_arg_list *args,
 				struct rtsp_message **out)
 {
-	_rtsp_message_unref_ struct rtsp_message *m;
+	_rtsp_message_unref_ struct rtsp_message *m = NULL;
 	_shl_free_ char *body = NULL;
 	int r;
 

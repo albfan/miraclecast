@@ -22,6 +22,7 @@
 #include <signal.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 #include <systemd/sd-event.h>
 #include "ctl.h"
 #include "wfd.h"
@@ -71,21 +72,25 @@ error:
 	return r;
 }
 
-static void ctl_wfd_destroy(struct ctl_wfd *wfd)
-{
-	ctl_wifi_free(wfd->wifi);
-	wfd->wifi = NULL;
-	shl_htable_clear_str(&wfd->sinks, NULL, NULL);
-	shl_htable_clear_u64(&wfd->sessions, NULL, NULL);
-}
-
 static void ctl_wfd_free(struct ctl_wfd *wfd)
 {
+	int i;
+
 	if(!wfd) {
 		return;
 	}
 
-	ctl_wfd_destroy(wfd);
+	ctl_wifi_free(wfd->wifi);
+	wfd->wifi = NULL;
+	shl_htable_clear_str(&wfd->sinks, NULL, NULL);
+	shl_htable_clear_u64(&wfd->sessions, NULL, NULL);
+
+	for(i = 0; i < SHL_ARRAY_LENGTH(wfd->signal_sources); ++ i) {
+		if(wfd->signal_sources[i]) {
+			sd_event_source_set_enabled(wfd->signal_sources[i], SD_EVENT_OFF);
+			sd_event_source_unref(wfd->signal_sources[i]);
+		}
+	}
 
 	if(wfd->loop) {
 		sd_event_unref(wfd->loop);
@@ -99,7 +104,7 @@ int ctl_wfd_add_sink(struct ctl_wfd *wfd,
 				union wfd_sube *sube,
 				struct wfd_sink **out)
 {
-	_wfd_sink_free_ struct wfd_sink *s;
+	_wfd_sink_free_ struct wfd_sink *s = NULL;
 	int r = shl_htable_lookup_str(&wfd->sinks,
 					p->label,
 					NULL,
@@ -223,7 +228,11 @@ int ctl_wfd_remove_session_by_id(struct ctl_wfd *wfd,
 static int ctl_wfd_fetch_info(sd_event_source *s, void *userdata)
 {
 	struct ctl_wfd *wfd = userdata;
-	int r = ctl_wifi_fetch(wfd->wifi);
+	int r;
+
+	sd_event_source_unref(s);
+   
+	r = ctl_wifi_fetch(wfd->wifi);
 	if(0 > r) {
 		log_warning("failed to fetch information about links and peers: %s",
 						strerror(errno));
@@ -238,7 +247,8 @@ static int ctl_wfd_handle_signal(sd_event_source *s,
 				void *userdata)
 {
 	struct ctl_wfd *wfd = userdata;
-	ctl_wfd_destroy(wfd);
+
+	sd_event_source_set_enabled(s, false);
 
 	return sd_event_exit(wfd->loop, 0);
 }
@@ -246,10 +256,12 @@ static int ctl_wfd_handle_signal(sd_event_source *s,
 static int ctl_wfd_init(struct ctl_wfd *wfd, sd_bus *bus)
 {
 	int i, r;
-	const int signals[] = { SIGINT, SIGHUP, SIGQUIT, SIGTERM };
+	const int signals[SHL_ARRAY_LENGTH(wfd->signal_sources)] = {
+					SIGINT, SIGHUP, SIGQUIT, SIGTERM
+	};
 	struct ctl_wifi *wifi;
 
-	for(i = 0; i < SHL_ARRAY_LENGTH(signals); i ++) {
+	for(i = 0; i < SHL_ARRAY_LENGTH(wfd->signal_sources); i ++) {
 		sigset_t mask;
 		sigemptyset(&mask);
 		sigaddset(&mask, signals[i]);
@@ -259,7 +271,7 @@ static int ctl_wfd_init(struct ctl_wfd *wfd, sd_bus *bus)
 		}
 
 		r = sd_event_add_signal(wfd->loop,
-						NULL,
+						&wfd->signal_sources[i],
 						signals[i],
 						ctl_wfd_handle_signal,
 						wfd);
@@ -284,11 +296,6 @@ static int ctl_wfd_init(struct ctl_wfd *wfd, sd_bus *bus)
 
 end:
 	return r;
-}
-
-int ctl_wfd_run(struct ctl_wfd *wfd)
-{
-	return sd_event_loop(wfd->loop);
 }
 
 /* Callbacks from ctl-src */
@@ -366,12 +373,7 @@ void ctl_fn_peer_free(struct ctl_peer *p)
 
 	label = strdup(s->label);
 
-	r = wfd_fn_sink_free(s);
-	if(0 > r) {
-		log_warning("failed to unpublish removed sink (%s): %s",
-						wfd_sink_get_label(s),
-						strerror(errno));
-	}
+	wfd_fn_sink_free(s);
 
 	wfd_sink_free(s);
 
@@ -417,6 +419,7 @@ void cli_fn_help()
 int main(int argc, char **argv)
 {
 	int r;
+
 	sd_event *loop;
 	sd_bus *bus;
 
@@ -457,25 +460,26 @@ int main(int argc, char **argv)
 	r = wfd_dbus_expose(wfd_dbus);
 	if(0 > r) {
 		log_warning("unabled to publish WFD service: %s", strerror(errno));
-		goto free_ctl_wfd;
+		goto free_wfd_dbus;
 	}
 
-	r = ctl_wfd_run(wfd);
+	r = sd_event_loop(loop);
 	if(0 > r) {
 		log_warning("unabled to keep WFD service running: %s", strerror(errno));
 	}
 
+free_wfd_dbus:
 	wfd_dbus_free(wfd_dbus);
 	wfd_dbus = NULL;
-
 free_ctl_wfd:
 	ctl_wfd_free(wfd);
 	wfd = NULL;
 bus_detach_event:
 	sd_bus_detach_event(bus);
 unref_bus:
-	sd_bus_unref(bus);
+	sd_bus_flush_close_unref(bus);
 unref_loop:
+	sd_event_run(loop, 0);
 	sd_event_unref(loop);
 end:
 	return r < 0 ? EXIT_FAILURE : EXIT_SUCCESS;

@@ -43,7 +43,7 @@ extern int wfd_out_session_resume(struct wfd_session *);
 extern int wfd_out_session_pause(struct wfd_session *);
 extern int wfd_out_session_teardown(struct wfd_session *);
 extern void wfd_out_session_end(struct wfd_session *);
-extern void wfd_out_session_distruct(struct wfd_session *);
+extern void wfd_out_session_destroy(struct wfd_session *);
 
 const struct wfd_session_vtable session_vtbl[] = {
 	[WFD_SESSION_DIR_OUT] = {
@@ -53,8 +53,7 @@ const struct wfd_session_vtable session_vtbl[] = {
 		.resume				= wfd_out_session_resume,
 		.pause				= wfd_out_session_pause,
 		.teardown			= wfd_out_session_teardown,
-		.end				= wfd_out_session_end,
-		.distruct			= wfd_out_session_distruct,
+		.destroy			= wfd_out_session_destroy,
 	}
 };
 
@@ -178,6 +177,9 @@ int wfd_session_teardown(struct wfd_session *s)
 {
 	assert(wfd_is_session(s));
 
+	/* notify and detach from sink */
+	wfd_fn_out_session_ended(s);
+
 	if(wfd_session_is_established(s)) {
 		if(!session_vtbl[s->dir].teardown) {
 			return 0;
@@ -186,39 +188,19 @@ int wfd_session_teardown(struct wfd_session *s)
 		return session_vtbl[s->dir].teardown(s);;
 	}
 
-	wfd_session_end(s);
+	wfd_session_free(s);
 
 	return 0;
-}
-
-void wfd_session_end(struct wfd_session *s)
-{
-	assert(wfd_is_session(s));
-
-	if(WFD_SESSION_STATE_NULL == s->state) {
-		return;
-	}
-
-	log_info("session %lu ended", s->id);
-
-	wfd_session_set_state(s, WFD_SESSION_STATE_NULL);
-
-	(*session_vtbl[s->dir].end)(s);
-
-	if(s->rtsp) {
-		rtsp_unref(s->rtsp);
-		s->rtsp = NULL;
-	}
-
-	if(wfd_is_out_session(s)) {
-		wfd_fn_out_session_ended(s);
-	}
 }
 
 void wfd_session_free(struct wfd_session *s)
 {
 	if(!s) {
 		return;
+	}
+
+	if(session_vtbl[s->dir].destroy) {
+		(*session_vtbl[s->dir].destroy)(s);
 	}
 
 	if(s->vformats) {
@@ -236,15 +218,14 @@ void wfd_session_free(struct wfd_session *s)
 		s->stream.url = NULL;
 	}
 
+	if(s->rtsp) {
+		rtsp_unref(s->rtsp);
+		s->rtsp = NULL;
+	}
+
 	s->rtp_ports[0] = 0;
 	s->rtp_ports[1] = 0;
 	s->last_request = RTSP_M_UNKNOWN;
-
-	wfd_session_end(s);
-
-	if(session_vtbl[s->dir].distruct) {
-		(*session_vtbl[s->dir].distruct)(s);
-	}
 
 	free(s);
 }
@@ -401,6 +382,10 @@ static int wfd_session_post_handle_request_n_reply(struct wfd_session *s,
 	if(RTSP_M_UNKNOWN != next_request) {
 		return wfd_session_request(s, next_request, req_args);
 	}
+
+	if(WFD_SESSION_STATE_TEARING_DOWN == new_state) {
+		wfd_fn_out_session_ended(s);
+	}
 	
 	return 0;
 }
@@ -454,7 +439,7 @@ static int wfd_session_handle_request(struct rtsp *bus,
 	return 0;
 
 error:
-	wfd_session_end(s);
+	wfd_session_teardown(s);
 
 	return r;
 
@@ -498,7 +483,8 @@ static int wfd_session_handle_reply(struct rtsp *bus,
 	return 0;
 
 error:
-	wfd_session_end(s);
+	wfd_session_teardown(s);
+
 	return r;
 }
 
@@ -552,6 +538,7 @@ static int wfd_session_handle_io(sd_event_source *source,
 	_rtsp_unref_ struct rtsp *rtsp = NULL;
 
 	sd_event_source_set_enabled(source, SD_EVENT_OFF);
+	sd_event_source_unref(source);
 
 	if (mask & EPOLLERR) {
 		r = getsockopt(fd, SOL_SOCKET, SO_ERROR, &err, &len);
@@ -597,7 +584,7 @@ static int wfd_session_handle_io(sd_event_source *source,
 
 end:
 	if (0 > r) {
-		wfd_session_end(s);
+		wfd_session_teardown(s);
 	}
 
 	return r;

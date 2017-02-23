@@ -25,7 +25,6 @@
 
 #define wfd_out_session(s)		(assert(wfd_is_out_session(s)), (struct wfd_out_session *) (s))
 #define wfd_in_session(s)		(assert(wfd_is_in_session(s)), (struct wfd_in_session *) (s))
-#define wfd_session_is_destructed(s)	(!(s) || (s)->destructed)
 
 struct wfd_session;
 struct wfd_sink;
@@ -89,8 +88,7 @@ struct wfd_session_vtable
 	int (*resume)(struct wfd_session *);
 	int (*pause)(struct wfd_session *);
 	int (*teardown)(struct wfd_session *);
-	void (*end)(struct wfd_session *s);
-	void (*distruct)(struct wfd_session *s);
+	void (*destroy)(struct wfd_session *s);
 };
 
 struct wfd_session
@@ -110,7 +108,6 @@ struct wfd_session
 		enum wfd_stream_id id;
 		char *url;
 		uint16_t rtp_port;
-		pid_t gst;
 	} stream;
 };
 
