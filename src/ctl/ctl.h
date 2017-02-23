@@ -198,6 +198,8 @@ struct wfd_sink
 	union wfd_sube dev_info;
 	char *label;
 	struct wfd_session *session;
+
+	sd_event_source *session_cleanup_source;
 };
 
 int wfd_sink_new(struct wfd_sink **out,
@@ -237,6 +239,8 @@ struct ctl_wfd
 	struct shl_htable sessions;
 	size_t n_sessions;
 	uint64_t id_pool;
+
+	sd_event_source *signal_sources[4];
 };
 
 struct ctl_wfd * ctl_wfd_get();

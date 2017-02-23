@@ -24,6 +24,34 @@
 #include "ctl.h"
 #include "wfd-dbus.h"
 
+static int wfd_sink_set_session(struct wfd_sink *sink,
+				struct wfd_session *session)
+{
+	int r;
+
+	if(sink->session == session) {
+		return 0;
+	}
+
+	if(session) {
+		r = ctl_wfd_add_session(ctl_wfd_get(), session);
+		if(0 > r) {
+			return r;
+		}
+	}
+	
+	if(sink->session) {
+		ctl_wfd_remove_session_by_id(ctl_wfd_get(),
+						wfd_session_get_id(sink->session),
+						NULL);
+	}
+
+	sink->session = session;
+	wfd_fn_sink_properties_changed(sink, "Session");
+
+	return 0;
+}
+
 int wfd_sink_new(struct wfd_sink **out,
 				struct ctl_peer *peer,
 				union wfd_sube *sube)
@@ -55,12 +83,16 @@ int wfd_sink_new(struct wfd_sink **out,
 
 void wfd_sink_free(struct wfd_sink *sink)
 {
+	struct wfd_session *s;
+
 	if(!sink) {
 		return;
 	}
 
 	if(sink->session) {
-		wfd_session_free(sink->session);
+		s = sink->session;
+		wfd_sink_set_session(sink, NULL);
+		wfd_session_free(s);
 	}
 
 	if(sink->label) {
@@ -107,7 +139,7 @@ int wfd_sink_start_session(struct wfd_sink *sink, struct wfd_session **out)
 		return r;
 	}
 
-	r = ctl_wfd_add_session(ctl_wfd_get(), s);
+	r = wfd_sink_set_session(sink, s);
 	if(0 > r) {
 		return r;
 	}
@@ -121,43 +153,13 @@ int wfd_sink_start_session(struct wfd_sink *sink, struct wfd_session **out)
 	return 0;
 }
 
-static int wfd_sink_defered_session_cleanup(sd_event_source *source,
-				uint64_t used,
-				void *userdata)
-{
-	struct wfd_session *s = userdata;
-
-	sd_event_source_set_enabled(source, false);
-
-	ctl_wfd_remove_session_by_id(ctl_wfd_get(),
-					wfd_session_get_id(s),
-					NULL);
-	wfd_session_free(s);
-
-	return 0;
-}
-
 int wfd_fn_out_session_ended(struct wfd_session *s)
 {
-	struct wfd_sink *sink;
-	uint64_t now = 0;
-
 	assert(wfd_is_out_session(s));
 
-	sink = wfd_out_session_get_sink(s);
-	sink->session = NULL;
+	wfd_sink_set_session(wfd_out_session_get_sink(s), NULL);
 
-	wfd_fn_sink_properties_changed(sink, "Session");
-
-	sd_event_now(ctl_wfd_get_loop(), CLOCK_MONOTONIC, &now);
-
-	return sd_event_add_time(ctl_wfd_get_loop(),
-					NULL,
-					CLOCK_MONOTONIC,
-					200 * 1000 + now,
-					0,
-					wfd_sink_defered_session_cleanup,
-					s);
+	return 0;
 }
 
 bool wfd_sink_is_session_started(struct wfd_sink *sink)
