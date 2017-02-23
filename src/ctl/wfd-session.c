@@ -293,16 +293,16 @@ static enum rtsp_message_id wfd_session_message_to_id(struct wfd_session *s,
 			return RTSP_M11_SET_CONNECTOR_TYPE;
 		}
 
-		if(!rtsp_message_read(m, "{<>}", "wfd_standby")) {
+		if(!rtsp_message_read(m, "{<>}", "wfd_uibc_setting")) {
+			return RTSP_M15_ENABLE_UIBC;
+		}
+
+		if(!strncmp("wfd_standby", rtsp_message_get_body(m), 11)) {
 			return RTSP_M12_SET_STANDBY;
 		}
 
-		if(!rtsp_message_read(m, "{<>}", "wfd_idr_request")) {
+		if(!strncmp("wfd_idr_request", rtsp_message_get_body(m), 15)) {
 			return RTSP_M13_REQUEST_IDR;
-		}
-
-		if(!rtsp_message_read(m, "{<>}", "wfd_uibc_setting")) {
-			return RTSP_M15_ENABLE_UIBC;
 		}
 
 		if(WFD_SESSION_STATE_CAPS_EXCHANGING == s->state) {
@@ -401,6 +401,10 @@ static int wfd_session_handle_request(struct rtsp *bus,
 
 	id = wfd_session_message_to_id(s, m);
 	if(RTSP_M_UNKNOWN == id) {
+		if(m) {
+			log_debug("unable to map request to id: %s",
+							(char *) rtsp_message_get_raw(m));
+		}
 		r = -EPROTO;
 		goto error;
 	}
