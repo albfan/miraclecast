@@ -21,10 +21,17 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <arpa/inet.h>
+#include <unistd.h>
 #include <time.h>
 #include "wfd-session.h"
 #include "shl_log.h"
 #include "rtsp.h"
+
+enum wfd_display_type
+{
+	WFD_DISPLAY_TYPE_UNKNOWN,
+	WFD_DISPLAY_TYPE_X,
+};
 
 struct wfd_out_session
 {
@@ -33,15 +40,59 @@ struct wfd_out_session
 	int fd;
 	sd_event_source *gst_launch_source;
 	sd_event_source *gst_term_source;
+
+	enum wfd_display_type display_type;
+	char *display_name;
+	uint16_t x;
+	uint16_t y;
+	uint16_t width;
+	uint16_t height;
+	enum wfd_resolution_standard std;
+	uint32_t mask;
 };
 
 static const struct rtsp_dispatch_entry out_session_rtsp_disp_tbl[];
 
-#include <unistd.h>
-
-int wfd_out_session_new(struct wfd_session **out, struct wfd_sink *sink)
+int wfd_out_session_new(struct wfd_session **out,
+				struct wfd_sink *sink,
+				const char *display,
+				uint16_t x,
+				uint16_t y,
+				uint16_t width,
+				uint16_t height)
 {
-	struct wfd_out_session *s = calloc(1, sizeof(struct wfd_out_session));
+	_shl_free_ char *display_schema = NULL;
+	_shl_free_ char *display_name = NULL;
+	enum wfd_display_type display_type;
+	struct wfd_out_session *s;
+	enum wfd_resolution_standard std;
+	uint32_t mask;
+	int r;
+
+	r = sscanf(display, "%m[^:]://%ms",
+					&display_schema,
+					&display_name);
+	if(r != 2) {
+		return -EINVAL;
+	}
+
+	if(!strcmp("x", display_schema)) {
+		display_type = WFD_DISPLAY_TYPE_X;
+	}
+	else {
+		return -EINVAL;
+	}
+
+	if(!width || !height) {
+		return -EINVAL;
+	}
+
+	r = vfd_get_mask_from_resolution(width, height, &std, &mask);
+	if(0 > r) {
+		return -EINVAL;
+	}
+	
+	s = calloc(1, sizeof(struct wfd_out_session));
 	if(!s) {
 		return -ENOMEM;
 	}
@@ -50,6 +101,15 @@ int wfd_out_session_new(struct wfd_session **out, struct wfd_sink *sink)
 	wfd_session(s)->rtsp_disp_tbl = out_session_rtsp_disp_tbl;
 	s->fd = -1;
 	s->sink = sink;
+	s->display_type = display_type;
+	s->display_name = display_name;
+	display_name = NULL;
+	s->x = x;
+	s->y = y;
+	s->width = width;
+	s->height = height;
+	s->mask = mask;
+	s->std = std;
 
 	*out = wfd_session(s);
 
@@ -213,6 +273,11 @@ void wfd_out_session_destroy(struct wfd_session *s)
 	if(os->gst_launch_source) {
 		sd_event_source_unref(os->gst_launch_source);
 		os->gst_launch_source = NULL;
+	}
+
+	if(os->display_name) {
+		free(os->display_name);
+		os->display_name = NULL;
 	}
 
 	wfd_out_session_kill_gst(s);
@@ -429,19 +494,27 @@ static int wfd_out_session_request_options(struct wfd_session *s,
 	return 0;
 }
 
+inline static char * uint16_to_str(uint16_t i, char *buf, size_t len)
+{
+	snprintf(buf, len, "%u", i);
+
+	return buf;
+}
+
 static int wfd_out_session_launch_gst(struct wfd_session *s, pid_t *out)
 {
 	sigset_t sigset;
-	char port[10];
+	char x[16], y[16], width[16], height[16], port[16];
+	struct wfd_out_session *os = wfd_out_session(s);
 	char * args[] = {
 		"gst-launch-1.0",
 		"ximagesrc",
 			"use-damage=false",
 			"show-pointer=false",
-			"startx=0",
-			"starty=0",
-			"endx=1279",
-			"endy=719",
+			"startx=", uint16_to_str(os->x, x, sizeof(x)),
+			"starty=", uint16_to_str(os->x, y, sizeof(y)),
+			"endx=", uint16_to_str(os->width - 1, width, sizeof(width)),
+			"endy=", uint16_to_str(os->height - 1, height, sizeof(height)),
 		"!", "vaapipostproc",
 		"!", "video/x-raw,",
 			"format=YV12",
@@ -454,11 +527,9 @@ static int wfd_out_session_launch_gst(struct wfd_session *s, pid_t *out)
 		"!", "rtpmp2tpay",
 		"!", "udpsink",
 			"host=", wfd_out_session_get_sink(s)->peer->remote_address,
-			"port=", port,
+			"port=", uint16_to_str(s->stream.rtp_port, port, sizeof(port)),
 		NULL
 	};
-
-	snprintf(port, sizeof(port), "%hu", s->stream.rtp_port);
 
 	pid_t p = fork();
 	if(0 > p) {
@@ -748,6 +819,7 @@ static int wfd_out_session_request_set_parameter(struct wfd_session *s,
 				const struct wfd_arg_list *args,
 				struct rtsp_message **out)
 {
+	struct wfd_out_session *os = wfd_out_session(s);
 	_rtsp_message_unref_ struct rtsp_message *m = NULL;
 	_shl_free_ char *body = NULL;
 	int r;
@@ -762,12 +834,15 @@ static int wfd_out_session_request_set_parameter(struct wfd_session *s,
 	s->stream.id = WFD_STREAM_ID_PRIMARY;
 
 	r = asprintf(&body,
-					"wfd_video_formats: 00 00 02 10 00001401 00000000 00000000 00 0000 0000 00 none none\n"
+					"wfd_video_formats: 00 00 02 10 %08X %08X %08X 00 0000 0000 00 none none\n"
 					//"wfd_audio_codecs: AAC 00000001 00\n"
 					"wfd_presentation_URL: %s none\n"
 					"wfd_client_rtp_ports: %u %u mode=play",
 					//"wfd_uibc_capability: input_category_list=GENERIC\n;generic_cap_list=SingleTouch;hidc_cap_list=none;port=5100\n"
 					//"wfd_uibc_setting: disable\n",
+					WFD_RESOLUTION_STANDARD_CEA == os->std ? os->mask : 0,
+					WFD_RESOLUTION_STANDARD_VESA == os->std ? os->mask: 0,
+					WFD_RESOLUTION_STANDARD_HH == os->std ? os->mask : 0,
 					wfd_session_get_stream_url(s),
 					s->rtp_ports[0],
 					s->rtp_ports[1]);

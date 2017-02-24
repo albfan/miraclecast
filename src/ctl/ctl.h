@@ -170,7 +170,13 @@ enum wfd_session_state
 	WFD_SESSION_STATE_TEARING_DOWN,
 };
 
-int wfd_out_session_new(struct wfd_session **out, struct wfd_sink *sink);
+int wfd_out_session_new(struct wfd_session **out,
+				struct wfd_sink *sink,
+				const char *display,
+				uint16_t x,
+				uint16_t y,
+				uint16_t width,
+				uint16_t height);
 int wfd_session_start(struct wfd_session *s, uint64_t id);
 enum wfd_session_dir wfd_session_get_dir(struct wfd_session *s);
 uint64_t wfd_session_get_id(struct wfd_session *s);
@@ -211,7 +217,12 @@ void wfd_sink_free(struct wfd_sink *sink);
 const char * wfd_sink_get_label(struct wfd_sink *sink);
 const union wfd_sube * wfd_sink_get_dev_info(struct wfd_sink *sink);
 int wfd_sink_start_session(struct wfd_sink *sink,
-				struct wfd_session **session);
+				struct wfd_session **out,
+				const char *display,
+				uint16_t x,
+				uint16_t y,
+				uint16_t width,
+				uint16_t height);
 void wfd_sink_handle_session_ended(struct wfd_sink *sink);
 bool wfd_sink_is_session_started(struct wfd_sink *sink);
 static inline void wfd_sink_freep(struct wfd_sink **s)
