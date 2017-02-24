@@ -262,6 +262,55 @@ int vfd_get_hh_resolution(uint32_t mask, int *hres, int *vres)
 	return -EINVAL;
 }
 
+int vfd_get_mask_from_resolution(int hres,
+				int vres,
+				enum wfd_resolution_standard *out_std,
+				uint32_t *out_mask)
+{
+	struct {
+		const struct wfd_resolution *entries;
+		size_t n_entries;
+	} tbls[] = {
+		[WFD_RESOLUTION_STANDARD_CEA] =  {
+			resolutions_cea,
+			SHL_ARRAY_LENGTH(resolutions_cea)
+		},
+		[WFD_RESOLUTION_STANDARD_VESA] =  {
+			resolutions_vesa,
+			SHL_ARRAY_LENGTH(resolutions_vesa)
+		},
+		[WFD_RESOLUTION_STANDARD_HH] =  {
+			resolutions_hh,
+			SHL_ARRAY_LENGTH(resolutions_hh)
+		},
+	};
+	enum wfd_resolution_standard std = WFD_RESOLUTION_STANDARD_CEA;
+	uint32_t mask = 0;
+	size_t n;
+
+	for(; std <= WFD_RESOLUTION_STANDARD_HH; ++ std) {
+		for(n = 0; n < tbls[std].n_entries; ++ n) {
+			if(hres == tbls[std].entries[n].hres &&
+							vres == tbls[std].entries[n].vres) {
+				mask |= 1 << n;
+			}
+		}
+
+		if(mask) {
+			if(out_mask) {
+				*out_mask = mask;
+			}
+			if(out_std) {
+				*out_std = std;
+			}
+
+			return 0;
+		}
+	}
+	
+	return -ENOENT;
+}
+
 static int wfd_sube_parse_device_info(const char *in, union wfd_sube *out)
 {
 	int r = sscanf(in, "%4hx%4hx%4hx",

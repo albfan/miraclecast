@@ -376,7 +376,19 @@ static int wfd_dbus_sink_start_session(sd_bus_message *m,
 	struct wfd_sink *sink = userdata;
 	_wfd_session_free_ struct wfd_session *session = NULL;
 	_shl_free_ char *path = NULL;
-	int r = wfd_sink_start_session(sink, &session);
+	char *display = NULL;
+	uint16_t x, y, width, height;
+	int r;
+
+	r = sd_bus_message_read(m, "sqqqq", &display, &x, &y, &width, &height);
+	if(0 > r) {
+		return r;
+	}
+
+	r = wfd_sink_start_session(sink,
+					&session,
+					display,
+					x, y, width, height);
 	if(0 > r) {
 		return r;
 	}
@@ -610,7 +622,7 @@ static const sd_bus_vtable wfd_dbus_vtable[] = {
 
 static const sd_bus_vtable wfd_dbus_sink_vtable[] = {
 	SD_BUS_VTABLE_START(0),
-	SD_BUS_METHOD("StartSession", NULL, "o", wfd_dbus_sink_start_session, 0),
+	SD_BUS_METHOD("StartSession", "sqqqq", "o", wfd_dbus_sink_start_session, 0),
 	/*SD_BUS_PROPERTY("AudioFormats", "a{sv}", wfd_dbus_sink_get_audio_formats, 0, SD_BUS_VTABLE_PROPERTY_CONST),*/
 	/*SD_BUS_PROPERTY("VideoFormats", "a{sv}", wfd_dbus_sink_get_video_formats, 0, SD_BUS_VTABLE_PROPERTY_CONST),*/
 	/*SD_BUS_PROPERTY("HasAudio", "b", wfd_dbus_sink_has_audio, 0, SD_BUS_VTABLE_PROPERTY_CONST),*/
