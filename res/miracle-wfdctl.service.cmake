@@ -8,4 +8,4 @@ Environment=LOG_LEVEL=trace
 ExecStart=@CMAKE_INSTALL_PREFIX@/bin/miracle-wfdctl
 
 [Install]
-Allias=dbus-org.freedesktop.miracle.wfd.service
+Alias=dbus-org.freedesktop.miracle.wfd.service
