@@ -683,11 +683,6 @@ static int wfd_out_session_handle_play_request(struct wfd_session *s,
 		return r;
 	}
 
-	r = rtsp_message_append(m, "<s>", "Range", "ntp=now-");
-	if(0 > r) {
-		return r;
-	}
-
 	r = sd_event_now(ctl_wfd_get_loop(), CLOCK_MONOTONIC, &now);
 	if(0 > r) {
 		return r;
