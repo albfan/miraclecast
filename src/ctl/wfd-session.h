@@ -98,7 +98,7 @@ struct wfd_session
 	enum rtsp_message_id last_request;
 	const struct rtsp_dispatch_entry *rtsp_disp_tbl;
 
-	uint64_t id;
+	unsigned int id;
 	struct rtsp *rtsp;
 	uint16_t rtp_ports[2];
 	struct wfd_video_formats *vformats;

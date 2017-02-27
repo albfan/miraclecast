@@ -235,12 +235,12 @@ enum wfd_session_dir wfd_session_get_dir(struct wfd_session *s)
 	return s->dir;
 }
 
-uint64_t * wfd_session_to_htable(struct wfd_session *s)
+unsigned int * wfd_session_to_htable(struct wfd_session *s)
 {
 	return &s->id;
 }
 
-struct wfd_session * wfd_session_from_htable(uint64_t *e)
+struct wfd_session * wfd_session_from_htable(unsigned int *e)
 {
 	return shl_htable_entry(e, struct wfd_session, id);
 }

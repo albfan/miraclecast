@@ -536,7 +536,7 @@ static int wfd_out_session_launch_gst(struct wfd_session *s, pid_t *out)
 		return p;
 	}
 	else if(0 < p) {
-		log_info("gstreamer (%d) is launched for session %" PRId64,
+		log_info("gstreamer (%d) is launched for session %u",
 						p,
 						s->id);
 
@@ -743,7 +743,7 @@ static int wfd_out_session_handle_setup_request(struct wfd_session *s,
 		return r;
 	}
 
-	r = asprintf(&sess, "%" PRIu64 ";timeout=30", s->id);
+	r = asprintf(&sess, "%X;timeout=30", s->id);
 	if(0 > r) {
 		return r;
 	}

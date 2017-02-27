@@ -165,7 +165,7 @@ end:
 	return r;
 }
 
-uint64_t ctl_wfd_alloc_session_id(struct ctl_wfd *wfd)
+unsigned int ctl_wfd_alloc_session_id(struct ctl_wfd *wfd)
 {
 	return ++wfd->id_pool;
 }
@@ -178,7 +178,7 @@ int ctl_wfd_add_session(struct ctl_wfd *wfd, struct wfd_session *s)
 	assert(s && wfd_session_get_id(s));
 	assert(!ctl_wfd_find_session_by_id(wfd, wfd_session_get_id(s), NULL));
 
-	r = shl_htable_insert_u64(&wfd->sessions, wfd_session_to_htable(s));
+	r = shl_htable_insert_uint(&wfd->sessions, wfd_session_to_htable(s));
 	if(0 > r) {
 		return r;
 	}
@@ -191,11 +191,11 @@ int ctl_wfd_add_session(struct ctl_wfd *wfd, struct wfd_session *s)
 }
 
 int ctl_wfd_find_session_by_id(struct ctl_wfd *wfd,
-				uint64_t id,
+				unsigned int id,
 				struct wfd_session **out)
 {
-	uint64_t *entry;
-	int r = shl_htable_lookup_u64(&wfd->sessions, id, &entry);
+	unsigned int *entry;
+	int r = shl_htable_lookup_uint(&wfd->sessions, id, &entry);
 	if(r && out) {
 		*out = wfd_session_from_htable(entry);
 	}
@@ -204,12 +204,12 @@ int ctl_wfd_find_session_by_id(struct ctl_wfd *wfd,
 }
 
 int ctl_wfd_remove_session_by_id(struct ctl_wfd *wfd,
-				uint64_t id,
+				unsigned int id,
 				struct wfd_session **out)
 {
-	uint64_t *entry;
+	unsigned int *entry;
 	struct wfd_session *s;
-	int r = shl_htable_remove_u64(&wfd->sessions, id, &entry);
+	int r = shl_htable_remove_uint(&wfd->sessions, id, &entry);
 	if(!r) {
 		return 0;
 	}
