@@ -633,6 +633,10 @@ static int wfd_out_session_post_handle_play(sd_event_source *source,
 	sd_event_source_unref(source);
 	wfd_out_session(s)->gst_launch_source = NULL;
 
+	if(getenv("DO_NOT_LAUNCH_GST")) {
+		return 0;
+	}
+
 	r = wfd_out_session_launch_gst(s, &gst);
 	if(0 > r) {
 		return r;
