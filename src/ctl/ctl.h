@@ -190,8 +190,8 @@ void wfd_session_free(struct wfd_session *s);
 uint64_t wfd_session_get_id(struct wfd_session *s);
 struct wfd_sink * wfd_out_session_get_sink(struct wfd_session *s);
 void wfd_session_free_p(struct wfd_session **s);
-uint64_t * wfd_session_to_htable(struct wfd_session *s);
-struct wfd_session * wfd_session_from_htable(uint64_t *e);
+unsigned int * wfd_session_to_htable(struct wfd_session *s);
+struct wfd_session * wfd_session_from_htable(unsigned int *e);
 
 /* wfd sink */
 #define _wfd_sink_free_ _shl_cleanup_(wfd_sink_freep)
@@ -249,7 +249,7 @@ struct ctl_wfd
 	size_t n_sinks;
 	struct shl_htable sessions;
 	size_t n_sessions;
-	uint64_t id_pool;
+	unsigned int id_pool;
 
 	sd_event_source *signal_sources[4];
 };
@@ -260,12 +260,12 @@ int ctl_wfd_find_sink_by_label(struct ctl_wfd *wfd,
 				struct wfd_sink **out);
 int ctl_wfd_add_session(struct ctl_wfd *wfd, struct wfd_session *s);
 int ctl_wfd_find_session_by_id(struct ctl_wfd *wfd,
-				uint64_t id,
+				unsigned int id,
 				struct wfd_session **out);
 int ctl_wfd_remove_session_by_id(struct ctl_wfd *wfd,
-				uint64_t id,
+				unsigned int id,
 				struct wfd_session **out);
-uint64_t ctl_wfd_alloc_session_id(struct ctl_wfd *wfd);
+unsigned int ctl_wfd_alloc_session_id(struct ctl_wfd *wfd);
 static inline struct sd_event * ctl_wfd_get_loop()
 {
 	return ctl_wfd_get()->loop;
