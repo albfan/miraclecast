@@ -510,10 +510,12 @@ int main(int argc, char **argv)
 		log_max_sev = log_parse_arg(getenv("LOG_LEVEL"));
 	}
 
+	gst_init(&argc, &argv);
+
 	loop = g_main_loop_new(NULL, FALSE);
 	if(!loop) {
 		r = -ENOMEM;
-		goto end;
+		goto deinit_gst;
 	}
 
 	r = sd_event_default(&event);
@@ -581,7 +583,8 @@ unref_event:
 	sd_event_unref(event);
 unref_loop:
 	g_main_loop_unref(loop);
-end:
+deinit_gst:
+	gst_deinit();
 	return r < 0 ? EXIT_FAILURE : EXIT_SUCCESS;
 }
 

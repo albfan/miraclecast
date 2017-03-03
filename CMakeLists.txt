@@ -24,6 +24,7 @@ find_package(PkgConfig)
 pkg_check_modules (GLIB2 REQUIRED glib-2.0)
 pkg_check_modules (UDEV REQUIRED libudev)
 pkg_check_modules (SYSTEMD REQUIRED libsystemd)
+pkg_check_modules (GSTREAMER REQUIRED gstreamer-1.0)
 
 include(CheckCCompilerFlag)
 check_c_compiler_flag(-fstack-protector-strong HAS_STACK_PROTCTOR_STRONG)
