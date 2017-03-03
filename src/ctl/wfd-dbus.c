@@ -622,7 +622,7 @@ static const sd_bus_vtable wfd_dbus_vtable[] = {
 
 static const sd_bus_vtable wfd_dbus_sink_vtable[] = {
 	SD_BUS_VTABLE_START(0),
-	SD_BUS_METHOD("StartSession", "sqqqq", "o", wfd_dbus_sink_start_session, 0),
+	SD_BUS_METHOD("StartSession", "sqqqq", "o", wfd_dbus_sink_start_session, SD_BUS_VTABLE_UNPRIVILEGED),
 	/*SD_BUS_PROPERTY("AudioFormats", "a{sv}", wfd_dbus_sink_get_audio_formats, 0, SD_BUS_VTABLE_PROPERTY_CONST),*/
 	/*SD_BUS_PROPERTY("VideoFormats", "a{sv}", wfd_dbus_sink_get_video_formats, 0, SD_BUS_VTABLE_PROPERTY_CONST),*/
 	/*SD_BUS_PROPERTY("HasAudio", "b", wfd_dbus_sink_has_audio, 0, SD_BUS_VTABLE_PROPERTY_CONST),*/
@@ -634,9 +634,9 @@ static const sd_bus_vtable wfd_dbus_sink_vtable[] = {
 
 static const sd_bus_vtable wfd_dbus_session_vtable[] = {
 	SD_BUS_VTABLE_START(0),
-	SD_BUS_METHOD("Resume", NULL, NULL, wfd_dbus_session_resume, 0),
-	SD_BUS_METHOD("Pause", NULL, NULL, wfd_dbus_session_pause, 0),
-	SD_BUS_METHOD("Teardown", NULL, NULL, wfd_dbus_session_teardown, 0),
+	SD_BUS_METHOD("Resume", NULL, NULL, wfd_dbus_session_resume, SD_BUS_VTABLE_UNPRIVILEGED),
+	SD_BUS_METHOD("Pause", NULL, NULL, wfd_dbus_session_pause, SD_BUS_VTABLE_UNPRIVILEGED),
+	SD_BUS_METHOD("Teardown", NULL, NULL, wfd_dbus_session_teardown, SD_BUS_VTABLE_UNPRIVILEGED),
 	SD_BUS_PROPERTY("Sink", "o", wfd_dbus_session_get_sink, 0, SD_BUS_VTABLE_PROPERTY_CONST),
 	SD_BUS_PROPERTY("Url", "o", wfd_dbus_get_session_presentation_url, 0, SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
 	SD_BUS_PROPERTY("State", "i", wfd_dbus_get_session_state, 0, SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
