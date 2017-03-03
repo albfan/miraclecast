@@ -8,9 +8,9 @@ pkg_check_modules (GLIB2 REQUIRED glib-2.0)
 ########### next target ###############
 
 set(miracle-wifictl_SRCS ctl.h
-                         ctl-cli.c
-                         ctl-wifi.c
-                         wifictl.c)
+						 ctl-cli.c
+						 ctl-wifi.c
+						 wifictl.c)
 
 add_executable(miracle-wifictl ${miracle-wifictl_SRCS})
 
@@ -29,12 +29,12 @@ target_link_libraries(miracle-wifictl ${GLIB2_LIBRARIES})
 ########### next target ###############
 
 set(miracle-sinkctl_SRCS ctl.h
-                         ctl-cli.c
-                         ctl-sink.h
-                         ctl-sink.c
-                         ctl-wifi.c
-                         sinkctl.c
-                         wfd.c)
+						 ctl-cli.c
+						 ctl-sink.h
+						 ctl-sink.c
+						 ctl-wifi.c
+						 sinkctl.c
+						 wfd.c)
 
 add_executable(miracle-sinkctl ${miracle-sinkctl_SRCS})
 target_link_libraries(miracle-sinkctl ${GLIB2_LIBRARIES})
@@ -65,7 +65,8 @@ set(miracle-wfdctl_SRCS ctl-cli.c
 						wfd-arg.c)
 
 include_directories(${CMAKE_BINARY_DIR}
-                    ${CMAKE_SOURCE_DIR}/src
+					${GLIB2_INCLUDE_DIRS}
+					${CMAKE_SOURCE_DIR}/src
 					${CMAKE_SOURCE_DIR}/src/shared)
 
 add_executable(miracle-wfdctl ${miracle-wfdctl_SRCS})
@@ -80,7 +81,7 @@ if(READLINE_FOUND)
 	target_link_libraries(miracle-wfdctl ${READLINE_LIBRARY})
 endif(READLINE_FOUND)
 
-target_link_libraries(miracle-wfdctl miracle-shared)
+target_link_libraries(miracle-wfdctl miracle-shared ${GLIB2_LIBRARIES})
 
 ########### install files ###############
 
