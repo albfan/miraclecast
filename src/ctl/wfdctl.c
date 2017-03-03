@@ -24,6 +24,7 @@
 #include <string.h>
 #include <time.h>
 #include <systemd/sd-event.h>
+#include <glib.h>
 #include "ctl.h"
 #include "wfd.h"
 #include "wfd-dbus.h"
@@ -416,11 +417,91 @@ void cli_fn_help()
 {
 }
 
+/*
+ * see: https://lists.freedesktop.org/archives/systemd-devel/2014-August/022329.html
+ **/
+#define SD_SOURCE(p)	((SDSource *) (p))
+
+typedef struct _SDSource SDSource;
+
+struct _SDSource
+{
+	GSource source;
+	sd_event *event;
+	GPollFD pollfd;
+};
+
+static gboolean sd_source_prepare(GSource *source, gint *timeout)
+{
+	return sd_event_prepare(SD_SOURCE(source)->event) > 0 ? TRUE : FALSE;
+}
+
+static gboolean sd_source_check(GSource *source)
+{
+	return sd_event_wait(SD_SOURCE(source)->event, 0) > 0 ? TRUE : FALSE;
+}
+
+static gboolean sd_source_dispatch(GSource *source,
+				GSourceFunc callback,
+				gpointer userdata)
+{
+	return sd_event_dispatch(SD_SOURCE(source)->event) >= 0
+					? G_SOURCE_CONTINUE
+					: G_SOURCE_REMOVE;
+}
+
+static void sd_source_finalize(GSource *source)
+{
+	sd_event_unref(SD_SOURCE(source)->event);
+}
+
+static int sd_source_on_exit(sd_event_source *source, void *userdata)
+{
+	g_main_loop_quit(userdata);
+
+	sd_event_source_set_enabled(source, false);
+	sd_event_source_unref(source);
+
+	return 0;
+}
+
+static int sd_source_attach(GSource *source, GMainLoop *loop)
+{
+	g_source_set_name(source, "sd-event");
+	g_source_add_poll(source, &SD_SOURCE(source)->pollfd);
+	g_source_attach(source, g_main_loop_get_context(loop));
+
+	return sd_event_add_exit(SD_SOURCE(source)->event,
+					NULL,
+					sd_source_on_exit,
+					loop);
+}
+
+GSource * sd_source_new(sd_event *event)
+{
+	static GSourceFuncs funcs = {
+		sd_source_prepare,
+		sd_source_check,
+		sd_source_dispatch,
+		sd_source_finalize,
+	};
+	GSource *s = g_source_new(&funcs, sizeof(SDSource));
+	if(s) {
+		SD_SOURCE(s)->event = sd_event_ref(event);
+		SD_SOURCE(s)->pollfd.fd = sd_event_get_fd(event);
+		SD_SOURCE(s)->pollfd.events = G_IO_IN | G_IO_HUP;
+	}
+
+	return s;
+}
+
 int main(int argc, char **argv)
 {
 	int r;
 
-	sd_event *loop;
+	GMainLoop *loop;
+	GSource *source;
+	sd_event *event;
 	sd_bus *bus;
 
 	setlocale(LC_ALL, "");
@@ -429,30 +510,47 @@ int main(int argc, char **argv)
 		log_max_sev = log_parse_arg(getenv("LOG_LEVEL"));
 	}
 
-	r = sd_event_default(&loop);
-	if(0 > r) {
+	loop = g_main_loop_new(NULL, FALSE);
+	if(!loop) {
+		r = -ENOMEM;
 		goto end;
+	}
+
+	r = sd_event_default(&event);
+	if(0 > r) {
+		goto unref_loop;
+	}
+
+	source = sd_source_new(event);
+	if(!source) {
+		r = -ENOMEM;
+		goto unref_event;
+	}
+
+	r = sd_source_attach(source, loop);
+	if(0 > r) {
+		goto unref_source;
 	}
 
 	r = sd_bus_default_system(&bus);
 	if(0 > r) {
 		log_warning("unabled to connect to system DBus: %s", strerror(errno));
-		goto unref_loop;
+		goto unref_source;
 	}
 
-	r = sd_bus_attach_event(bus, loop, 0);
+	r = sd_bus_attach_event(bus, event, 0);
 	if(0 > r) {
 		log_warning("unabled to attache DBus event source to loop: %s",
 						strerror(errno));
 		goto unref_bus;
 	}
 
-	r = ctl_wfd_new(&wfd, loop, bus);
+	r = ctl_wfd_new(&wfd, event, bus);
 	if(0 > r) {
 		goto bus_detach_event;;
 	}
 
-	r = wfd_dbus_new(&wfd_dbus, loop, bus);
+	r = wfd_dbus_new(&wfd_dbus, event, bus);
 	if(0 > r) {
 		goto free_ctl_wfd;
 	}
@@ -463,10 +561,7 @@ int main(int argc, char **argv)
 		goto free_wfd_dbus;
 	}
 
-	r = sd_event_loop(loop);
-	if(0 > r) {
-		log_warning("unabled to keep WFD service running: %s", strerror(errno));
-	}
+	g_main_loop_run(loop);
 
 free_wfd_dbus:
 	wfd_dbus_free(wfd_dbus);
@@ -478,9 +573,14 @@ bus_detach_event:
 	sd_bus_detach_event(bus);
 unref_bus:
 	sd_bus_flush_close_unref(bus);
+unref_source:
+	g_source_ref(source);
+	g_source_destroy(source);
+unref_event:
+	sd_event_run(event, 0);
+	sd_event_unref(event);
 unref_loop:
-	sd_event_run(loop, 0);
-	sd_event_unref(loop);
+	g_main_loop_unref(loop);
 end:
 	return r < 0 ? EXIT_FAILURE : EXIT_SUCCESS;
 }
