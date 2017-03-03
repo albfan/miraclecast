@@ -57,7 +57,7 @@ set(miracle-wfdctl_SRCS ctl-cli.c
 						wfd-arg.c)
 
 include_directories(${CMAKE_BINARY_DIR}
-					${GLIB2_INCLUDE_DIRS}
+					${GSTREAMER_INCLUDE_DIRS}
 					${CMAKE_SOURCE_DIR}/src
 					${CMAKE_SOURCE_DIR}/src/shared)
 
@@ -73,7 +73,9 @@ if(READLINE_FOUND)
 	target_link_libraries(miracle-wfdctl ${READLINE_LIBRARY})
 endif(READLINE_FOUND)
 
-target_link_libraries(miracle-wfdctl miracle-shared ${GLIB2_LIBRARIES})
+target_link_libraries(miracle-wfdctl
+				miracle-shared
+				${GSTREAMER_LIBRARIES})
 
 ########### install files ###############
 

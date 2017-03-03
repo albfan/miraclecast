@@ -23,6 +23,7 @@
 #include <arpa/inet.h>
 #include <unistd.h>
 #include <time.h>
+#include <gst/gst.h>
 #include "wfd-session.h"
 #include "shl_log.h"
 #include "rtsp.h"
@@ -49,6 +50,8 @@ struct wfd_out_session
 	uint16_t height;
 	enum wfd_resolution_standard std;
 	uint32_t mask;
+
+	GstElement *pipeline;
 };
 
 static const struct rtsp_dispatch_entry out_session_rtsp_disp_tbl[];
@@ -227,20 +230,6 @@ int wfd_out_session_initiate_io(struct wfd_session *s,
 	return 0;
 }
 
-static void wfd_out_session_kill_gst(struct wfd_session *s)
-{
-	pid_t pid;
-	struct wfd_out_session *os = wfd_out_session(s);
-
-	if(os->gst_term_source) {
-		sd_event_source_get_child_pid(os->gst_term_source, &pid);
-		kill(pid, SIGTERM);
-
-		sd_event_source_set_userdata(os->gst_term_source, NULL);
-		os->gst_term_source = NULL;
-	}
-}
-
 int wfd_out_session_resume(struct wfd_session *s)
 {
 	return wfd_session_request(s,
@@ -280,7 +269,11 @@ void wfd_out_session_destroy(struct wfd_session *s)
 		os->display_name = NULL;
 	}
 
-	wfd_out_session_kill_gst(s);
+	if(os->pipeline) {
+		gst_element_set_state(os->pipeline, GST_STATE_NULL);
+		g_object_unref(os->pipeline);
+		os->pipeline = NULL;
+	}
 }
 
 int wfd_out_session_initiate_request(struct wfd_session *s)
@@ -501,13 +494,14 @@ inline static char * uint16_to_str(uint16_t i, char *buf, size_t len)
 	return buf;
 }
 
-static int wfd_out_session_launch_gst(struct wfd_session *s, pid_t *out)
+static int wfd_out_session_create_pipeline(struct wfd_session *s)
 {
-	sigset_t sigset;
 	char x[16], y[16], width[16], height[16], port[16];
 	struct wfd_out_session *os = wfd_out_session(s);
-	char * args[] = {
-		"gst-launch-1.0",
+	GstElement *pipeline;
+	GError *error = NULL;
+	GstStateChangeReturn r;
+	const char * pipeline_desc[] = {
 		"ximagesrc",
 			"use-damage=false",
 			"show-pointer=false",
@@ -519,10 +513,6 @@ static int wfd_out_session_launch_gst(struct wfd_session *s, pid_t *out)
 		"!", "video/x-raw,",
 			"format=YV12",
 		"!", "vaapih264enc",
-		/*"!", "video/x-h264,",*/
-			/*"stream-format=byte-steram,",*/
-			/*"profile=high",*/
-		/*"!", "queue",*/
 		"!", "mpegtsmux",
 		"!", "rtpmp2tpay",
 		"!", "udpsink",
@@ -531,47 +521,22 @@ static int wfd_out_session_launch_gst(struct wfd_session *s, pid_t *out)
 		NULL
 	};
 
-	pid_t p = fork();
-	if(0 > p) {
-		return p;
-	}
-	else if(0 < p) {
-		log_info("gstreamer (%d) is launched for session %u",
-						p,
-						s->id);
-
-		*out = p;
-		return 0;
+	pipeline = gst_parse_launchv(pipeline_desc, &error);
+	if(!pipeline) {
+		if(error) {
+			log_error("failed to create pipeline: %s", error->message);
+			g_error_free(error);
+		}
+		return -1;
 	}
 
-	sigemptyset(&sigset);
-	sigaddset(&sigset, SIGTERM);
-	sigprocmask(SIG_UNBLOCK, &sigset, NULL);
-
-	execvp(args[0], args);
-
-	exit(1);
-}
-
-static int wfd_out_session_handle_gst_term(sd_event_source *source,
-				const siginfo_t *si,
-				void *userdata)
-{
-	struct wfd_out_session *os = userdata;
-
-	log_trace("gst-launch(%d) terminated", si->si_pid);
-
-	sd_event_source_unref(source);
-
-	if(!os) {
-		return 0;
+	r = gst_element_set_state(pipeline, GST_STATE_READY);
+	if(GST_STATE_CHANGE_FAILURE == r) {
+		g_object_unref(pipeline);
+		return -1;
 	}
 
-	os->gst_term_source = NULL;
-
-	if(WFD_SESSION_STATE_PAUSED != wfd_session(os)->state) {
-		wfd_session_teardown(wfd_session(os));
-	}
+	os->pipeline = pipeline;
 
 	return 0;
 }
@@ -583,7 +548,7 @@ static int wfd_out_session_handle_pause_request(struct wfd_session *s,
 	_rtsp_message_unref_ struct rtsp_message *m = NULL;
 	int r;
 
-	wfd_out_session_kill_gst(s);
+	gst_element_set_state(wfd_out_session(s)->pipeline, GST_STATE_READY);
 
 	r = rtsp_message_new_reply_for(req,
 					&m,
@@ -606,7 +571,7 @@ static int wfd_out_session_handle_teardown_request(struct wfd_session *s,
 	_rtsp_message_unref_ struct rtsp_message *m = NULL;
 	int r;
 
-	wfd_out_session_kill_gst(s);
+	gst_element_set_state(wfd_out_session(s)->pipeline, GST_STATE_NULL);
 
 	r = rtsp_message_new_reply_for(req,
 					&m,
@@ -627,33 +592,19 @@ static int wfd_out_session_post_handle_play(sd_event_source *source,
 				void *userdata)
 {
 	struct wfd_session *s = userdata;
-	int r, status;
-	pid_t gst;
+	GstStateChangeReturn r;
 
 	sd_event_source_unref(source);
 	wfd_out_session(s)->gst_launch_source = NULL;
 
-	if(getenv("DO_NOT_LAUNCH_GST")) {
-		return 0;
-	}
-
-	r = wfd_out_session_launch_gst(s, &gst);
-	if(0 > r) {
-		return r;
-	}
-
-	r = sd_event_add_child(ctl_wfd_get_loop(),
-					&wfd_out_session(s)->gst_term_source,
-					gst, WEXITED,
-					wfd_out_session_handle_gst_term,
-					s);
-	if(0 > r) {
-		kill(gst, SIGKILL);
-		waitpid(gst, &status, WNOHANG);
+	r = gst_element_set_state(wfd_out_session(s)->pipeline,
+					GST_STATE_PLAYING);
+	if(GST_STATE_CHANGE_FAILURE == r) {
 		wfd_session_teardown(s);
+		return -1;
 	}
 
-	return r;
+	return 0;
 }
 
 static int wfd_out_session_handle_play_request(struct wfd_session *s,
@@ -759,6 +710,11 @@ static int wfd_out_session_handle_setup_request(struct wfd_session *s,
 	}
 
 	r = rtsp_message_append(m, "<&>", "Transport", trans);
+	if(0 > r) {
+		return r;
+	}
+
+	r = wfd_out_session_create_pipeline(s);
 	if(0 > r) {
 		return r;
 	}
