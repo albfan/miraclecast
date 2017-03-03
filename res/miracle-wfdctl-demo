@@ -180,7 +180,6 @@ set_prop org.freedesktop.miracle.wifi \
     P2PScanning b true
 cleanup_push link_stop_p2pscan
 echo connect to peer...
-dump_packets &
 invoke org.freedesktop.miracle.wifi \
     /org/freedesktop/miracle/wifi/peer/$peer_id \
     org.freedesktop.miracle.wifi.Peer \
@@ -191,7 +190,7 @@ get_prop org.freedesktop.miracle.wifi \
     /org/freedesktop/miracle/wifi/peer/$peer_id \
     org.freedesktop.miracle.wifi.Peer \
     Interface p2p_iface
-tcpdump -nnvvXS -s 0 -i $p2p_iface port 7236 or port 67 or port 68 &
+sudo tcpdump -nnvvXS -s 0 -i $p2p_iface port 7236 or port 67 or port 68 &
 cleanup_push "kill $!"
 
 while [[ -z "$nocheck" ]] && ! killall -0 miracle-wfdctl &>/dev/null; do
