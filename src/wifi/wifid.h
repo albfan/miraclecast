@@ -174,6 +174,7 @@ int link_set_p2p_scanning(struct link *l, bool set);
 bool link_get_p2p_scanning(struct link *l);
 const char *link_get_mac_addr(struct link *l);
 
+void link_supplicant_managed(struct link *l);
 void link_supplicant_started(struct link *l);
 void link_supplicant_stopped(struct link *l);
 void link_supplicant_p2p_scan_changed(struct link *l, bool new_value);

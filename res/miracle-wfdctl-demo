@@ -126,10 +126,11 @@ nm_manage()
 
 link_unmanage()
 {
-    set_prop org.freedesktop.miracle.wifi \
+    invoke org.freedesktop.miracle.wifi \
         /org/freedesktop/miracle/wifi/link/$link_index \
         org.freedesktop.miracle.wifi.Link \
-        Managed b false
+        Managed false \
+        Unmanage
 }
 
 link_stop_p2pscan()
@@ -161,10 +162,11 @@ set_prop org.freedesktop.NetworkManager \
     org.freedesktop.NetworkManager.Device \
     Managed b false
 cleanup_push nm_manage
-set_prop org.freedesktop.miracle.wifi \
+invoke org.freedesktop.miracle.wifi \
     /org/freedesktop/miracle/wifi/link/$link_index \
     org.freedesktop.miracle.wifi.Link \
-    Managed b true
+    Managed true \
+    Manage
 cleanup_push link_unmanage
 set_prop org.freedesktop.miracle.wifi \
     /org/freedesktop/miracle/wifi/link/$link_index \

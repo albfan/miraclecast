@@ -187,20 +187,28 @@ int link_set_managed(struct link *l, bool set)
 		return 0;
 
 	if (set) {
-		log_info("manage link %s", l->ifname);
-
 		r = supplicant_start(l->s);
 		if (r < 0) {
 			log_error("cannot start supplicant on %s", l->ifname);
 			return -EFAULT;
 		}
+		log_info("acquiring link ownership %s", l->ifname);
 	} else {
-		log_info("link %s no longer managed", l->ifname);
+		log_info("droping link ownership %s", l->ifname);
 		supplicant_stop(l->s);
 	}
 
-	l->managed = set;
 	return 0;
+}
+
+void link_supplicant_managed(struct link *l)
+{
+	if(l->managed) {
+		return;
+	}
+
+	l->managed = true;
+	link_dbus_properties_changed(l, "Managed", NULL);
 }
 
 int link_renamed(struct link *l, const char *ifname)
@@ -355,6 +363,9 @@ void link_supplicant_stopped(struct link *l)
 {
 	if (!l || !l->public)
 		return;
+
+	l->managed = false;
+	link_dbus_properties_changed(l, "Managed", NULL);
 
 	log_info("link %s unmanaged", l->ifname);
 }

@@ -2435,45 +2435,45 @@ static void supplicant_run(struct supplicant *s, const char *binary)
 
 static int supplicant_find(char **binary)
 {
-    _shl_free_ char *path = getenv("PATH");
-    if(!path) {
-        return -EINVAL;
-    }
+	_shl_free_ char *path = getenv("PATH");
+	if(!path) {
+		return -EINVAL;
+	}
 
-    path = strdup(path);
-    if(!path) {
-        return log_ENOMEM();
-    }
+	path = strdup(path);
+	if(!path) {
+		return log_ENOMEM();
+	}
 
-    struct stat bin_stat;
-    char *curr = path, *next;
-    while(1) {
-        curr = strtok_r(curr, ":", &next);
-        if(!curr) {
-            break;
-        }
+	struct stat bin_stat;
+	char *curr = path, *next;
+	while(1) {
+		curr = strtok_r(curr, ":", &next);
+		if(!curr) {
+			break;
+		}
 
-        _shl_free_ char *bin = shl_strcat(curr, "/wpa_supplicant");
-        if (!bin)
-            return log_ENOMEM();
+		_shl_free_ char *bin = shl_strcat(curr, "/wpa_supplicant");
+		if (!bin)
+			return log_ENOMEM();
 
-        if(stat(bin, &bin_stat) < 0) {
-            if(ENOENT == errno || ENOTDIR == errno) {
-                goto end;
-            }
-            return log_ERRNO();
-        }
+		if(stat(bin, &bin_stat) < 0) {
+			if(ENOENT == errno || ENOTDIR == errno) {
+				goto end;
+			}
+			return log_ERRNO();
+		}
 
-        if (!access(bin, X_OK)) {
-            *binary = strdup(bin);
-            return 0;
-        }
+		if (!access(bin, X_OK)) {
+			*binary = strdup(bin);
+			return 0;
+		}
 
 end:
-        curr = NULL;
-    }
+		curr = NULL;
+	}
 
-    return -EINVAL;
+	return -EINVAL;
 }
 
 static int supplicant_spawn(struct supplicant *s)
@@ -2489,12 +2489,12 @@ static int supplicant_spawn(struct supplicant *s)
 
 	log_debug("spawn supplicant of %s", s->l->ifname);
 
-    if (supplicant_find(&binary) < 0) {
-        log_error("execution of wpas (%s) not possible: %m", binary);
-        return -EINVAL;
-    }
+	if (supplicant_find(&binary) < 0) {
+		log_error("execution of wpas (%s) not possible: %m", binary);
+		return -EINVAL;
+	}
 
-    log_info("wpa_supplicant found: %s", binary);
+	log_info("wpa_supplicant found: %s", binary);
 
 	pid = fork();
 	if (pid < 0) {
@@ -2577,6 +2577,7 @@ static int supplicant_timer_fn(sd_event_source *source,
 		} else {
 			/* wpas is running smoothly, disable timer */
 			sd_event_source_set_enabled(source, SD_EVENT_OFF);
+			link_supplicant_managed(s->l);
 		}
 	} else {
 		/* Who armed this timer? What timer is this? */
