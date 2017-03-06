@@ -606,22 +606,28 @@ static int link_dbus_get_managed(sd_bus *bus,
 	return 1;
 }
 
-static int link_dbus_set_managed(sd_bus *bus,
-				      const char *path,
-				      const char *interface,
-				      const char *property,
-				      sd_bus_message *value,
-				      void *data,
-				      sd_bus_error *err)
+static int link_dbus_manage(sd_bus_message *msg,
+				void *data,
+				sd_bus_error *err)
 {
 	struct link *l = data;
-	int val, r;
-
-	r = sd_bus_message_read(value, "b", &val);
-	if (r < 0)
+	int r = link_set_managed(l, true);
+	if(r < 0)
 		return r;
 
-	return link_set_managed(l, val);
+	return sd_bus_reply_method_return(msg, NULL);
+}
+
+static int link_dbus_unmanage(sd_bus_message *msg,
+				void *data,
+				sd_bus_error *err)
+{
+	struct link *l = data;
+	int r = link_set_managed(l, false);
+	if(r < 0)
+		return r;
+
+	return sd_bus_reply_method_return(msg, NULL);
 }
 
 static int link_dbus_get_p2p_scanning(sd_bus *bus,
@@ -699,6 +705,16 @@ static int link_dbus_set_wfd_subelements(sd_bus *bus,
 
 static const sd_bus_vtable link_dbus_vtable[] = {
 	SD_BUS_VTABLE_START(0),
+	SD_BUS_METHOD("Manage",
+		      NULL,
+		      NULL,
+		      link_dbus_manage,
+		      SD_BUS_VTABLE_UNPRIVILEGED),
+	SD_BUS_METHOD("Unmanage",
+		      NULL,
+		      NULL,
+		      link_dbus_unmanage,
+		      SD_BUS_VTABLE_UNPRIVILEGED),
 	SD_BUS_PROPERTY("InterfaceIndex",
 			"u",
 			link_dbus_get_interface_index,
@@ -720,12 +736,11 @@ static const sd_bus_vtable link_dbus_vtable[] = {
 				 link_dbus_set_friendly_name,
 				 0,
 				 SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE | SD_BUS_VTABLE_UNPRIVILEGED),
-	SD_BUS_WRITABLE_PROPERTY("Managed",
+	SD_BUS_PROPERTY("Managed",
 				 "b",
 				 link_dbus_get_managed,
-				 link_dbus_set_managed,
 				 0,
-				 SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE | SD_BUS_VTABLE_UNPRIVILEGED),
+				 SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
 	SD_BUS_WRITABLE_PROPERTY("P2PScanning",
 				 "b",
 				 link_dbus_get_p2p_scanning,
