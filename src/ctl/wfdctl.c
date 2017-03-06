@@ -25,6 +25,7 @@
 #include <time.h>
 #include <systemd/sd-event.h>
 #include <glib.h>
+#include <gst/gst.h>
 #include "ctl.h"
 #include "wfd.h"
 #include "wfd-dbus.h"
