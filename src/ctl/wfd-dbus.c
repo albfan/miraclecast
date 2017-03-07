@@ -268,7 +268,7 @@ int wfd_fn_sink_free(struct wfd_sink *s)
 		return r;
 	}
 
-	return wfd_dbus_object_added(path, "org.freedesktop.miracle.wfd.Sink");
+	return wfd_dbus_object_removed(path, "org.freedesktop.miracle.wfd.Sink");
 }
 
 int _wfd_fn_sink_properties_changed(struct wfd_sink *s, char **names)
