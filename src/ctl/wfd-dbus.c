@@ -444,16 +444,22 @@ static int wfd_dbus_sink_get_session(sd_bus *bus,
 	_shl_free_ char *session_path = NULL;
 	int r;
 
-	if(!s->session) {
-		return 0;
+	if(s->session) {
+		wfd_dbus_get_session_path(s->session, &session_path);
+	}
+	else {
+		session_path = strdup("/");
+	}
+	if(!session_path) {
+		return -ENOMEM;
 	}
 
-	r = wfd_dbus_get_session_path(s->session, &session_path);
+	r = sd_bus_message_append(reply, "o", session_path);
 	if(0 > r) {
 		return r;
 	}
 
-	return sd_bus_message_append(reply, "o", session_path);
+	return 1;
 }
 
 static int wfd_dbus_sink_get_peer(sd_bus *bus,
@@ -473,7 +479,12 @@ static int wfd_dbus_sink_get_peer(sd_bus *bus,
 		return r;
 	}
 
-	return sd_bus_message_append(reply, "o", peer_path);
+	r = sd_bus_message_append(reply, "o", peer_path);
+	if(0 > r) {
+		return r;
+	}
+
+	return 1;
 }
 
 //static int wfd_dbus_sink_has_audio(sd_bus *bus,
@@ -552,16 +563,21 @@ static int wfd_dbus_session_get_sink(sd_bus *bus,
 	int r;
 
 	if(wfd_session_get_id(s) != WFD_SESSION_DIR_OUT) {
-		return 0;
+		sink_path = strdup("/");
+	}
+	else {
+		wfd_dbus_get_sink_path(wfd_out_session_get_sink(s), &sink_path);
+	}
+	if(!sink_path) {
+		return -ENOMEM;
 	}
 
-	r = wfd_dbus_get_sink_path(wfd_out_session_get_sink(s),
-					&sink_path);
+	r = sd_bus_message_append(reply, "o", sink_path);
 	if(0 > r) {
 		return r;
 	}
 
-	return sd_bus_message_append(reply, "o", sink_path);
+	return 1;
 }
 
 static int wfd_dbus_get_session_presentation_url(sd_bus *bus,
@@ -573,9 +589,14 @@ static int wfd_dbus_get_session_presentation_url(sd_bus *bus,
 				sd_bus_error *ret_error)
 {
 	struct wfd_session *s = userdata;
-	return sd_bus_message_append(reply,
+	int r =  sd_bus_message_append(reply,
 					"s",
-					wfd_session_get_stream_url(s));
+					wfd_session_get_stream_url(s) ? : "");
+	if(0 > r) {
+		return r;
+	}
+
+	return 1;
 }
 
 static int wfd_dbus_get_session_state(sd_bus *bus,
@@ -587,7 +608,12 @@ static int wfd_dbus_get_session_state(sd_bus *bus,
 				sd_bus_error *ret_error)
 {
 	struct wfd_session *s = userdata;
-	return sd_bus_message_append(reply, "i", wfd_session_get_state(s));
+	int r = sd_bus_message_append(reply, "i", wfd_session_get_state(s));
+	if(0 > r) {
+		return r;
+	}
+
+	return 1;
 }
 
 int _wfd_fn_session_properties_changed(struct wfd_session *s, char **names)
@@ -634,7 +660,7 @@ static const sd_bus_vtable wfd_dbus_session_vtable[] = {
 	SD_BUS_METHOD("Pause", NULL, NULL, wfd_dbus_session_pause, SD_BUS_VTABLE_UNPRIVILEGED),
 	SD_BUS_METHOD("Teardown", NULL, NULL, wfd_dbus_session_teardown, SD_BUS_VTABLE_UNPRIVILEGED),
 	SD_BUS_PROPERTY("Sink", "o", wfd_dbus_session_get_sink, 0, SD_BUS_VTABLE_PROPERTY_CONST),
-	SD_BUS_PROPERTY("Url", "o", wfd_dbus_get_session_presentation_url, 0, SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
+	SD_BUS_PROPERTY("Url", "s", wfd_dbus_get_session_presentation_url, 0, SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
 	SD_BUS_PROPERTY("State", "i", wfd_dbus_get_session_state, 0, SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
 	SD_BUS_VTABLE_END,
 };
