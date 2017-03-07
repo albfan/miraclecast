@@ -252,9 +252,7 @@ int _wfd_dbus_object_added(struct wfd_dbus *wfd_dbus,
 int wfd_fn_sink_new(struct wfd_sink *s)
 {
 	_shl_free_ char *path = NULL;
-	int r = sd_bus_path_encode("/org/freedesktop/miracle/wfd/sink",
-					wfd_sink_get_label(s),
-					&path);
+	int r = wfd_dbus_get_sink_path(s, &path);
 	if(0 > r) {
 		return r;
 	}
@@ -265,9 +263,7 @@ int wfd_fn_sink_new(struct wfd_sink *s)
 int wfd_fn_sink_free(struct wfd_sink *s)
 {
 	_shl_free_ char *path = NULL;
-	int r = sd_bus_path_encode("/org/freedesktop/miracle/wfd/sink",
-					wfd_sink_get_label(s),
-					&path);
+	int r = wfd_dbus_get_sink_path(s, &path);
 	if(0 > r) {
 		return r;
 	}
