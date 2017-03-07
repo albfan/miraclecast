@@ -28,6 +28,9 @@
 #include "shl_log.h"
 #include "rtsp.h"
 
+#define LOCAL_RTP_PORT		16384
+#define LOCAL_RTCP_PORT		16385
+
 enum wfd_display_type
 {
 	WFD_DISPLAY_TYPE_UNKNOWN,
@@ -496,12 +499,13 @@ inline static char * uint16_to_str(uint16_t i, char *buf, size_t len)
 
 static int wfd_out_session_create_pipeline(struct wfd_session *s)
 {
-	char x[16], y[16], width[16], height[16], port[16];
+	char x[16], y[16], width[16], height[16];
+	char rrtp_port[16], rrtcp_port[16], lrtcp_port[16];
 	struct wfd_out_session *os = wfd_out_session(s);
 	GstElement *pipeline;
 	GError *error = NULL;
 	GstStateChangeReturn r;
-	const char * pipeline_desc[] = {
+	const char *pipeline_desc[96] = {
 		"ximagesrc",
 			"use-damage=false",
 			"show-pointer=false",
@@ -509,17 +513,68 @@ static int wfd_out_session_create_pipeline(struct wfd_session *s)
 			"starty=", uint16_to_str(os->x, y, sizeof(y)),
 			"endx=", uint16_to_str(os->width - 1, width, sizeof(width)),
 			"endy=", uint16_to_str(os->height - 1, height, sizeof(height)),
+		"!", "video/x-raw,",
+			"framerate=50/1",
 		"!", "vaapipostproc",
 		"!", "video/x-raw,",
 			"format=YV12",
 		"!", "vaapih264enc",
+		"!", "queue",
+			"max-size-buffers=0",
+			"max-size-bytes=0",
 		"!", "mpegtsmux",
+			"name=muxer",
 		"!", "rtpmp2tpay",
+		"!", ".send_rtp_sink_0", "rtpbin",
+			"name=session",
+			"do-retransmission=true",
+			"ntp-time-source=3",
+			"buffer-mode=0",
+			"latency=30",
+			"max-misorder-time=40",
+		"!", "application/x-rtp",
 		"!", "udpsink",
+			"sync=false",
+			"async=false",
 			"host=", wfd_out_session_get_sink(s)->peer->remote_address,
-			"port=", uint16_to_str(s->stream.rtp_port, port, sizeof(port)),
+			"port=", uint16_to_str(s->stream.rtp_port, rrtp_port,sizeof(rrtp_port)),
+		"pulsesrc",
+			"do-timestamp=true",
+			"client-name=miraclecast",
+			"device=\"alsa_output.pci-0000_00_1b.0.analog-stereo.monitor\"",
+		"!", "audioconvert",
+		"!", "audio/x-raw,",
+			"rate=48000,",
+			"channels=2",
+		"!", "avenc_aac",
+		"!", "queue",
+			"max-size-buffers=0",
+			"max-size-bytes=0",
+		"!", "muxer.",
+		"udpsrc",
+			"address=", wfd_out_session_get_sink(s)->peer->local_address,
+			"port=", uint16_to_str(LOCAL_RTCP_PORT, lrtcp_port,sizeof(lrtcp_port)),
+			"reuse=true",
+		"!", "session.recv_rtcp_sink_0",
 		NULL
 	};
+	const char **tmp;
+
+	if(s->stream.rtcp_port) {
+		tmp = pipeline_desc;
+		while(*tmp ++);
+		*tmp ++ = "session.send_rtcp_src_0";
+		*tmp ++ = "!";
+		*tmp ++ = "udpsink";
+		*tmp ++ = "host=";
+		*tmp ++ = wfd_out_session_get_sink(s)->peer->remote_address;
+		*tmp ++ = "port=";
+		*tmp ++ = uint16_to_str(s->stream.rtp_port, rrtp_port,sizeof(rrtp_port));
+		*tmp ++ = "sync=false";
+		*tmp ++ = "async=false";
+	}
+
+	snprintf(rrtcp_port, sizeof(rrtcp_port), "%hu", s->stream.rtcp_port);
 
 	pipeline = gst_parse_launchv(pipeline_desc, &error);
 	if(!pipeline) {
@@ -658,7 +713,7 @@ static int wfd_out_session_handle_setup_request(struct wfd_session *s,
 						struct rtsp_message **out_rep)
 {
 	int r;
-	const char *l;
+	char *l;
 	_rtsp_message_unref_ struct rtsp_message *m = NULL;
 	_shl_free_ char *sess = NULL, *trans = NULL;
 
@@ -680,9 +735,20 @@ static int wfd_out_session_handle_setup_request(struct wfd_session *s,
 	l += 12;
 
 	errno = 0;
-	s->stream.rtp_port = strtoul(l, NULL, 10);
+	s->stream.rtp_port = strtoul(l, &l, 10);
 	if(errno) {
 		return -errno;
+	}
+
+	if('-' == *l) {
+		errno = 0;
+		s->stream.rtcp_port = strtoul(l + 1, NULL, 10);
+		if(errno) {
+			return -errno;
+		}
+	}
+	else {
+		s->stream.rtcp_port = 0;
 	}
 
 	r = rtsp_message_new_reply_for(req,
@@ -703,8 +769,11 @@ static int wfd_out_session_handle_setup_request(struct wfd_session *s,
 		return r;
 	}
 
-	r = asprintf(&trans, "RTP/AVP/UDP;unicast;client_port=%hd",
-					s->stream.rtp_port);
+	r = asprintf(&trans, "RTP/AVP/UDP;unicast;client_port=%hu%s;server_port=%u-%u",
+					s->stream.rtp_port,
+					l,
+					LOCAL_RTP_PORT,
+					LOCAL_RTCP_PORT);
 	if(0 > r) {
 		return r;
 	}
@@ -723,6 +792,16 @@ static int wfd_out_session_handle_setup_request(struct wfd_session *s,
 	m = NULL;
 
 	return 0;
+}
+
+static int wfd_out_session_handle_idr_request(struct wfd_session *s,
+				struct rtsp_message *req,
+				struct rtsp_message **out_rep)
+{
+	return rtsp_message_new_reply_for(req,
+					out_rep,
+					RTSP_CODE_OK,
+					NULL);
 }
 
 static int wfd_out_session_request_trigger(struct wfd_session *s,
@@ -790,7 +869,7 @@ static int wfd_out_session_request_set_parameter(struct wfd_session *s,
 
 	r = asprintf(&body,
 					"wfd_video_formats: 00 00 02 10 %08X %08X %08X 00 0000 0000 00 none none\n"
-					//"wfd_audio_codecs: AAC 00000001 00\n"
+					"wfd_audio_codecs: AAC 00000001 00\n"
 					"wfd_presentation_URL: %s none\n"
 					"wfd_client_rtp_ports: %u %u mode=play",
 					//"wfd_uibc_capability: input_category_list=GENERIC\n;generic_cap_list=SingleTouch;hidc_cap_list=none;port=5100\n"
@@ -908,7 +987,7 @@ static const struct rtsp_dispatch_entry out_session_rtsp_disp_tbl[] = {
 		.handle_request = wfd_out_session_request_not_implement
 	},
 	[RTSP_M13_REQUEST_IDR]			= {
-		.handle_request = wfd_out_session_request_not_implement
+		.handle_request = wfd_out_session_handle_idr_request,
 	},
 	[RTSP_M14_ESTABLISH_UIBC]		= {
 	},
