@@ -108,6 +108,7 @@ struct wfd_session
 		enum wfd_stream_id id;
 		char *url;
 		uint16_t rtp_port;
+		uint16_t rtcp_port;
 	} stream;
 };
 
