@@ -57,7 +57,7 @@ int ctl_wfd_new(struct ctl_wfd **out, sd_event *loop, sd_bus *bus)
 	}
 
 	shl_htable_init_str(&wfd->sinks);
-	shl_htable_init_u64(&wfd->sessions);
+	shl_htable_init_uint(&wfd->sessions);
 	wfd->loop = sd_event_ref(loop);
 
 	r = ctl_wfd_init(wfd, bus);
@@ -85,7 +85,7 @@ static void ctl_wfd_free(struct ctl_wfd *wfd)
 	ctl_wifi_free(wfd->wifi);
 	wfd->wifi = NULL;
 	shl_htable_clear_str(&wfd->sinks, NULL, NULL);
-	shl_htable_clear_u64(&wfd->sessions, NULL, NULL);
+	shl_htable_clear_uint(&wfd->sessions, NULL, NULL);
 
 	for(i = 0; i < SHL_ARRAY_LENGTH(wfd->signal_sources); ++ i) {
 		if(wfd->signal_sources[i]) {
