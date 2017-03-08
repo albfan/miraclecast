@@ -8,5 +8,5 @@ Homepage: https://github.com/derekdai/miraclecast
 
 Package: miraclecast
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}, gstreamer1.0-tools, gstreamer1.0-vaapi, mesa-va-drivers, i965-va-driver
+Depends: ${shlibs:Depends}, ${misc:Depends}, libsystemd0, libglib2.0-0, libgstreamer1.0-0, gstreamer1.0-pulseaudio, gstreamer1.0-vaapi, gstreamer1.0-plugins-good, mesa-va-drivers, i965-va-driver
 Description: Connect external monitors to your system via Wifi-Display specification also known as Miracast
