@@ -204,6 +204,13 @@ invoke org.freedesktop.miracle.wfd \
     /org/freedesktop/miracle/wfd/sink/$peer_id \
     org.freedesktop.miracle.wfd.Sink \
     Peer /org/freedesktop/miracle/wifi/peer/$peer_id \
-    StartSession sqqqq 'x://:0.0' 0 0 1920 1080
+    StartSession ssqqqqs \
+        "$XAUTHORITY" \
+        'x://:0.0' \
+        0 \
+        0 \
+        1920 \
+        1080 \
+        'alsa_output.pci-0000_00_1b.0.analog-stereo.monitor'
 
 wait

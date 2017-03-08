@@ -46,6 +46,7 @@ struct wfd_out_session
 	sd_event_source *gst_term_source;
 
 	enum wfd_display_type display_type;
+	char *authority;
 	char *display_name;
 	uint16_t x;
 	uint16_t y;
@@ -53,6 +54,7 @@ struct wfd_out_session
 	uint16_t height;
 	enum wfd_resolution_standard std;
 	uint32_t mask;
+	char *audio_dev;
 
 	GstElement *pipeline;
 };
@@ -61,16 +63,18 @@ static const struct rtsp_dispatch_entry out_session_rtsp_disp_tbl[];
 
 int wfd_out_session_new(struct wfd_session **out,
 				struct wfd_sink *sink,
+				const char *authority,
 				const char *display,
 				uint16_t x,
 				uint16_t y,
 				uint16_t width,
-				uint16_t height)
+				uint16_t height,
+				const char *audio_dev)
 {
 	_shl_free_ char *display_schema = NULL;
 	_shl_free_ char *display_name = NULL;
+	_wfd_session_free_ struct wfd_session *s;
 	enum wfd_display_type display_type;
-	struct wfd_out_session *s;
 	enum wfd_resolution_standard std;
 	uint32_t mask;
 	int r;
@@ -97,27 +101,41 @@ int wfd_out_session_new(struct wfd_session **out,
 	if(0 > r) {
 		return -EINVAL;
 	}
-	
+
 	s = calloc(1, sizeof(struct wfd_out_session));
 	if(!s) {
 		return -ENOMEM;
 	}
 
+	wfd_out_session(s)->authority = strdup(authority);
+	if(!wfd_out_session(s)->authority) {
+		free(s);
+		return -ENOMEM;
+	}
+
+	wfd_out_session(s)->audio_dev = strdup(audio_dev);
+	if(!wfd_out_session(s)->audio_dev) {
+		free(s);
+		return -ENOMEM;
+	}
+
 	wfd_session(s)->dir = WFD_SESSION_DIR_OUT;
 	wfd_session(s)->rtsp_disp_tbl = out_session_rtsp_disp_tbl;
-	s->fd = -1;
-	s->sink = sink;
-	s->display_type = display_type;
-	s->display_name = display_name;
-	display_name = NULL;
-	s->x = x;
-	s->y = y;
-	s->width = width;
-	s->height = height;
-	s->mask = mask;
-	s->std = std;
+	wfd_out_session(s)->fd = -1;
+	wfd_out_session(s)->sink = sink;
+	wfd_out_session(s)->display_type = display_type;
+	wfd_out_session(s)->display_name = display_name;
+	wfd_out_session(s)->x = x;
+	wfd_out_session(s)->y = y;
+	wfd_out_session(s)->width = width;
+	wfd_out_session(s)->height = height;
+	wfd_out_session(s)->mask = mask;
+	wfd_out_session(s)->std = std;
 
 	*out = wfd_session(s);
+	s = NULL;
+
+	display_name = NULL;
 
 	return 0;
 }
@@ -267,9 +285,19 @@ void wfd_out_session_destroy(struct wfd_session *s)
 		os->gst_launch_source = NULL;
 	}
 
+	if(os->audio_dev) {
+		free(os->audio_dev);
+		os->audio_dev = NULL;
+	}
+
 	if(os->display_name) {
 		free(os->display_name);
 		os->display_name = NULL;
+	}
+
+	if(os->authority) {
+		free(os->authority);
+		os->authority = NULL;
 	}
 
 	if(os->pipeline) {
@@ -497,14 +525,23 @@ inline static char * uint16_to_str(uint16_t i, char *buf, size_t len)
 	return buf;
 }
 
+inline static char * quote_str(const char *s, char *d, size_t len)
+{
+	snprintf(d, len, "\"%s\"", s);
+
+	return d;
+}
+
 static int wfd_out_session_create_pipeline(struct wfd_session *s)
 {
 	char x[16], y[16], width[16], height[16];
 	char rrtp_port[16], rrtcp_port[16], lrtcp_port[16];
+	char audio_dev[256];
 	struct wfd_out_session *os = wfd_out_session(s);
 	GstElement *pipeline;
 	GError *error = NULL;
-	GstStateChangeReturn r;
+	const char **tmp;
+	int r;
 	const char *pipeline_desc[96] = {
 		"ximagesrc",
 			"use-damage=false",
@@ -541,7 +578,7 @@ static int wfd_out_session_create_pipeline(struct wfd_session *s)
 		"pulsesrc",
 			"do-timestamp=true",
 			"client-name=miraclecast",
-			"device=\"alsa_output.pci-0000_00_1b.0.analog-stereo.monitor\"",
+			"device=", quote_str(os->audio_dev, audio_dev, sizeof(audio_dev)),
 		"!", "audioconvert",
 		"!", "audio/x-raw,",
 			"rate=48000,",
@@ -558,7 +595,6 @@ static int wfd_out_session_create_pipeline(struct wfd_session *s)
 		"!", "session.recv_rtcp_sink_0",
 		NULL
 	};
-	const char **tmp;
 
 	if(s->stream.rtcp_port) {
 		tmp = pipeline_desc;
@@ -574,7 +610,24 @@ static int wfd_out_session_create_pipeline(struct wfd_session *s)
 		*tmp ++ = "async=false";
 	}
 
-	snprintf(rrtcp_port, sizeof(rrtcp_port), "%hu", s->stream.rtcp_port);
+	r = snprintf(rrtcp_port, sizeof(rrtcp_port), "%hu", s->stream.rtcp_port);
+	if(0 > r) {
+		return r;
+	}
+
+	/* bad pratice, but since we are in the same process,
+	   I think this is the only way to do it */
+	if(WFD_DISPLAY_TYPE_X == os->display_type) {
+		r = setenv("XAUTHORITY", os->authority, 1);
+		if(0 > r) {
+			return r;
+		}
+
+		r = setenv("DISPLAY", os->display_name, 1);
+		if(0 > r) {
+			return r;
+		}
+	}
 
 	pipeline = gst_parse_launchv(pipeline_desc, &error);
 	if(!pipeline) {

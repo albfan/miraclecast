@@ -119,11 +119,13 @@ struct ctl_peer * wfd_sink_get_peer(struct wfd_sink *sink)
 
 int wfd_sink_start_session(struct wfd_sink *sink,
 				struct wfd_session **out,
+				const char *authority,
 				const char *display,
 				uint16_t x,
 				uint16_t y,
 				uint16_t width,
-				uint16_t height)
+				uint16_t height,
+				const char *audio_dev)
 {
 	int r;
 	_wfd_session_free_ struct wfd_session *s = NULL;
@@ -135,7 +137,15 @@ int wfd_sink_start_session(struct wfd_sink *sink,
 		return -EALREADY;
 	}
 
-	r = wfd_out_session_new(&s, sink, display, x, y, width, height);
+	r = wfd_out_session_new(&s,
+					sink,
+					authority,
+					display,
+					x,
+					y,
+					width,
+					height,
+					audio_dev);
 	if(0 > r) {
 		return r;
 	}
