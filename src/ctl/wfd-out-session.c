@@ -48,6 +48,8 @@ struct wfd_out_session
 	enum wfd_display_type display_type;
 	char *authority;
 	char *display_name;
+	const char *display_param_name;
+	const char *display_param_value;
 	uint16_t x;
 	uint16_t y;
 	uint16_t width;
@@ -73,7 +75,9 @@ int wfd_out_session_new(struct wfd_session **out,
 {
 	_shl_free_ char *display_schema = NULL;
 	_shl_free_ char *display_name = NULL;
+	char *display_param;
 	_wfd_session_free_ struct wfd_session *s;
+	struct wfd_out_session *os;
 	enum wfd_display_type display_type;
 	enum wfd_resolution_standard std;
 	uint32_t mask;
@@ -93,6 +97,11 @@ int wfd_out_session_new(struct wfd_session **out,
 		return -EINVAL;
 	}
 
+	display_param = strchr(display_name, '?');
+	if(display_param) {
+		*display_param ++ = '\0';
+	}
+
 	if(!width || !height) {
 		return -EINVAL;
 	}
@@ -107,34 +116,44 @@ int wfd_out_session_new(struct wfd_session **out,
 		return -ENOMEM;
 	}
 
-	wfd_out_session(s)->authority = strdup(authority);
-	if(!wfd_out_session(s)->authority) {
+	os = wfd_out_session(s);
+	os->authority = strdup(authority);
+	if(!os->authority) {
 		free(s);
 		return -ENOMEM;
 	}
 
-	wfd_out_session(s)->audio_dev = strdup(audio_dev);
-	if(!wfd_out_session(s)->audio_dev) {
+	os->audio_dev = strdup(audio_dev);
+	if(!os->audio_dev) {
 		free(s);
 		return -ENOMEM;
 	}
 
-	wfd_session(s)->dir = WFD_SESSION_DIR_OUT;
-	wfd_session(s)->rtsp_disp_tbl = out_session_rtsp_disp_tbl;
-	wfd_out_session(s)->fd = -1;
-	wfd_out_session(s)->sink = sink;
-	wfd_out_session(s)->display_type = display_type;
-	wfd_out_session(s)->display_name = display_name;
-	wfd_out_session(s)->x = x;
-	wfd_out_session(s)->y = y;
-	wfd_out_session(s)->width = width;
-	wfd_out_session(s)->height = height;
-	wfd_out_session(s)->mask = mask;
-	wfd_out_session(s)->std = std;
+	s->dir = WFD_SESSION_DIR_OUT;
+	s->rtsp_disp_tbl = out_session_rtsp_disp_tbl;
+	os->fd = -1;
+	os->sink = sink;
+	os->display_type = display_type;
+	os->display_name = display_name;
+	os->x = x;
+	os->y = y;
+	os->width = width;
+	os->height = height;
+	os->mask = mask;
+	os->std = std;
+
+	if(display_param) {
+		os->display_param_name = display_param;
+		display_param = strchr(display_param, '=');
+		if(!display_param) {
+			return -EINVAL;
+		}
+		*display_param ++ = '\0';
+		os->display_param_value = display_param;
+	}
 
 	*out = wfd_session(s);
 	s = NULL;
-
 	display_name = NULL;
 
 	return 0;
@@ -534,9 +553,8 @@ inline static char * quote_str(const char *s, char *d, size_t len)
 
 static int wfd_out_session_create_pipeline(struct wfd_session *s)
 {
-	char x[16], y[16], width[16], height[16];
 	char rrtp_port[16], rrtcp_port[16], lrtcp_port[16];
-	char audio_dev[256];
+	char audio_dev[256], vsrc_params[256] = "";
 	struct wfd_out_session *os = wfd_out_session(s);
 	GstElement *pipeline;
 	GError *error = NULL;
@@ -544,12 +562,10 @@ static int wfd_out_session_create_pipeline(struct wfd_session *s)
 	int r;
 	const char *pipeline_desc[96] = {
 		"ximagesrc",
+			"name=vsrc",
 			"use-damage=false",
 			"show-pointer=false",
-			"startx=", uint16_to_str(os->x, x, sizeof(x)),
-			"starty=", uint16_to_str(os->x, y, sizeof(y)),
-			"endx=", uint16_to_str(os->width - 1, width, sizeof(width)),
-			"endy=", uint16_to_str(os->height - 1, height, sizeof(height)),
+			vsrc_params,
 		"!", "video/x-raw,",
 			"framerate=50/1",
 		"!", "vaapipostproc",
@@ -605,14 +621,9 @@ static int wfd_out_session_create_pipeline(struct wfd_session *s)
 		*tmp ++ = "host=";
 		*tmp ++ = wfd_out_session_get_sink(s)->peer->remote_address;
 		*tmp ++ = "port=";
-		*tmp ++ = uint16_to_str(s->stream.rtp_port, rrtp_port,sizeof(rrtp_port));
+		*tmp ++ = uint16_to_str(s->stream.rtcp_port, rrtcp_port,sizeof(rrtcp_port));
 		*tmp ++ = "sync=false";
 		*tmp ++ = "async=false";
-	}
-
-	r = snprintf(rrtcp_port, sizeof(rrtcp_port), "%hu", s->stream.rtcp_port);
-	if(0 > r) {
-		return r;
 	}
 
 	/* bad pratice, but since we are in the same process,
@@ -626,6 +637,23 @@ static int wfd_out_session_create_pipeline(struct wfd_session *s)
 		r = setenv("DISPLAY", os->display_name, 1);
 		if(0 > r) {
 			return r;
+		}
+
+		if(!os->display_param_name) {
+			snprintf(vsrc_params, sizeof(vsrc_params),
+					"strtx=%hu starty=%hu endx=%hu endy=%hu",
+					os->x,
+					os->y,
+					os->width,
+					os->height);
+		}
+		else if(!strcmp("xid", os->display_param_name) ||
+						!strcmp("xname", os->display_param_name)) {
+			snprintf(vsrc_params, sizeof(vsrc_params),
+					"%s=\"%s\"",
+					os->display_param_name,
+					os->display_param_value,
+					NULL);
 		}
 	}
 
