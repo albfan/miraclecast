@@ -566,12 +566,16 @@ static int wfd_out_session_create_pipeline(struct wfd_session *s)
 			"use-damage=false",
 			"show-pointer=false",
 			vsrc_params,
-		"!", "video/x-raw,",
-			"framerate=50/1",
+		"!", "video/x-raw",
+			"framerate=60/1",
 		"!", "vaapipostproc",
 		"!", "video/x-raw,",
 			"format=YV12",
 		"!", "vaapih264enc",
+			"rate-control=2",
+			"num-slices=128",
+			"max-bframes=0",
+			"init-qp=21",
 		"!", "queue",
 			"max-size-buffers=0",
 			"max-size-bytes=0",
@@ -581,10 +585,12 @@ static int wfd_out_session_create_pipeline(struct wfd_session *s)
 		"!", ".send_rtp_sink_0", "rtpbin",
 			"name=session",
 			"do-retransmission=true",
+			"do-sync-event=true",
+			"do-lost=true",
 			"ntp-time-source=3",
 			"buffer-mode=0",
-			"latency=30",
-			"max-misorder-time=40",
+			"latency=20",
+			"max-misorder-time=30",
 		"!", "application/x-rtp",
 		"!", "udpsink",
 			"sync=false",
@@ -613,8 +619,7 @@ static int wfd_out_session_create_pipeline(struct wfd_session *s)
 	};
 
 	if(s->stream.rtcp_port) {
-		tmp = pipeline_desc;
-		while(*tmp ++);
+		for(tmp = pipeline_desc; *tmp; ++tmp);
 		*tmp ++ = "session.send_rtcp_src_0";
 		*tmp ++ = "!";
 		*tmp ++ = "udpsink";
@@ -624,6 +629,7 @@ static int wfd_out_session_create_pipeline(struct wfd_session *s)
 		*tmp ++ = uint16_to_str(s->stream.rtcp_port, rrtcp_port,sizeof(rrtcp_port));
 		*tmp ++ = "sync=false";
 		*tmp ++ = "async=false";
+		*tmp ++ = NULL;
 	}
 
 	/* bad pratice, but since we are in the same process,
