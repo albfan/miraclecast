@@ -188,7 +188,7 @@ int wfd_session_teardown(struct wfd_session *s)
 		return session_vtbl[s->dir].teardown(s);;
 	}
 
-	wfd_session_free(s);
+	//wfd_session_free(s);
 
 	return 0;
 }
@@ -219,6 +219,7 @@ void wfd_session_free(struct wfd_session *s)
 	}
 
 	if(s->rtsp) {
+		rtsp_detach_event(s->rtsp);
 		rtsp_unref(s->rtsp);
 		s->rtsp = NULL;
 	}

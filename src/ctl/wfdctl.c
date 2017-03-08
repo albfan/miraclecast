@@ -363,23 +363,16 @@ void ctl_fn_peer_new(struct ctl_peer *p)
 void ctl_fn_peer_free(struct ctl_peer *p)
 {
 	struct wfd_sink *s;
-	_shl_free_ char *label = NULL;
 	int r;
 
-	log_info("peer %s down", p->label);
-
 	r = ctl_wfd_remove_sink_by_label(wfd, p->label, &s);
-	if(!r) {
-		return;
+	if(r) {
+		wfd_fn_sink_free(s);
+		log_info("sink %s removed", s->label);
+		wfd_sink_free(s);
 	}
 
-	label = strdup(s->label);
-
-	wfd_fn_sink_free(s);
-
-	wfd_sink_free(s);
-
-	log_info("sink %s removed", label);
+	log_info("peer %s down", p->label);
 }
 
 void ctl_fn_peer_provision_discovery(struct ctl_peer *p,
