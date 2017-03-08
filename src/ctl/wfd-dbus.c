@@ -173,7 +173,7 @@ int _wfd_dbus_object_removed(struct wfd_dbus *wfd_dbus,
 					&m,
 					"/org/freedesktop/miracle/wfd",
 					"org.freedesktop.DBus.ObjectManager",
-					"InterfaceRemoved");
+					"InterfacesRemoved");
 	if(0 > r) {
 		return r;
 	}
@@ -219,7 +219,7 @@ int _wfd_dbus_object_added(struct wfd_dbus *wfd_dbus,
 					&m,
 					"/org/freedesktop/miracle/wfd",
 					"org.freedesktop.DBus.ObjectManager",
-					"InterfaceAdded");
+					"InterfacesAdded");
 	if(0 > r) {
 		return r;
 	}
