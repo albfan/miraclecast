@@ -32,7 +32,7 @@ The MiracleCast projects requires the following software to be installed:
  Use the following for ubuntu:
  
  ```
- sudo apt install git ubuntu-restricted-extras check gstreamer1.0 libglib2.0-dev libreadline-dev libudev-dev libsystemd-dev libusb-dev cmake build-essential
+ sudo apt install git ubuntu-restricted-extras check gstreamer1.0 libglib2.0-dev libreadline-dev libudev-dev libsystemd-dev libusb-dev cmake build-essential libreadline6 libreadline6-dev
  ```
 
 ## Install
@@ -178,3 +178,15 @@ If you have any questions, do not hesitate to contact one of the maintainers.
 - Original repo: git://people.freedesktop.org/~dvdhrm/miracle
 - Fork repo: https://github.com/albfan/miraclecast
 - Technical spec: https://www.wi-fi.org/file/wi-fi-display-technical-specification-v11 (free registration required)
+
+### Troubleshooting
+There's a possible issue installing for those who already have anaconda python installed on their system.
+
+The libreadline library is missing a handful of necessary methods.
+Consequently, in order to build on these machines, mv the version in anaconda to a backup version, then create a symlink from the system's version to the old version in anaconda
+
+```
+mv /anaconda3/lib/libreadline.so.6.2 /anaconda3/lib/libreadline.so.6.2.bak
+ln -s /lib/x86_64-linux-gnu/libreadline.so.6.3 /anaconda3/lib/readline.so.6.2
+
+```
