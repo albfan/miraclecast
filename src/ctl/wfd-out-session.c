@@ -59,6 +59,7 @@ struct wfd_out_session
 	char *audio_dev;
 
 	GstElement *pipeline;
+	GstBus *bus;
 };
 
 static const struct rtsp_dispatch_entry out_session_rtsp_disp_tbl[];
@@ -319,6 +320,12 @@ void wfd_out_session_destroy(struct wfd_session *s)
 		os->authority = NULL;
 	}
 
+	if(os->bus) {
+		gst_bus_remove_signal_watch(os->bus);
+		g_object_unref(os->bus);
+		os->bus = NULL;
+	}
+
 	if(os->pipeline) {
 		gst_element_set_state(os->pipeline, GST_STATE_NULL);
 		g_object_unref(os->pipeline);
@@ -554,9 +561,12 @@ inline static char * quote_str(const char *s, char *d, size_t len)
 static int wfd_out_session_create_pipeline(struct wfd_session *s)
 {
 	char rrtp_port[16], rrtcp_port[16], lrtcp_port[16];
-	char audio_dev[256], vsrc_params[256] = "";
+	char audio_dev[256];
+	char vsrc_param1[16] = "", vsrc_param2[16] = "";
+	char vsrc_param3[16] = "", vsrc_param4[16] = "";
 	struct wfd_out_session *os = wfd_out_session(s);
 	GstElement *pipeline;
+	GstBus *bus;
 	GError *error = NULL;
 	const char **tmp;
 	int r;
@@ -565,8 +575,11 @@ static int wfd_out_session_create_pipeline(struct wfd_session *s)
 			"name=vsrc",
 			"use-damage=false",
 			"show-pointer=false",
-			vsrc_params,
-		"!", "video/x-raw",
+			vsrc_param1,
+			vsrc_param2,
+			vsrc_param3,
+			vsrc_param4,
+		"!", "video/x-raw,",
 			"framerate=60/1",
 		"!", "vaapipostproc",
 		"!", "video/x-raw,",
@@ -646,16 +659,14 @@ static int wfd_out_session_create_pipeline(struct wfd_session *s)
 		}
 
 		if(!os->display_param_name) {
-			snprintf(vsrc_params, sizeof(vsrc_params),
-					"strtx=%hu starty=%hu endx=%hu endy=%hu",
-					os->x,
-					os->y,
-					os->width,
-					os->height);
+			snprintf(vsrc_param1, sizeof(vsrc_param1), "startx=%hu", os->x);
+			snprintf(vsrc_param2, sizeof(vsrc_param2), "starty=%hu", os->y);
+			snprintf(vsrc_param3, sizeof(vsrc_param3), "endx=%d", os->width - 1);
+			snprintf(vsrc_param4, sizeof(vsrc_param4), "endy=%d", os->height - 1);
 		}
 		else if(!strcmp("xid", os->display_param_name) ||
 						!strcmp("xname", os->display_param_name)) {
-			snprintf(vsrc_params, sizeof(vsrc_params),
+			snprintf(vsrc_param1, sizeof(vsrc_param1),
 					"%s=\"%s\"",
 					os->display_param_name,
 					os->display_param_value,
@@ -678,7 +689,11 @@ static int wfd_out_session_create_pipeline(struct wfd_session *s)
 		return -1;
 	}
 
+	bus = gst_element_get_bus(pipeline);
+	gst_bus_add_signal_watch(bus);
+
 	os->pipeline = pipeline;
+	os->bus = bus;
 
 	return 0;
 }
@@ -1039,12 +1054,12 @@ static const struct rtsp_dispatch_entry out_session_rtsp_disp_tbl[] = {
 	},
 	[RTSP_M7_PLAY]					= {
 		.handle_request = wfd_out_session_handle_play_request,
-		.rule = wfd_arg_list(
-			wfd_arg_dict(
-					wfd_arg_u(WFD_SESSION_ARG_NEW_STATE),
-					wfd_arg_u(WFD_SESSION_STATE_PLAYING)
-			),
-		)
+		/*.rule = wfd_arg_list(*/
+			/*wfd_arg_dict(*/
+					/*wfd_arg_u(WFD_SESSION_ARG_NEW_STATE),*/
+					/*wfd_arg_u(WFD_SESSION_STATE_PLAYING)*/
+			/*),*/
+		/*)*/
 	},
 	[RTSP_M8_TEARDOWN]				= {
 		.handle_request = wfd_out_session_handle_teardown_request,
@@ -1057,12 +1072,12 @@ static const struct rtsp_dispatch_entry out_session_rtsp_disp_tbl[] = {
 	},
 	[RTSP_M9_PAUSE]					= {
 		.handle_request = wfd_out_session_handle_pause_request,
-		.rule = wfd_arg_list(
-			wfd_arg_dict(
-					wfd_arg_u(WFD_SESSION_ARG_NEW_STATE),
-					wfd_arg_u(WFD_SESSION_STATE_PAUSED)
-			),
-		)
+		/*.rule = wfd_arg_list(*/
+			/*wfd_arg_dict(*/
+					/*wfd_arg_u(WFD_SESSION_ARG_NEW_STATE),*/
+					/*wfd_arg_u(WFD_SESSION_STATE_PAUSED)*/
+			/*),*/
+		/*)*/
 	},
 	[RTSP_M10_SET_ROUTE]			= {
 		.handle_request = wfd_out_session_request_not_implement
