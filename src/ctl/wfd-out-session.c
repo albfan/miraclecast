@@ -570,7 +570,7 @@ static int wfd_out_session_create_pipeline(struct wfd_session *s)
 	GError *error = NULL;
 	const char **tmp;
 	int r;
-	const char *pipeline_desc[96] = {
+	const char *pipeline_desc[128] = {
 		"ximagesrc",
 			"name=vsrc",
 			"use-damage=false",
@@ -610,19 +610,6 @@ static int wfd_out_session_create_pipeline(struct wfd_session *s)
 			"async=false",
 			"host=", wfd_out_session_get_sink(s)->peer->remote_address,
 			"port=", uint16_to_str(s->stream.rtp_port, rrtp_port,sizeof(rrtp_port)),
-		"pulsesrc",
-			"do-timestamp=true",
-			"client-name=miraclecast",
-			"device=", quote_str(os->audio_dev, audio_dev, sizeof(audio_dev)),
-		"!", "audioconvert",
-		"!", "audio/x-raw,",
-			"rate=48000,",
-			"channels=2",
-		"!", "avenc_aac",
-		"!", "queue",
-			"max-size-buffers=0",
-			"max-size-bytes=0",
-		"!", "muxer.",
 		"udpsrc",
 			"address=", wfd_out_session_get_sink(s)->peer->local_address,
 			"port=", uint16_to_str(LOCAL_RTCP_PORT, lrtcp_port,sizeof(lrtcp_port)),
@@ -642,6 +629,30 @@ static int wfd_out_session_create_pipeline(struct wfd_session *s)
 		*tmp ++ = uint16_to_str(s->stream.rtcp_port, rrtcp_port,sizeof(rrtcp_port));
 		*tmp ++ = "sync=false";
 		*tmp ++ = "async=false";
+		*tmp ++ = NULL;
+	}
+
+	if(*os->audio_dev) {
+		for(tmp = pipeline_desc; *tmp; ++tmp);
+		*tmp ++ = "pulsesrc";
+		*tmp ++ = "do-timestamp=true";
+		*tmp ++ = "client-name=miraclecast";
+		*tmp ++ = "device=";
+		*tmp ++ = quote_str(os->audio_dev, audio_dev, sizeof(audio_dev));
+		*tmp ++ = "!";
+		*tmp ++ = "audioconvert";
+		*tmp ++ = "!";
+		*tmp ++ = "audio/x-raw,";
+		*tmp ++ = "rate=48000,";
+		*tmp ++ = "channels=2";
+		*tmp ++ = "!";
+		*tmp ++ = "avenc_aac";
+		*tmp ++ = "!";
+		*tmp ++ = "queue";
+		*tmp ++ = "max-size-buffers=0";
+		*tmp ++ = "max-size-bytes=0";
+		*tmp ++ = "!";
+		*tmp ++ = "muxer.";
 		*tmp ++ = NULL;
 	}
 
