@@ -18,6 +18,7 @@
  */
 #define LOG_SUBSYSTEM "wfd-session"
 
+#include <time.h>
 #include "ctl.h"
 #include "rtsp.h"
 #include "wfd-dbus.h"
@@ -398,6 +399,9 @@ static int wfd_session_handle_request(struct rtsp *bus,
 	_rtsp_message_unref_ struct rtsp_message *rep = NULL;
 	struct wfd_session *s = userdata;
 	enum rtsp_message_id id;
+	char date[128];
+	uint64_t usec;
+	time_t sec;
 	int r;
 
 	id = wfd_session_message_to_id(s, m);
@@ -418,6 +422,21 @@ static int wfd_session_handle_request(struct rtsp *bus,
 					id,
 					m,
 					&rep);
+	if(0 > r) {
+		goto error;
+	}
+
+	r = sd_event_now(ctl_wfd_get_loop(), CLOCK_REALTIME, &usec);
+	if(0 > r) {
+		goto error;
+	}
+
+	sec = usec / 1000 / 1000;
+	strftime(date, sizeof(date),
+					"%a, %d %b %Y %T %z",
+					gmtime(&sec));
+
+	r = rtsp_message_append(rep, "<s>", "Date", date);
 	if(0 > r) {
 		goto error;
 	}

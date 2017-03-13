@@ -499,6 +499,7 @@ int main(int argc, char **argv)
 	sd_bus *bus;
 
 	setlocale(LC_ALL, "");
+	setlocale(LC_TIME, "en_US.UTF-8");
 
 	if(getenv("LOG_LEVEL")) {
 		log_max_sev = log_parse_arg(getenv("LOG_LEVEL"));
