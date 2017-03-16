@@ -24,6 +24,7 @@
 #include <unistd.h>
 #include <time.h>
 #include <gst/gst.h>
+#include <gst/base/base.h>
 #include "wfd-session.h"
 #include "shl_log.h"
 #include "rtsp.h"
@@ -566,6 +567,7 @@ static int wfd_out_session_create_pipeline(struct wfd_session *s)
 	char vsrc_param3[16] = "", vsrc_param4[16] = "";
 	struct wfd_out_session *os = wfd_out_session(s);
 	GstElement *pipeline;
+	GstElement *vsrc;
 	GstBus *bus;
 	GError *error = NULL;
 	const char **tmp;
@@ -693,6 +695,11 @@ static int wfd_out_session_create_pipeline(struct wfd_session *s)
 		}
 		return -1;
 	}
+
+	vsrc = gst_bin_get_by_name(GST_BIN(pipeline), "vsrc");
+	gst_base_src_set_live(GST_BASE_SRC(vsrc), true);
+	g_object_unref(vsrc);
+	vsrc = NULL;
 
 	r = gst_element_set_state(pipeline, GST_STATE_READY);
 	if(GST_STATE_CHANGE_FAILURE == r) {
