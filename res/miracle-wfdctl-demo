@@ -192,7 +192,7 @@ get_prop org.freedesktop.miracle.wifi \
     /org/freedesktop/miracle/wifi/peer/$peer_id \
     org.freedesktop.miracle.wifi.Peer \
     Interface p2p_iface
-tshark -i $p2p_iface -w miraclecast.pcap &
+sudo tcpdump -i $p2p_iface -w miraclecast.pcap -T rtp &
 cleanup_push "kill $!"
 
 while [[ -z "$nocheck" ]] && ! killall -0 miracle-wfdctl &>/dev/null; do

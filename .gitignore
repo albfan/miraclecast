@@ -6,6 +6,7 @@
 *.swp
 *.tar.xz
 *.trs
+*.pcap
 .deps/
 .dirstamp
 .libs/
