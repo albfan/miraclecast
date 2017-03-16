@@ -638,29 +638,29 @@ static int wfd_out_session_create_pipeline(struct wfd_session *s)
 		*tmp ++ = NULL;
 	}
 
-	if(*os->audio_dev) {
-		for(tmp = pipeline_desc; *tmp; ++tmp);
-		*tmp ++ = "pulsesrc";
-		*tmp ++ = "do-timestamp=true";
-		*tmp ++ = "client-name=miraclecast";
-		*tmp ++ = "device=";
-		*tmp ++ = quote_str(os->audio_dev, audio_dev, sizeof(audio_dev));
-		*tmp ++ = "!";
-		*tmp ++ = "audioconvert";
-		*tmp ++ = "!";
-		*tmp ++ = "audio/x-raw,";
-		*tmp ++ = "rate=48000,";
-		*tmp ++ = "channels=2";
-		*tmp ++ = "!";
-		*tmp ++ = "avenc_aac";
-		*tmp ++ = "!";
-		*tmp ++ = "queue";
-		*tmp ++ = "max-size-buffers=0";
-		*tmp ++ = "max-size-bytes=0";
-		*tmp ++ = "!";
-		*tmp ++ = "muxer.";
-		*tmp ++ = NULL;
-	}
+	/*if(*os->audio_dev) {*/
+		/*for(tmp = pipeline_desc; *tmp; ++tmp);*/
+		/**tmp ++ = "pulsesrc";*/
+		/**tmp ++ = "do-timestamp=true";*/
+		/**tmp ++ = "client-name=miraclecast";*/
+		/**tmp ++ = "device=";*/
+		/**tmp ++ = quote_str(os->audio_dev, audio_dev, sizeof(audio_dev));*/
+		/**tmp ++ = "!";*/
+		/**tmp ++ = "audioconvert";*/
+		/**tmp ++ = "!";*/
+		/**tmp ++ = "audio/x-raw,";*/
+		/**tmp ++ = "rate=48000,";*/
+		/**tmp ++ = "channels=2";*/
+		/**tmp ++ = "!";*/
+		/**tmp ++ = "avenc_aac";*/
+		/**tmp ++ = "!";*/
+		/**tmp ++ = "queue";*/
+		/*[>*tmp ++ = "max-size-buffers=0";<]*/
+		/*[>*tmp ++ = "max-size-bytes=0";<]*/
+		/**tmp ++ = "!";*/
+		/**tmp ++ = "muxer.";*/
+		/**tmp ++ = NULL;*/
+	/*}*/
 
 	/* bad pratice, but since we are in the same process,
 	   I think this is the only way to do it */
