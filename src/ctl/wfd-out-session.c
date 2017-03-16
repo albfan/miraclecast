@@ -582,15 +582,19 @@ static int wfd_out_session_create_pipeline(struct wfd_session *s)
 			vsrc_param3,
 			vsrc_param4,
 		"!", "video/x-raw,",
-			"framerate=60/1",
+			"framerate=30/1",
 		"!", "vaapipostproc",
-		"!", "video/x-raw,",
-			"format=YV12",
+			"scale-method=2",	/* high quality scaling mode */
+			"format=3",			/* yv12" */
 		"!", "vaapih264enc",
-			"rate-control=2",
-			"num-slices=128",
-			"max-bframes=0",
-			"init-qp=21",
+			"rate-control=1",
+			"num-slices=1",		/* in WFD spec, one slice per frame */
+			"max-bframes=0",	/* in H264 CHP, no bframe supporting */
+			"cabac=true",		/* in H264 CHP, CABAC entropy codeing is supported, but need more processing to decode */
+			"dct8x8=true",		/* in H264 CHP, DTC is supported */
+			"cpb-length=50",	/* shortent buffer in order to decrease latency */
+			"keyframe-period=30",
+			/*  "bitrate=62500", */	/* the max bitrate of H264 level 4.2, crashing my dongle, let codec decide */
 		"!", "queue",
 			"max-size-buffers=0",
 			"max-size-bytes=0",
