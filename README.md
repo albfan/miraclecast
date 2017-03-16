@@ -21,10 +21,20 @@ The MiracleCast projects requires the following software to be installed:
  - **glib**: A utility library. Used by the current DHCP implementation. Will be removed once sd-dns gains DHCP-server capabilities.
     *required*: ~=glib2-2.38 (might work with older releases, untested..)
 
+ - readline**: A library which is used to provide command line interface to control wifid, sink, etc..
+
  - **check**: Test-suite for C programs. Used for optional tests of the MiracleCast code base.
     *optional*: ~=check-0.9.11 (might work with older releases, untested..)
 
- - **gstreamer**: MiracleCast rely on gstreamer to show cast its output. You can test if all needed is installed launching [res/test-viewer.sh](https://github.com/albfan/miraclecast/blob/master/res/test-viewer.sh)
+ - **gstreamer**: MiracleCast rely on gstreamer to show cast its output. You can test if all needed is installed launching [res/test-viewer.sh](https://github.com/albfan/miraclecast/blob/master/res/test-viewer.sh).
+
+ - gstreamer plugins: here are the gstreamer plugins you need in order to run sinkctl or wfdctl
+     - gstreamer-plugins-base
+     - gstreamer-plugins-good
+     - gstreamer-plugins-bad
+     - gstreamer-plugins-ugly
+     - gstreamer-plugins-vaapi
+     - gstreamer-plugins-libav
 
  - **P2P Wi-Fi device** Although widespread these days, there are some devices not compatible with [Wi-Fi Direct](http://en.wikipedia.org/wiki/Wi-Fi_Direct) (prior know as Wi-Fi P2P). Test yours with [res/test-hardware-capabilities.sh](https://github.com/albfan/miraclecast/blob/master/res/test-hardware-capabilities.sh)
 
@@ -55,9 +65,9 @@ You can also choose the interface with  `--interface` option for miracle-wifid.
 Check your systemd version with:
 
     $ systemctl --version
-    
+
 If you are on 221 or above your systemd has kdbus enabled.
- 
+
 If you are below 221, an alternative repo was created to install systemd with dbus
 
 https://github.com/albfan/systemd-ubuntu-with-dbus
@@ -88,7 +98,7 @@ If you feel confidence enough (since systemd is the entrypoint for an OS) extrac
  1. shutdown wpa_supplicant and NetworkManager
 
         $ systemctl stop NetworkManager.service
-        $ systemctl stop wpa_supplicant.service 
+        $ systemctl stop wpa_supplicant.service
 
  2. launch wifi daemon
 
@@ -99,7 +109,7 @@ If you feel confidence enough (since systemd is the entrypoint for an OS) extrac
         $ sudo miracle-sinkctl
         [ADD]  Link: 3
 
- 4. run WiFi Display on link: 
+ 4. run WiFi Display on link:
 
         > run 3
 
@@ -139,7 +149,7 @@ This software is licensed under the terms of the GNU-LGPL license. Please see ./
 
 ## Credits
 
-This software is originally maintained by: David Herrmann dh.herrmann@gmail.com 
+This software is originally maintained by: David Herrmann dh.herrmann@gmail.com
 
 This fork is maintained by: Alberto Fanjul albertofanjul@gmail.com
 
