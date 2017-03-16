@@ -1,4 +1,4 @@
-find_package(Readline)
+find_package(Readline REQUIRED)
 ########### next target ###############
 
 set(miracle-wifictl_SRCS ctl.h 
