@@ -686,8 +686,7 @@ static int wfd_out_session_create_pipeline(struct wfd_session *s)
 			snprintf(vsrc_param1, sizeof(vsrc_param1),
 					"%s=\"%s\"",
 					os->display_param_name,
-					os->display_param_value,
-					NULL);
+					os->display_param_value);
 		}
 	}
 
