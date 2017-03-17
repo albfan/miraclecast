@@ -322,7 +322,7 @@ void wfd_out_session_destroy(struct wfd_session *s)
 	}
 
 	if(os->bus) {
-		gst_bus_remove_signal_watch(os->bus);
+		gst_bus_remove_watch(os->bus);
 		g_object_unref(os->bus);
 		os->bus = NULL;
 	}
@@ -545,6 +545,44 @@ static int wfd_out_session_request_options(struct wfd_session *s,
 	return 0;
 }
 
+static gboolean wfd_out_session_handle_gst_message(GstBus *bus,
+				GstMessage *m,
+				gpointer userdata)
+{
+	struct wfd_session *s = userdata;
+	struct wfd_out_session *os = userdata;
+	GstState old_state, new_state;
+
+	switch(GST_MESSAGE_TYPE(m)) {
+		case GST_MESSAGE_STATE_CHANGED:
+			if(os->pipeline != (void *) GST_MESSAGE_SRC(m)) {
+				break;
+			}
+
+			gst_message_parse_state_changed(m, &old_state, &new_state, NULL);
+			if(GST_STATE_PLAYING == new_state) {
+				log_info("stream is playing");
+				wfd_session_set_state(s, WFD_SESSION_STATE_PLAYING);
+			}
+			else if(GST_STATE_PLAYING == old_state &&
+							GST_STATE_PAUSED == new_state) {
+				log_info("stream is paused");
+				wfd_session_set_state(s, WFD_SESSION_STATE_PAUSED);
+			}
+			break;
+		case GST_MESSAGE_EOS:
+		case GST_MESSAGE_ERROR:
+			log_warning("%s encounter unexpected error or EOS",
+							GST_MESSAGE_SRC_NAME(m));
+			wfd_session_teardown(s);
+			break;
+		default:
+			break;
+	}
+
+	return TRUE;
+}
+
 inline static char * uint16_to_str(uint16_t i, char *buf, size_t len)
 {
 	snprintf(buf, len, "%u", i);
@@ -704,14 +742,14 @@ static int wfd_out_session_create_pipeline(struct wfd_session *s)
 	g_object_unref(vsrc);
 	vsrc = NULL;
 
-	r = gst_element_set_state(pipeline, GST_STATE_READY);
+	r = gst_element_set_state(pipeline, GST_STATE_PAUSED);
 	if(GST_STATE_CHANGE_FAILURE == r) {
 		g_object_unref(pipeline);
 		return -1;
 	}
 
 	bus = gst_element_get_bus(pipeline);
-	gst_bus_add_signal_watch(bus);
+	gst_bus_add_watch(bus, wfd_out_session_handle_gst_message, s);
 
 	os->pipeline = pipeline;
 	os->bus = bus;
@@ -726,7 +764,10 @@ static int wfd_out_session_handle_pause_request(struct wfd_session *s,
 	_rtsp_message_unref_ struct rtsp_message *m = NULL;
 	int r;
 
-	gst_element_set_state(wfd_out_session(s)->pipeline, GST_STATE_READY);
+	r = gst_element_set_state(wfd_out_session(s)->pipeline, GST_STATE_READY);
+	if(GST_STATE_CHANGE_FAILURE == r) {
+		return -1;
+	}
 
 	r = rtsp_message_new_reply_for(req,
 					&m,
@@ -1075,12 +1116,6 @@ static const struct rtsp_dispatch_entry out_session_rtsp_disp_tbl[] = {
 	},
 	[RTSP_M7_PLAY]					= {
 		.handle_request = wfd_out_session_handle_play_request,
-		/*.rule = wfd_arg_list(*/
-			/*wfd_arg_dict(*/
-					/*wfd_arg_u(WFD_SESSION_ARG_NEW_STATE),*/
-					/*wfd_arg_u(WFD_SESSION_STATE_PLAYING)*/
-			/*),*/
-		/*)*/
 	},
 	[RTSP_M8_TEARDOWN]				= {
 		.handle_request = wfd_out_session_handle_teardown_request,
@@ -1093,12 +1128,6 @@ static const struct rtsp_dispatch_entry out_session_rtsp_disp_tbl[] = {
 	},
 	[RTSP_M9_PAUSE]					= {
 		.handle_request = wfd_out_session_handle_pause_request,
-		/*.rule = wfd_arg_list(*/
-			/*wfd_arg_dict(*/
-					/*wfd_arg_u(WFD_SESSION_ARG_NEW_STATE),*/
-					/*wfd_arg_u(WFD_SESSION_STATE_PAUSED)*/
-			/*),*/
-		/*)*/
 	},
 	[RTSP_M10_SET_ROUTE]			= {
 		.handle_request = wfd_out_session_request_not_implement

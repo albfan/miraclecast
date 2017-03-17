@@ -120,7 +120,7 @@ enum wfd_session_state wfd_session_get_state(struct wfd_session *s)
 	return s->state;
 }
 
-static void wfd_session_set_state(struct wfd_session *s,
+void wfd_session_set_state(struct wfd_session *s,
 				enum wfd_session_state state)
 {
 	if(state == s->state) {
