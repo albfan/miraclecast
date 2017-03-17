@@ -120,9 +120,8 @@ int wfd_session_request(struct wfd_session *s,
 				enum rtsp_message_id id,
 				const struct wfd_arg_list *args);
 void wfd_session_end(struct wfd_session *s);
-
 struct wfd_sink * wfd_out_session_get_sink(struct wfd_session *s);
-
-const char * rtsp_message_id_to_string(enum rtsp_message_id id);
+void wfd_session_set_state(struct wfd_session *s,
+				enum wfd_session_state state);
 
 #endif /* CTL_WFD_SESSION_H */
