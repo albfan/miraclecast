@@ -45,6 +45,7 @@ extern int wfd_out_session_pause(struct wfd_session *);
 extern int wfd_out_session_teardown(struct wfd_session *);
 extern void wfd_out_session_end(struct wfd_session *);
 extern void wfd_out_session_destroy(struct wfd_session *);
+static const char * rtsp_message_id_to_string(enum rtsp_message_id id);
 
 const struct wfd_session_vtable session_vtbl[] = {
 	[WFD_SESSION_DIR_OUT] = {
@@ -655,7 +656,7 @@ void wfd_session_free_p(struct wfd_session **s)
 	wfd_session_free(*s);
 }
 
-const char * rtsp_message_id_to_string(enum rtsp_message_id id)
+static const char * rtsp_message_id_to_string(enum rtsp_message_id id)
 {
 	if(rtsp_message_id_is_valid(id)) {
 		return rtsp_message_names[id];
