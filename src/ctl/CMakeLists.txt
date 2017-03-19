@@ -43,46 +43,8 @@ endif(READLINE_FOUND)
 
 target_link_libraries(miracle-sinkctl miracle-shared)
 
-include_directories(${CMAKE_BINARY_DIR} ${CMAKE_SOURCE_DIR}/src ${CMAKE_SOURCE_DIR}/src/shared)
-
-########### next target ###############
-set(miracle-wfdctl_SRCS ctl-cli.c
-						ctl-wifi.c
-						wfd-sink.c
-						wfd-dbus.c
-						wfd-session.c
-						wfd-out-session.c
-						wfdctl.c
-						wfd.c
-						wfd-arg.c)
-
 include_directories(${CMAKE_BINARY_DIR}
-					${GSTREAMER_INCLUDE_DIRS}
-					${GSTREAMER_BASE_INCLUDE_DIRS}
-					${CMAKE_SOURCE_DIR}/src
-					${CMAKE_SOURCE_DIR}/src/shared)
-
-add_executable(miracle-wfdctl ${miracle-wfdctl_SRCS})
-
-install(TARGETS miracle-wfdctl DESTINATION bin)
-
-if(READLINE_FOUND)
-	message(STATUS "Compiling with Readline support")
-	set_property(TARGET miracle-wfdctl
-						APPEND
-						PROPERTY COMPILE_DEFINITIONS HAVE_READLINE)
-	target_link_libraries(miracle-wfdctl ${READLINE_LIBRARY})
-endif(READLINE_FOUND)
-
-target_link_libraries(miracle-wfdctl
-				miracle-shared
-				${GSTREAMER_LIBRARIES}
-				${GSTREAMER_BASE_LIBRARIES})
-
-########### install files ###############
-
-
-
+         ${CMAKE_SOURCE_DIR}/src ${CMAKE_SOURCE_DIR}/src/shared)
 
 #original Makefile.am contents follow:
 
