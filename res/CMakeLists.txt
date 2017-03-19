@@ -25,15 +25,15 @@ install(
     )
 
 configure_file(
-    miracle-wfdctl.service.cmake
-    miracle-wfdctl.service
+    miracle-dispd.service.cmake
+    miracle-dispd.service
     )
 install(
-    FILES ${CMAKE_CURRENT_BINARY_DIR}/miracle-wfdctl.service
+    FILES ${CMAKE_CURRENT_BINARY_DIR}/miracle-dispd.service
     DESTINATION ${SYSTEMD_SYSTEM_UNIT_DIR}/
     )
 install(
-    CODE "execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink miracle-wfdctl.service ${SYSTEMD_SYSTEM_UNIT_DIR}/dbus-org.freedesktop.miracle.wfd.service)"
+    CODE "execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink miracle-dispd.service ${SYSTEMD_SYSTEM_UNIT_DIR}/dbus-org.freedesktop.miracle.wfd.service)"
     )
 
 configure_file(
