@@ -374,12 +374,12 @@ static int wfd_dbus_sink_start_session(sd_bus_message *m,
 	_shl_free_ char *path = NULL;
 	const char *authority;
 	const char *display;
-	uint16_t x, y, width, height;
+	uint32_t x, y, width, height;
 	const char *audio_dev;
 	int r;
 
 	r = sd_bus_message_read(m,
-					"ssqqqqs",
+					"ssuuuus",
 					&authority,
 					&display,
 					&x,
@@ -656,7 +656,7 @@ static const sd_bus_vtable wfd_dbus_vtable[] = {
 
 static const sd_bus_vtable wfd_dbus_sink_vtable[] = {
 	SD_BUS_VTABLE_START(0),
-	SD_BUS_METHOD("StartSession", "ssqqqqs", "o", wfd_dbus_sink_start_session, SD_BUS_VTABLE_UNPRIVILEGED),
+	SD_BUS_METHOD("StartSession", "ssuuuus", "o", wfd_dbus_sink_start_session, SD_BUS_VTABLE_UNPRIVILEGED),
 	/*SD_BUS_PROPERTY("AudioFormats", "a{sv}", wfd_dbus_sink_get_audio_formats, 0, SD_BUS_VTABLE_PROPERTY_CONST),*/
 	/*SD_BUS_PROPERTY("VideoFormats", "a{sv}", wfd_dbus_sink_get_video_formats, 0, SD_BUS_VTABLE_PROPERTY_CONST),*/
 	/*SD_BUS_PROPERTY("HasAudio", "b", wfd_dbus_sink_has_audio, 0, SD_BUS_VTABLE_PROPERTY_CONST),*/

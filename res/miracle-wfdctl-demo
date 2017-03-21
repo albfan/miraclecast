@@ -204,7 +204,7 @@ invoke org.freedesktop.miracle.wfd \
     /org/freedesktop/miracle/wfd/sink/$peer_id \
     org.freedesktop.miracle.wfd.Sink \
     Peer /org/freedesktop/miracle/wifi/peer/$peer_id \
-    StartSession ssqqqqs \
+    StartSession ssuuuus \
         "$XAUTHORITY" \
         'x://:0.0' \
         0 \
