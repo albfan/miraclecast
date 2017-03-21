@@ -438,7 +438,7 @@ error:
 
 static bool find_strv(const char *str, char **strv)
 {
-	while(strv) {
+	while(*strv) {
 		if(!strcmp(str, *strv)) {
 			return true;
 		}
