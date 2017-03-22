@@ -1,0 +1,36 @@
+<!DOCTYPE node PUBLIC "-//freedesktop//DTD D-BUS Object Introspection 1.0//EN"
+"http://www.freedesktop.org/standards/dbus/1.0/introspect.dtd">
+<node>
+ <interface name="org.freedesktop.miracle.wfd.Session">
+  <method name="Resume">
+  </method>
+  <method name="Pause">
+  </method>
+  <method name="Teardown">
+  </method>
+  <property name="Sink" type="o" access="readonly">
+   <annotation name="org.freedesktop.DBus.Property.EmitsChangedSignal" value="const"/>
+  </property>
+  <property name="Url" type="s" access="readonly">
+  </property>
+  <property name="State" type="i" access="readonly">
+  </property>
+ </interface>
+ <interface name="org.freedesktop.miracle.wfd.Sink">
+  <method name="StartSession">
+   <arg type="s" direction="in"/>
+   <arg type="s" direction="in"/>
+   <arg type="u" direction="in"/>
+   <arg type="u" direction="in"/>
+   <arg type="u" direction="in"/>
+   <arg type="u" direction="in"/>
+   <arg type="s" direction="in"/>
+   <arg type="o" direction="out"/>
+  </method>
+  <property name="Session" type="o" access="readonly">
+  </property>
+  <property name="Peer" type="o" access="readonly">
+   <annotation name="org.freedesktop.DBus.Property.EmitsChangedSignal" value="const"/>
+  </property>
+ </interface>
+</node>
