@@ -2,13 +2,15 @@ find_program(VALAC valac)
 if(NOT VALAC)
 	message(FATAL_ERROR "valac not found")
 endif()
+
 find_program(VALA_DBUS_BINDING_TOOL vala-dbus-binding-tool)
 if(NOT VALA_DBUS_BINDING_TOOL)
 	message(FATAL_ERROR "vala-dbus-binding-tool not found")
 endif()
-find_library(READLINE REQUIRED)
 
+find_library(READLINE REQUIRED)
 pkg_check_modules(GIO2 REQUIRED gio-2.0)
+pkg_check_modules(GDK3 REQUIRED gdk-3.0)
 
 set(RES_DIR ${CMAKE_CURRENT_SOURCE_DIR}/res)
 set(DBUS_DIR ${CMAKE_CURRENT_SOURCE_DIR}/dbus)
@@ -34,6 +36,7 @@ add_custom_command(OUTPUT wfdctl.c
 						  org-freedesktop-miracle-wfd.c
 				COMMAND ${VALAC} --target-glib=2.50 -H wfdctl.h --use-header -C
 								--pkg=gio-2.0
+								--pkg=gdk-3.0
 								${CMAKE_CURRENT_SOURCE_DIR}/wfdctl.vala
 								org-freedesktop-networkmanager.vala
 								org-freedesktop-miracle-wifi.vala
@@ -52,7 +55,7 @@ add_custom_command(OUTPUT wfdctl-res.c
 						${RES_DIR}/wfdctl-res.xml
 				WORKING_DIRECTORY ${RES_DIR})
 
-include_directories(${GIO2_INCLUDE_DIRS})
+include_directories(${GIO2_INCLUDE_DIRS} ${GDK3_INCLUDE_DIRS})
 
 # silent C compiler warning about valac generated code, bad practice
 set(CMAKE_C_FLAGS "-Wno-unused-label ${CMAKE_C_FLAGS}")
@@ -66,5 +69,6 @@ add_executable(miracle-wfdctl wfdctl
 							  org-freedesktop-miracle-wifi.c
 							  org-freedesktop-miracle-wfd.c)
 
-target_link_libraries(miracle-wfdctl ${GIO2_LIBRARIES})
+target_link_libraries(miracle-wfdctl ${GIO2_LIBRARIES}
+									 ${GDK3_LIBRARIES})
 
