@@ -720,8 +720,8 @@ static int wfd_out_session_create_pipeline(struct wfd_session *s)
 		if(!os->display_param_name) {
 			snprintf(vsrc_param1, sizeof(vsrc_param1), "startx=%hu", os->x);
 			snprintf(vsrc_param2, sizeof(vsrc_param2), "starty=%hu", os->y);
-			snprintf(vsrc_param3, sizeof(vsrc_param3), "endx=%d", os->width - 1);
-			snprintf(vsrc_param4, sizeof(vsrc_param4), "endy=%d", os->height - 1);
+			snprintf(vsrc_param3, sizeof(vsrc_param3), "endx=%d", os->x + os->width - 1);
+			snprintf(vsrc_param4, sizeof(vsrc_param4), "endy=%d", os->y + os->height - 1);
 		}
 		else if(!strcmp("xid", os->display_param_name) ||
 						!strcmp("xname", os->display_param_name)) {
@@ -1042,7 +1042,7 @@ static int wfd_out_session_request_set_parameter(struct wfd_session *s,
 					"wfd_client_rtp_ports: %u %u mode=play",
 					//"wfd_uibc_capability: input_category_list=GENERIC\n;generic_cap_list=SingleTouch;hidc_cap_list=none;port=5100\n"
 					//"wfd_uibc_setting: disable\n",
-					WFD_RESOLUTION_STANDARD_CEA == os->std ? os->mask : 0,
+					WFD_RESOLUTION_STANDARD_CEA == os->std ? 0x80 : 0,
 					WFD_RESOLUTION_STANDARD_VESA == os->std ? os->mask: 0,
 					WFD_RESOLUTION_STANDARD_HH == os->std ? os->mask : 0,
 					wfd_session_get_stream_url(s),
