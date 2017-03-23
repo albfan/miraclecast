@@ -8,9 +8,20 @@ if(NOT VALA_DBUS_BINDING_TOOL)
 	message(FATAL_ERROR "vala-dbus-binding-tool not found")
 endif()
 
+find_program(GLIB_COMPILE_RESOURCES glib-compile-resources)
+if(NOT GLIB_COMPILE_RESOURCES)
+	message(FATAL_ERROR "glib-compile-resources not found")
+endif()
+
 find_library(READLINE REQUIRED)
 pkg_check_modules(GIO2 REQUIRED gio-2.0)
 pkg_check_modules(GDK3 REQUIRED gdk-3.0)
+
+execute_process(COMMAND ${PKG_CONFIG_EXECUTABLE} --atleast-version 3.22 gdk-3.0
+				RESULT_VARIABLE GDK_VERSION_NEWER_THEN_3_22)
+if(NOT GDK_VERSION_NEWER_THEN_3_22)
+	set(VALA_EXTRA_OPTIONS -D GDK_VERSION_NEWER_THEN_3_22)
+endif()
 
 set(RES_DIR ${CMAKE_CURRENT_SOURCE_DIR}/res)
 set(DBUS_DIR ${CMAKE_CURRENT_SOURCE_DIR}/dbus)
@@ -41,6 +52,7 @@ add_custom_command(OUTPUT wfdctl.c
 								org-freedesktop-networkmanager.vala
 								org-freedesktop-miracle-wifi.vala
 								org-freedesktop-miracle-wfd.vala
+								${VALA_EXTRA_OPTIONS}
 				DEPENDS wfdctl.vala
 						${CMAKE_CURRENT_BINARY_DIR}/org-freedesktop-networkmanager.vala
 						${CMAKE_CURRENT_BINARY_DIR}/org-freedesktop-miracle-wifi.vala
@@ -49,8 +61,9 @@ add_custom_command(OUTPUT wfdctl.c
 
 add_custom_command(OUTPUT wfdctl-res.c
 				COMMAND ${GLIB_COMPILE_RESOURCES}
+								--generate-source
 								--target=${CMAKE_CURRENT_BINARY_DIR}/wfdctl-res.c
-								--generate-source ${RES_DIR}/wfdctl-res.xml
+								${RES_DIR}/wfdctl-res.xml
 				DEPENDS ${RES_DIR}/wfdctl.ui
 						${RES_DIR}/wfdctl-res.xml
 				WORKING_DIRECTORY ${RES_DIR})
