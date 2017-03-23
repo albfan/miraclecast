@@ -93,3 +93,5 @@ add_executable(miracle-wfdctl wfdctl
 target_link_libraries(miracle-wfdctl ${GIO2_LIBRARIES}
 									 ${GDK3_LIBRARIES})
 
+install(TARGETS miracle-wfdctl DESTINATION bin)
+
