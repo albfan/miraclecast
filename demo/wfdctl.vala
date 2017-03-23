@@ -330,25 +330,53 @@ private class WfdCtl : GLib.Application
 		info("P2P group formed");
 	}
 
+#if GDK_VERSION_NEWER_THEN_3_22
+	private void get_monitor_geometry(out Gdk.Rectangle g) throws Error
+	{
+		Gdk.Monitor m;
+		if(-1 == opt_monitor_num) {
+			m = display.get_primary_monitor();
+		}
+		else {
+			m = display.get_monitor(opt_monitor_num);
+		}
+
+		if(null == m) {
+			throw new WfdCtlError.MONITOR_GONE("specified monitor disappeared");
+		}
+
+		g = m.geometry;
+	}
+#else
+	private void get_monitor_geometry(out Gdk.Rectangle g) throws Error
+	{
+		var s = display.get_default_screen();
+		int m = (-1 == opt_monitor_num)
+						? s.get_primary_monitor()
+						: opt_monitor_num;
+
+		if(s.get_n_monitors() <= m) {
+			throw new WfdCtlError.MONITOR_GONE("specified monitor disappeared");
+		}
+
+		s.get_monitor_geometry(m, out g);
+	}
+#endif
+
 	private async void establish_session() throws Error
 	{
-		weak Gdk.Monitor m = (-1 == opt_monitor_num)
-						? display.get_primary_monitor()
-						: display.get_monitor(opt_monitor_num);
-		if(null == m) {
-			throw new WfdCtlError.MONITOR_GONE("monitor %d gone",
-							opt_monitor_num);
-		}
+		Gdk.Rectangle g;
+		get_monitor_geometry(out g);
 
 		info("establishing display session...");
 
 		Sink sink = find_sink_by_mac(opt_peer_mac);
 		sink.start_session(opt_authority,
 						@"x://$(opt_display)",
-						m.geometry.x,
-						m.geometry.y,
-						m.geometry.width,
-						m.geometry.height,
+						g.x,
+						g.y,
+						g.width,
+						g.height,
 						null == opt_audio_device ? "" : opt_audio_device);
 	}
 
@@ -412,8 +440,13 @@ private class WfdCtl : GLib.Application
 			return false;
 		}
 
-		if(-1 != opt_monitor_num &&
-						null == display.get_monitor(opt_monitor_num)) {
+		int n_monitors;
+#if GDK_VERSION_NEWER_THEN_3_22
+		n_monitors = display.get_n_monitors();
+#else
+		n_monitors = display.get_default_screen().get_n_monitors();
+#endif
+		if(-1 > opt_monitor_num || opt_monitor_num >= n_monitors) {
 			print("invalid screen number option: %d", opt_monitor_num);
 			return false;
 		}
