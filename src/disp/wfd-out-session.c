@@ -477,7 +477,7 @@ static int wfd_out_session_handle_options_request(struct wfd_session *s,
 	}
 
 	r = rtsp_message_append(rep,
-					"<s>",
+					"<&>",
 					"Public", "org.wfa.wfd1.0, SETUP, TEARDOWN, PLAY, PAUSE, GET_PARAMETER, SET_PARAMETER");
 	if(0 > r) {
 		return r;
@@ -1039,7 +1039,7 @@ static int wfd_out_session_request_set_parameter(struct wfd_session *s,
 					"wfd_video_formats: 00 00 02 10 %08X %08X %08X 00 0000 0000 00 none none\n"
 					"wfd_audio_codecs: AAC 00000001 00\n"
 					"wfd_presentation_URL: %s none\n"
-					"wfd_client_rtp_ports: %u %u mode=play",
+					"wfd_client_rtp_ports: RTP/AVP/UDP;unicast %u %u mode=play",
 					//"wfd_uibc_capability: input_category_list=GENERIC\n;generic_cap_list=SingleTouch;hidc_cap_list=none;port=5100\n"
 					//"wfd_uibc_setting: disable\n",
 					WFD_RESOLUTION_STANDARD_CEA == os->std ? 0x80 : 0,
