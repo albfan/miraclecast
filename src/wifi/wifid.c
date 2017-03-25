@@ -541,6 +541,12 @@ int main(int argc, char **argv)
 	struct manager *m = NULL;
 	int r;
 
+	if (getuid() != 0) {
+      r = EACCES;
+		log_notice("Must run as root");
+      goto finish;
+	}
+
 	srand(time(NULL));
 
 	r = parse_argv(argc, argv);

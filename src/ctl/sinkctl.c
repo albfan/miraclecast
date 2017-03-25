@@ -733,6 +733,12 @@ static int ctl_main(int argc, char *argv[])
 	struct ctl_link *l;
 	int r, left;
 
+   if (getuid() != 0) {
+      r = EACCES;
+		log_notice("Must run as root");
+      return r;
+	}
+
 	r = ctl_wifi_new(&wifi, bus);
 	if (r < 0)
 		return r;
