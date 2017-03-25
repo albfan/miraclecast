@@ -1,3 +1,22 @@
+/*
+ * MiracleCast - Wifi-Display/Miracast Implementation
+ *
+ * Copyright (c) 2013-2014 David Herrmann <dh.herrmann@gmail.com>
+ *
+ * MiracleCast is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation; either version 2.1 of the License, or
+ * (at your option) any later version.
+ *
+ * MiracleCast is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with MiracleCast; If not, see <http://www.gnu.org/licenses/>.
+ */
+
 using Org.Freedesktop.NetworkManager;
 using Org.Freedesktop.Miracle.Wifi;
 using Org.Freedesktop.Miracle.Wfd;
@@ -82,14 +101,13 @@ private class WfdCtl : GLib.Application
 	string curr_sink_mac;
 	Gdk.Display display;
 	Session curr_session;
-	IOChannel sig_channel;
 
 	const GLib.OptionEntry[] option_entries = {
 		{ "interface", 'i', 0, OptionArg.STRING, ref opt_iface, "name of wireless network interface", "WNIC name" },
 		{ "wfd-subelems", 'w', 0, OptionArg.STRING, ref opt_wfd_subelems, "device infomation.  default: 000600111c4400c8", "device info subelems" },
 		{ "peer-mac", 'p', 0, OptionArg.STRING, ref opt_peer_mac, "MAC address of target peer", "peer MAC" },
 		{ "authority", 'x', 0, OptionArg.STRING, ref opt_authority, "authority to capture from display. default: XAUTHORITY environment variable", "display authority" },
-		{ "display", 'd', 0, OptionArg.STRING, ref opt_display, "display name.  default: DISPLAY environment variable", "display name" },
+		{ "display", 'd', 0, OptionArg.STRING, ref opt_display, "display name.	default: DISPLAY environment variable", "display name" },
 		{ "monitor-num", 'm', 0, OptionArg.INT, ref opt_monitor_num, "monitor number.  default: -1, primary monitor", "monitor number" },
 		{ "audio-device", 'a', 0, OptionArg.STRING, ref opt_audio_device, "pulseaudio device name", "audio device name" },
 		{ null },
@@ -500,8 +518,29 @@ private class WfdCtl : GLib.Application
 		yield wait_for_session_ending();
 		yield release_wnic_ownership();
 
-		release();
+		quit();
+
 		print("Bye");
+	}
+
+	public void stop_wireless_display()
+	{
+		info("tearing down wireless display...");
+
+		try {
+			if(null != curr_session) {
+				curr_session.teardown();
+			}
+			else {
+				release_wnic_ownership.begin(() => {
+					quit();
+					print("Bye");
+				});
+			}
+		}
+		catch(Error e) {
+			warning("%s", e.message);
+		}
 	}
 
 	private bool check_options()
@@ -575,29 +614,6 @@ private class WfdCtl : GLib.Application
 			return;
 		}
 
-		/* vala has bug in generatde C code looks like
-		 * sigset_t _tmp2_ = {0};
-		 * sigset_t _tmp3_ = {0};
-		 * sigset_t _tmp4_ = {0};
-		 * sigset_t _tmp5_ = {0};
-		 * sigset_t _tmp6_ = {0};
-		 * sigset_t _tmp7_ = {0};
-		 * sigemptyset (&_tmp3_);
-		 * sigaddset (&_tmp4_, SIGINT);
-		 * sigprocmask (SIG_BLOCK, &_tmp5_, &_tmp6_); */
-		//Posix.sigset_t mask = {}, oldmask = {};
-		//Posix.sigemptyset(mask);
-		//Posix.sigaddset(mask, Posix.SIGINT);
-		//Posix.sigprocmask(Posix.SIG_BLOCK, mask, oldmask);
-		//sig_channel = new IOChannel.unix_new(Linux.signalfd(-1, mask));
-		//sig_channel.add_watch(IOCondition.IN, (s, e) => {
-			//info("Bye");
-			//release();
-			//return false;
-		//});
-
-		hold();
-
 		start_wireless_display.begin((o, r) => {
 			try {
 				start_wireless_display.end(r);
@@ -607,6 +623,8 @@ private class WfdCtl : GLib.Application
 				release();
 			}
 		});
+
+		hold();
 	}
 
 	private unowned Device? find_device_by_name(string nic_name)
@@ -694,8 +712,11 @@ int main(string[]? argv)
 	Intl.setlocale();
 	Environment.set_prgname(Path.get_basename(argv[0]));
 
+
 	Application app = new WfdCtl();
 	app.set_default();
+
+	Sigint.add_watch((app as WfdCtl).stop_wireless_display);
 
 	try {
 		app.register();

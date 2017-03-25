@@ -56,9 +56,8 @@ add_custom_command(OUTPUT wfdctl.c
 				COMMAND ${VALAC} --target-glib=2.50 -H wfdctl.h --use-header -C
 								--pkg=gio-2.0
 								--pkg=gdk-3.0
-								--pkg=posix
-								--pkg=linux
 								${CMAKE_CURRENT_SOURCE_DIR}/wfdctl.vala
+								${CMAKE_CURRENT_SOURCE_DIR}/sigint.vapi
 								org-freedesktop-networkmanager.vala
 								org-freedesktop-miracle-wifi.vala
 								org-freedesktop-miracle-wfd.vala
@@ -78,7 +77,9 @@ add_custom_command(OUTPUT wfdctl-res.c
 						${RES_DIR}/wfdctl-res.xml
 				WORKING_DIRECTORY ${RES_DIR})
 
-include_directories(${GIO2_INCLUDE_DIRS} ${GDK3_INCLUDE_DIRS})
+include_directories(${GIO2_INCLUDE_DIRS}
+					${GDK3_INCLUDE_DIRS}
+					${CMAKE_CURRENT_SOURCE_DIR})
 
 # silent C compiler warning about valac generated code, bad practice
 set(CMAKE_C_FLAGS "-Wno-unused-label ${CMAKE_C_FLAGS}")
@@ -88,6 +89,7 @@ set(CMAKE_C_FLAGS "-Wno-unused-but-set-variable ${CMAKE_C_FLAGS}")
 
 add_executable(miracle-wfdctl wfdctl
 							  wfdctl-res.c
+							  sigint.c
 							  org-freedesktop-networkmanager.c
 							  org-freedesktop-miracle-wifi.c
 							  org-freedesktop-miracle-wfd.c)
@@ -96,4 +98,3 @@ target_link_libraries(miracle-wfdctl ${GIO2_LIBRARIES}
 									 ${GDK3_LIBRARIES})
 
 install(TARGETS miracle-wfdctl DESTINATION bin)
-
