@@ -23,11 +23,13 @@
 #include <arpa/inet.h>
 #include <unistd.h>
 #include <time.h>
+#include <stdio.h>
 #include <gst/gst.h>
 #include <gst/base/base.h>
 #include "wfd-session.h"
 #include "shl_log.h"
 #include "rtsp.h"
+#include "ctl.h"
 
 #define LOCAL_RTP_PORT		16384
 #define LOCAL_RTCP_PORT		16385

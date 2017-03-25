@@ -17,7 +17,7 @@
  * along with MiracleCast; If not, see <http://www.gnu.org/licenses/>.
  */
 #include <unistd.h>
-#include "ctl.h"
+#include "disp.h"
 #include "wfd-arg.h"
 
 #ifndef CTL_WFD_SESSION_H
