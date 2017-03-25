@@ -56,6 +56,8 @@ add_custom_command(OUTPUT wfdctl.c
 				COMMAND ${VALAC} --target-glib=2.50 -H wfdctl.h --use-header -C
 								--pkg=gio-2.0
 								--pkg=gdk-3.0
+								--pkg=posix
+								--pkg=linux
 								${CMAKE_CURRENT_SOURCE_DIR}/wfdctl.vala
 								org-freedesktop-networkmanager.vala
 								org-freedesktop-miracle-wifi.vala

@@ -81,6 +81,8 @@ private class WfdCtl : GLib.Application
 
 	string curr_sink_mac;
 	Gdk.Display display;
+	Session curr_session;
+	IOChannel sig_channel;
 
 	const GLib.OptionEntry[] option_entries = {
 		{ "interface", 'i', 0, OptionArg.STRING, ref opt_iface, "name of wireless network interface", "WNIC name" },
@@ -107,7 +109,7 @@ private class WfdCtl : GLib.Application
 		add_main_option_entries(option_entries);
 	}
 
-	private void add_object(string path) throws Error
+	private DBusProxy? add_object(string path) throws Error
 	{
 		int sep = path.last_index_of_char('/');
 		string prefix = path.substring(0, sep);
@@ -117,71 +119,108 @@ private class WfdCtl : GLib.Application
 				Device d = Bus.get_proxy_sync(BusType.SYSTEM,
 								BUS_NAME_NETWORK_MANAGER,
 								path);
-				if(is_wnic(d.interface)) {
+				if(is_wnic(d.interface) && !devices.contains(d.interface)) {
 					devices.insert(d.interface, d);
+					return d as DBusProxy;
 				}
 				break;
 			case OBJ_PATH_LINK:
-				Link l = Bus.get_proxy_sync(BusType.SYSTEM,
-								BUS_NAME_WIFID,
-								path);
 				key = decode_path(key);
-				links.insert(key, l);
-				info("found wireless interface: %s\n", l.interface_name);
-				link_added(key, l);
-				break;
+				Link l = links.lookup(key);
+				if(null == l) {
+					l = Bus.get_proxy_sync(BusType.SYSTEM,
+									BUS_NAME_WIFID,
+									path);
+					links.insert(key, l);
+					info("found wireless interface: %s\n", l.interface_name);
+					link_added(key, l);
+				}
+				return l as DBusProxy;
 			case OBJ_PATH_PEER:
 				key = decode_path(key);
-				if(peers.contains(key)) {
-					break;
+				Peer p = peers.lookup(key);
+				if(null == p) {
+					p = Bus.get_proxy_sync(BusType.SYSTEM,
+									BUS_NAME_WIFID,
+									path);
+					peers.insert(key, p);
+					info("peer added: %s\n", key);
+					peer_added(key, p);
 				}
-				Peer p = Bus.get_proxy_sync(BusType.SYSTEM,
-								BUS_NAME_WIFID,
-								path);
-				peers.insert(key, p);
-				info("peer added: %s\n", key);
-				peer_added(key, p);
-				break;
+				return p as DBusProxy;
 			case OBJ_PATH_SINK:
-				Sink s = Bus.get_proxy_sync(BusType.SYSTEM,
-								BUS_NAME_DISPD,
-								path);
 				key = decode_path(key);
-				sinks.insert(key, s);
-				info("sink added: %s", key);
-				sink_added(key, s);
-				break;
+				Sink s = sinks.lookup(key);
+				if(null == s) {
+					s = Bus.get_proxy_sync(BusType.SYSTEM,
+									BUS_NAME_DISPD,
+									path);
+					sinks.insert(key, s);
+					info("sink added: %s", key);
+					sink_added(key, s);
+				}
+				return s as DBusProxy;
 			case OBJ_PATH_SESSION:
-				Session s = Bus.get_proxy_sync(BusType.SYSTEM,
-								BUS_NAME_DISPD,
-								path);
 				key = decode_path(key);
-				sessions.insert(key, s);
-				info("session added: %s", key);
-				session_added(key, s);
-				break;
+				Session s = sessions.lookup(key);
+				if(null == s) {
+					s = Bus.get_proxy_sync(BusType.SYSTEM,
+									BUS_NAME_DISPD,
+									path);
+					sessions.insert(key, s);
+					info("session added: %s", key);
+					session_added(key, s);
+				}
+				return s as DBusProxy;
 		}
+
+		return null;
 	}
 
 	private void remove_object(string path)
 	{
-		debug("object removed: %s", path);
-
 		int sep = path.last_index_of_char('/');
 		string prefix = path.substring(0, sep);
 		string key = path.substring(sep + 1);
 		switch(prefix) {
 			case OBJ_PATH_DEVICE:
+				devices.remove(key);
 				break;
 			case OBJ_PATH_LINK:
+				key = decode_path(key);
+				Link l = links.lookup(key);
+				if(null == l) {
+					break;
+				}
+				links.remove(key);
+				link_removed(key, l);
 				break;
 			case OBJ_PATH_PEER:
+				key = decode_path(key);
+				Peer p = peers.lookup(key);
+				if(null == p) {
+					break;
+				}
+				peers.remove(key);
+				peer_removed(key, p);
 				break;
 			case OBJ_PATH_SINK:
 				key = decode_path(key);
+				Sink s = sinks.lookup(key);
+				if(null == s) {
+					break;
+				}
+				sinks.remove(key);
+				sink_removed(key, s);
 				break;
 			case OBJ_PATH_SESSION:
 				key = decode_path(key);
+				Session s = sessions.lookup(key);
+				if(null == s) {
+					break;
+				}
+				sessions.remove(key);
+				session_removed(key, s);
 				break;
 		}
 	}
@@ -247,16 +286,11 @@ private class WfdCtl : GLib.Application
 		}
 	}
 
-	private async void start_p2p_scan() throws Error
+	private async void acquire_wnic_ownership() throws Error
 	{
 		Device d = find_device_by_name(opt_iface);
-		if(null == d) {
-			throw new WfdCtlError.NO_SUCH_NIC("no such wireless adapter: %s",
-							opt_iface);
-		}
-
-		if(d.managed) {
-			info("tell NetworkManager do not touch %s anymore", opt_iface);
+		if(null != d && d.managed) {
+			info("NetworkManager is releasing ownership of %s...", opt_iface);
 
 			d.managed = false;
 			yield wait_prop_changed(d as DBusProxy, "Managed");
@@ -269,12 +303,16 @@ private class WfdCtl : GLib.Application
 		}
 
 		if(!l.managed) {
-			info("let wifid manage %s", opt_iface);
+			info("wifid is acquiring ownership of %s...", opt_iface);
 
 			l.manage();
 			yield wait_prop_changed(l as DBusProxy, "Managed");
 		}
+	}
 
+	private async void start_p2p_scan() throws Error
+	{
+		Link l = find_link_by_name(opt_iface);
 		if(l.wfd_subelements != opt_wfd_subelems) {
 			info("update wfd_subelems to broadcast what kind of device we are");
 
@@ -363,6 +401,28 @@ private class WfdCtl : GLib.Application
 	}
 #endif
 
+	private unowned string session_state_to_str(int s)
+	{
+		switch(s) {
+			case 1:
+				return "connecting";
+			case 2:
+				return "capabilities exchanging";
+			case 3:
+				return "established";
+			case 4:
+				return "seting up session parameters";
+			case 5:
+				return "paused";
+			case 6:
+				return "playing";
+			case 7:
+				return "tearing down";
+		}
+
+		return "unknown";
+	}
+
 	private async void establish_session() throws Error
 	{
 		Gdk.Rectangle g;
@@ -371,22 +431,77 @@ private class WfdCtl : GLib.Application
 		info("establishing display session...");
 
 		Sink sink = find_sink_by_mac(opt_peer_mac);
-		sink.start_session(opt_authority,
+		string path = sink.start_session(opt_authority,
 						@"x://$(opt_display)",
 						g.x,
 						g.y,
 						g.width,
 						g.height,
 						null == opt_audio_device ? "" : opt_audio_device);
+		curr_session = add_object(path) as Session;
+		(curr_session as DBusProxy).g_properties_changed.connect((props) => {
+			string k;
+			Variant v;
+			foreach(var prop in props) {
+				prop.get("{sv}", out k, out v);
+				if(k != "State") {
+					continue;
+				}
+
+				info("session status: %s", session_state_to_str(v.get_int32()));
+			}
+		});
+
+		info("session status: %s", session_state_to_str(curr_session.state));
+	}
+
+	private async void wait_for_session_ending()
+	{
+		info("wait for session ending");
+		session_removed.connect((id, s) => {
+			info("session ended");
+			curr_session = null;
+			wait_for_session_ending.callback();
+		});
+
+		yield;
+	}
+
+	private async void release_wnic_ownership() throws Error
+	{
+		Link l = find_link_by_name(opt_iface);
+		if(null == l) {
+			throw new WfdCtlError.NO_SUCH_NIC("no such wireless adapter: %s",
+							opt_iface);
+		}
+
+		if(l.managed) {
+			info("wifid is releasing ownership of %s...", opt_iface);
+			l.unmanage();
+			yield wait_prop_changed(l as DBusProxy, "Managed");
+		}
+
+		Device d = find_device_by_name(opt_iface);
+		if(null != d && !d.managed) {
+			info("NetworkManager is acquiring ownership of %s...", opt_iface);
+			d.managed = true;
+			yield wait_prop_changed(d as DBusProxy, "Managed");
+		}
 	}
 
 	private async void start_wireless_display() throws Error
 	{
 		fetch_info_from_dbus();
+		yield acquire_wnic_ownership();
 		yield start_p2p_scan();
 		yield wait_for_target_sink();
 		yield form_p2p_group();
 		yield establish_session();
+		yield wait_for_session_ending();
+		yield release_wnic_ownership();
+
+		release();
+		print("Bye");
 	}
 
 	private bool check_options()
@@ -459,6 +574,27 @@ private class WfdCtl : GLib.Application
 		if(!check_options()) {
 			return;
 		}
+
+		/* vala has bug in generatde C code looks like
+		 * sigset_t _tmp2_ = {0};
+		 * sigset_t _tmp3_ = {0};
+		 * sigset_t _tmp4_ = {0};
+		 * sigset_t _tmp5_ = {0};
+		 * sigset_t _tmp6_ = {0};
+		 * sigset_t _tmp7_ = {0};
+		 * sigemptyset (&_tmp3_);
+		 * sigaddset (&_tmp4_, SIGINT);
+		 * sigprocmask (SIG_BLOCK, &_tmp5_, &_tmp6_); */
+		//Posix.sigset_t mask = {}, oldmask = {};
+		//Posix.sigemptyset(mask);
+		//Posix.sigaddset(mask, Posix.SIGINT);
+		//Posix.sigprocmask(Posix.SIG_BLOCK, mask, oldmask);
+		//sig_channel = new IOChannel.unix_new(Linux.signalfd(-1, mask));
+		//sig_channel.add_watch(IOCondition.IN, (s, e) => {
+			//info("Bye");
+			//release();
+			//return false;
+		//});
 
 		hold();
 
