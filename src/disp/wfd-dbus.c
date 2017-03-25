@@ -20,7 +20,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <systemd/sd-bus.h>
-#include "ctl.h"
+#include "disp.h"
 #include "util.h"
 #include "wfd-dbus.h"
 

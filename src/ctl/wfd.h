@@ -21,6 +21,7 @@
 #ifndef WFD_H
 #define WFD_H
 
+#include <stdbool.h>
 #include <assert.h>
 #include <stdlib.h>
 

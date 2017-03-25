@@ -22,6 +22,7 @@
 #include <time.h>
 #include <systemd/sd-event.h>
 #include "ctl.h"
+#include "disp.h"
 #include "wfd-dbus.h"
 
 static int wfd_sink_set_session(struct wfd_sink *sink,

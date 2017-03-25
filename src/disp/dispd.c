@@ -27,6 +27,7 @@
 #include <glib.h>
 #include <gst/gst.h>
 #include "ctl.h"
+#include "disp.h"
 #include "wfd.h"
 #include "wfd-dbus.h"
 #include "config.h"
@@ -298,23 +299,6 @@ static int ctl_wfd_init(struct ctl_wfd *wfd, sd_bus *bus)
 
 end:
 	return r;
-}
-
-/* Callbacks from ctl-src */
-void wfd_fn_src_connected(struct wfd_src *s)
-{
-}
-
-void wfd_fn_src_disconnected(struct wfd_src *s)
-{
-}
-
-void wfd_fn_src_setup(struct wfd_src *s)
-{
-}
-
-void wfd_fn_src_playing(struct wfd_src *s)
-{
 }
 
 void ctl_fn_peer_new(struct ctl_peer *p)
