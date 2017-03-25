@@ -61,8 +61,10 @@ int gst_audio_en = 1;
 static const int DEFAULT_RSTP_PORT = 1991;
 bool uibc_option;
 bool uibc_enabled;
+bool external_player;
 int rstp_port;
 int uibc_port;
+char* player;
 
 unsigned int wfd_supported_res_cea  = 0x0000001f;	/* up to 720x576 */
 unsigned int wfd_supported_res_vesa = 0x00000003;	/* up to 800x600 */
@@ -388,12 +390,13 @@ void launch_player(struct ctl_sink *s) {
 	char port[64];
 	char uibc_portStr[64];
 	int i = 0;
-	char* player;
-	if (uibc_enabled) {
-		player = "uibc-viewer";
-	} else {
-		player = "miracle-gst";
-	}
+   if (!external_player) {
+	   if (uibc_enabled) {
+	   	player = "uibc-viewer";
+	   } else {
+	   	player = "miracle-gst";
+	   }
+   }
 
 	argv[i++] = player;
 	if (uibc_enabled) {
@@ -680,8 +683,9 @@ void cli_fn_help()
 	       "     --gst-debug [cat:]lvl[,...] List of categories an level of debug\n"
 	       "     --audio <0/1>               Enable audio support (default %d)\n"
 	       "     --scale WxH                 Scale to resolution\n"
-	       "     --port <port>                  Port for rtsp (default %d)\n"
+	       "  -p --port <port>                  Port for rtsp (default %d)\n"
 	       "     --uibc                         Enables UIBC\n"
+	       "  -e --external-player           Configure player to use\n"
 	       "     --res <n,n,n>               Supported resolutions masks (CEA, VESA, HH)\n"
 	       "                                    default CEA  %08X\n"
 	       "                                    default VESA %08X\n"
@@ -767,7 +771,6 @@ static int parse_argv(int argc, char *argv[])
 		ARG_AUDIO,
 		ARG_SCALE,
 		ARG_RES,
-		ARG_PORT,
 		ARG_UIBC,
 	};
 	static const struct option options[] = {
@@ -779,17 +782,19 @@ static int parse_argv(int argc, char *argv[])
 		{ "audio",	required_argument,	NULL,	ARG_AUDIO },
 		{ "scale",	required_argument,	NULL,	ARG_SCALE },
 		{ "res",	required_argument,	NULL,	ARG_RES },
-		{ "port",		required_argument,	NULL,	ARG_PORT },
+		{ "port",		required_argument,	NULL,	'p' },
 		{ "uibc",		no_argument,		NULL,	ARG_UIBC },
+		{ "external-player",		required_argument,		NULL,	'e' },
 		{}
 	};
 	int c;
 
 	uibc_option = false;
 	uibc_enabled = false;
+   external_player = false;
 	rstp_port = DEFAULT_RSTP_PORT;
 
-	while ((c = getopt_long(argc, argv, "h", options, NULL)) >= 0) {
+	while ((c = getopt_long(argc, argv, "he:p", options, NULL)) >= 0) {
 		switch (c) {
 		case 'h':
 			return cli_help(cli_cmds);
@@ -817,8 +822,12 @@ static int parse_argv(int argc, char *argv[])
 				&wfd_supported_res_vesa,
 				&wfd_supported_res_hh);
 			break;
-		case ARG_PORT:
+		case 'p':
 			rstp_port = atoi(optarg);
+			break;
+		case 'e':
+			external_player = true;
+			player = optarg;
 			break;
 		case ARG_UIBC:
 			uibc_option = true;
