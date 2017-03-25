@@ -637,6 +637,7 @@ int ctl_link_set_managed(struct ctl_link *l, bool val)
 	_sd_bus_message_unref_ sd_bus_message *m = NULL;
 	_sd_bus_error_free_ sd_bus_error err = SD_BUS_ERROR_NULL;
 	_shl_free_ char *node = NULL;
+	const char *method = val ? "Manage" : "Unmanage";
 	int r;
 
 	if (!l)
@@ -654,26 +655,8 @@ int ctl_link_set_managed(struct ctl_link *l, bool val)
 					   &m,
 					   "org.freedesktop.miracle.wifi",
 					   node,
-					   "org.freedesktop.DBus.Properties",
-					   "Set");
-	if (r < 0)
-		return cli_log_create(r);
-
-	r = sd_bus_message_append(m, "ss",
-				  "org.freedesktop.miracle.wifi.Link",
-				  "Managed");
-	if (r < 0)
-		return cli_log_create(r);
-
-	r = sd_bus_message_open_container(m, 'v', "b");
-	if (r < 0)
-		return cli_log_create(r);
-
-	r = sd_bus_message_append(m, "b", val);
-	if (r < 0)
-		return cli_log_create(r);
-
-	r = sd_bus_message_close_container(m);
+					   "org.freedesktop.miracle.wifi.Link",
+					   method);
 	if (r < 0)
 		return cli_log_create(r);
 
