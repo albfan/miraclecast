@@ -41,19 +41,21 @@ class Player(object):
         uri = kwargs.get("uri")
 
         self.window = Gtk.Window()
-        self.window.set_name('eco')
+        self.window.set_name('gstplayer')
         self.window.connect('destroy', self.quit)
 
         title = kwargs.get("title")
         if title:
             self.window.set_title(title)
 
-        self.window.set_default_size(self.width, self.height)
+        if hasattr(self,'width') and hasattr(self,'height'):
+            self.window.set_default_size(self.width, self.height)
 
         self.drawingarea = Gtk.DrawingArea()
         self.window.add(self.drawingarea)
 
-        self.drawingarea.set_size_request(self.width,self.height)
+        if hasattr(self,'width') and hasattr(self,'height'):
+            self.drawingarea.set_size_request(self.width,self.height)
         self.drawingarea.add_events(Gdk.EventMask.BUTTON_PRESS_MASK|Gdk.EventMask.BUTTON_RELEASE_MASK) 
         self.drawingarea.connect('button-press-event', self.on_mouse_pressed)
         self.drawingarea.connect('button-release-event', self.on_mouse_pressed)
@@ -153,21 +155,13 @@ class Player(object):
         pos_event_y = event.y
 
 
-        #print('{0} {1} {2} {3} {4} {5}'.format(min_hor_pos, pos_event_x, max_hor_pos, min_ver_pos, pos_event_y,max_ver_pos))
         if min_hor_pos <= pos_event_x <= max_hor_pos and min_ver_pos <= pos_event_y <= max_ver_pos:
             uibc_x = int(pos_event_x - (half_area_width - half_def_width))
-            #print ('{0} {1} {2} {3}'.format(uibc_x, pos_event_x, half_area_width,half_def_width))
             uibc_y = int(pos_event_y - (half_area_height - half_def_height))
-            #print ('{0} {1} {2} {3}'.format(uibc_y, pos_event_y, half_area_height,half_def_height))
             print('{0},1,0,{1},{2}'.format(type, uibc_x , uibc_y))
 
     def on_key_pressed(self, widget, event):
-        #print(Gdk.keyval_name(event.keyval))
         print("3,0x%04X,0x0000" % event.keyval)
-        # print(event.state)
-        # if event.state & Gdk.ModifierType.LOCK_MASK == Gdk.ModifierType.LOCK_MASK:
-            # print("caps lock")
-        # print(Gtk.accelerator_get_label(event.keyval, event.state))
 
     def run(self):
         self.window.show_all()
@@ -186,8 +180,8 @@ class Player(object):
     def on_sync_message(self, bus, msg):
         if msg.get_structure().get_name() == 'prepare-window-handle':
             print(self.drawingarea.get_allocation())
-            #msg.src.set_property("force-aspect-radio", True)
-            msg.src.set_window_handle(self.xid)
+            if hasattr(self,'xid'):
+               msg.src.set_window_handle(self.xid)
 
     def on_eos(self, bus, msg):
         print('on_eos(): seeking to start of video')
