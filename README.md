@@ -23,7 +23,7 @@ The MiracleCast projects requires the following software to be installed:
  - **check**: Test-suite for C programs. Used for optional tests of the MiracleCast code base.
     *optional*: ~=check-0.9.11 (might work with older releases, untested..)
 
- - **gstreamer**: MiracleCast relay on gstreamer to show cast its output. You can test if all needed is installed launching [res/test-viewer.sh](https://github.com/albfan/miraclecast/blob/master/res/test-viewer.sh)
+ - **gstreamer**: MiracleCast rely on gstreamer to show cast its output. You can test if all needed is installed launching [res/test-viewer.sh](https://github.com/albfan/miraclecast/blob/master/res/test-viewer.sh)
 
  - **P2P Wi-Fi device** Although widespread these days, there are some devices not compatible with [Wi-Fi Direct](http://en.wikipedia.org/wiki/Wi-Fi_Direct) (prior know as Wi-Fi P2P). Test yours with [res/test-hardware-capabilities.sh](https://github.com/albfan/miraclecast/blob/master/res/test-hardware-capabilities.sh)
 
