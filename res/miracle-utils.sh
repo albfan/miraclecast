@@ -50,6 +50,17 @@ function find_wireless_pci_slot {
       show_pci_slot $i
    done
 }
+
+#
+# find wireless pci slot
+#
+function find_wireless_ifindex {
+   for i in $( find_wireless_network_interfaces )
+   do
+      show_ifindex $i
+   done
+}
+
 #
 # find wireless connected interfaces
 #
@@ -71,6 +82,17 @@ function find_physical_for_network_interface {
    if [ -n "$PHY_INDEX" ]
    then
       echo phy$PHY_INDEX
+   fi
+}
+
+#
+# find interface index for interface
+#
+function show_ifindex {
+   IF_INDEX=$(iw dev $1 info | grep ifindex | awk '{print $2}')
+   if [ -n "$IF_INDEX" ]
+   then
+      echo $IF_INDEX
    fi
 }
 
