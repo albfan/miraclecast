@@ -28,12 +28,28 @@ function find_wireless_network_interfaces {
 }
 
 #
+# show pci slot
+#
+function show_pci_slot {
+   basename $(readlink /sys/class/net/$1/device) | cut -d: -f2 | sed 's/^0*//'
+}
+
+#
 # test if interface is connected
 #
 function is_interface_connected {
    test x$( cat /sys/class/net/$1/carrier 2>/dev/null) = x1
 }
 
+#
+# find wireless pci slot
+#
+function find_wireless_pci_slot {
+   for i in $( find_wireless_network_interfaces )
+   do
+      show_pci_slot $i
+   done
+}
 #
 # find wireless connected interfaces
 #
