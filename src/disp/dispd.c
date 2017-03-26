@@ -305,6 +305,7 @@ void ctl_fn_peer_new(struct ctl_peer *p)
 {
 	struct wfd_sink *s;
 	union wfd_sube sube;
+    const char *sube_str;
 	int r;
 
 	log_debug("new peer %s (%s) shows up, wfd_subelems: '%s'",
@@ -312,7 +313,17 @@ void ctl_fn_peer_new(struct ctl_peer *p)
 					p->label,
 					p->wfd_subelements);
 
-	r = wfd_sube_parse(p->wfd_subelements, &sube);
+	if(p->wfd_subelements && *p->wfd_subelements) {
+		sube_str = p->wfd_subelements;
+	}
+	else {
+		sube_str = "000600111c4400c8";
+		log_info("peer %s has no wfd_subelems, assume %s",
+						p->label,
+						sube_str);
+	}
+
+	r = wfd_sube_parse(sube_str, &sube);
 	if(0 > r) {
 		log_debug("peer %s has invalid subelement", p->label);
 		return;
