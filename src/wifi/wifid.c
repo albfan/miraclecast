@@ -541,12 +541,6 @@ int main(int argc, char **argv)
 	struct manager *m = NULL;
 	int r;
 
-	if (getuid() != 0) {
-      r = EACCES;
-		log_notice("Must run as root");
-      goto finish;
-	}
-
 	srand(time(NULL));
 
 	r = parse_argv(argc, argv);
@@ -554,6 +548,12 @@ int main(int argc, char **argv)
 		return EXIT_FAILURE;
 	if (!r)
 		return EXIT_SUCCESS;
+
+	if (getuid() != 0) {
+      r = EACCES;
+		log_notice("Must run as root");
+      goto finish;
+	}
 
 	r = manager_new(&m);
 	if (r < 0)

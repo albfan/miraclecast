@@ -220,7 +220,7 @@ int cli_run(void);
 void cli_exit(void);
 bool cli_running(void);
 
-int cli_help(const struct cli_cmd *cmds);
+int cli_help(const struct cli_cmd *cmds, int whitespace);
 int cli_do(const struct cli_cmd *cmds, char **args, unsigned int n);
 
 /* callback functions */

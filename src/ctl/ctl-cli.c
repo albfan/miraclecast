@@ -93,13 +93,10 @@ void cli_printf(const char *fmt, ...)
 	va_end(args);
 }
 
-int cli_help(const struct cli_cmd *cmds)
+int cli_help(const struct cli_cmd *cmds, int whitespace)
 {
 	unsigned int i;
 
-	if (!is_cli()) {
-		cli_fn_help();
-	}
 	cli_printf("Available commands:\n");
 
 	for (i = 0; cmds[i].cmd; ++i) {
@@ -112,7 +109,7 @@ int cli_help(const struct cli_cmd *cmds)
 
 		cli_printf("  %s %-*s %s\n",
 			   cmds[i].cmd,
-			   (int)(40 - strlen(cmds[i].cmd)),
+			   (int)(whitespace - strlen(cmds[i].cmd)),
 			   cmds[i].args ? : "",
 			   cmds[i].desc ? : "");
 	}
@@ -173,7 +170,7 @@ int cli_do(const struct cli_cmd *cmds, char **args, unsigned int n)
 	}
 
 	if (!strcmp(cmd, "help"))
-		return cli_help(cmds);
+		return cli_help(cmds, 40);
 
 	return -EAGAIN;
 }

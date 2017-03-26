@@ -677,6 +677,7 @@ void cli_fn_help()
 	printf("%s [OPTIONS...] ...\n\n"
 	       "Control a dedicated local sink via MiracleCast.\n"
 	       "  -h --help                      Show this help\n"
+	       "     --help-commands             Show avaliable commands\n"
 	       "     --version                   Show package version\n"
 	       "     --log-level <lvl>           Maximum level for log messages\n"
 	       "     --log-journal-level <lvl>   Maximum level for journal log messages\n"
@@ -690,11 +691,11 @@ void cli_fn_help()
 	       "                                    default CEA  %08X\n"
 	       "                                    default VESA %08X\n"
 	       "                                    default HH   %08X\n"
+	       "     --help-res                  Shows avaliable values for res\n"
 	       "\n"
 	       , program_invocation_short_name, gst_audio_en, DEFAULT_RSTP_PORT,
 		   wfd_supported_res_cea, wfd_supported_res_vesa, wfd_supported_res_hh
 	       );
-	wfd_print_resolutions();
 	/*
 	 * 80-char barrier:
 	 *      01234567890123456789012345678901234567890123456789012345678901234567890123456789
@@ -771,10 +772,13 @@ static int parse_argv(int argc, char *argv[])
 		ARG_AUDIO,
 		ARG_SCALE,
 		ARG_RES,
+		ARG_HELP_RES,
 		ARG_UIBC,
+      ARG_HELP_COMMANDS,
 	};
 	static const struct option options[] = {
 		{ "help",	no_argument,		NULL,	'h' },
+		{ "help-commands",	no_argument,		NULL,	ARG_HELP_COMMANDS },
 		{ "version",	no_argument,		NULL,	ARG_VERSION },
 		{ "log-level",	required_argument,	NULL,	ARG_LOG_LEVEL },
 		{ "log-journal-level",	required_argument,	NULL,	ARG_JOURNAL_LEVEL },
@@ -782,6 +786,7 @@ static int parse_argv(int argc, char *argv[])
 		{ "audio",	required_argument,	NULL,	ARG_AUDIO },
 		{ "scale",	required_argument,	NULL,	ARG_SCALE },
 		{ "res",	required_argument,	NULL,	ARG_RES },
+		{ "help-res",	no_argument,	NULL,	ARG_HELP_RES },
 		{ "port",		required_argument,	NULL,	'p' },
 		{ "uibc",		no_argument,		NULL,	ARG_UIBC },
 		{ "external-player",		required_argument,		NULL,	'e' },
@@ -794,10 +799,16 @@ static int parse_argv(int argc, char *argv[])
    external_player = false;
 	rstp_port = DEFAULT_RSTP_PORT;
 
-	while ((c = getopt_long(argc, argv, "he:p", options, NULL)) >= 0) {
+	while ((c = getopt_long(argc, argv, "he:p:", options, NULL)) >= 0) {
 		switch (c) {
 		case 'h':
-			return cli_help(cli_cmds);
+		   cli_fn_help();
+         return 0;
+		case ARG_HELP_COMMANDS:
+			return cli_help(cli_cmds, 20);
+		case ARG_HELP_RES:
+			wfd_print_resolutions("");
+         return 0;
 		case ARG_VERSION:
 			puts(PACKAGE_STRING);
 			return 0;

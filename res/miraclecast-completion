@@ -1,3 +1,11 @@
+#!/bin/bash
+
+#
+# Autocompletion for miraclecast commands
+#
+# Maintainer: Alberto Fanjul <albertofanjul@gmail.com>
+#
+
 function _miracle-wifid() {
   local cur prev
 
@@ -15,7 +23,7 @@ function _miracle-wifid() {
       ;;
   esac
 
-  COMPREPLY=($(compgen -W "$(_parse_help miracle-wifid)" -- "$cur"))
+  COMPREPLY=($(compgen -W "$(_parse_help miracle-wifid) $(_parse_short_help miracle-wifid)" -- "$cur"))
 }
 
 complete -F _miracle-wifid miracle-wifid
@@ -33,7 +41,7 @@ function _miracle-sinkctl() {
       ;;
   esac
 
-  COMPREPLY=($(compgen -W "$(_parse_help miracle-sinkctl)" -- "$cur"))
+  COMPREPLY=($(compgen -W "$(_parse_help miracle-sinkctl) $(_parse_short_help miracle-sinkctl)" -- "$cur"))
 }
 
 complete -F _miracle-sinkctl miracle-sinkctl
@@ -51,7 +59,68 @@ function _miracle-wifictl() {
       ;;
   esac
 
-  COMPREPLY=($(compgen -W "$(_parse_help miracle-wifictl)" -- "$cur"))
+  COMPREPLY=($(compgen -W "$(_parse_help miracle-wifictl) $(_parse_short_help miracle-wifictl)" -- "$cur"))
 }
 
 complete -F _miracle-wifictl miracle-wifictl
+
+_parse_short_help () 
+{ 
+    eval local cmd=$( quote "$1" );
+    local line;
+    { 
+        case $cmd in 
+            -)
+                cat
+            ;;
+            *)
+                LC_ALL=C "$( dequote "$cmd" )" ${2:---help} 2>&1
+            ;;
+        esac
+    } | while read -r line; do
+        [[ $line == *([[:blank:]])-* ]] || continue;
+        while [[ $line =~ ((^|[^-])-[A-Za-z0-9?][[:space:]]+)\[?[A-Z0-9]+\]? ]]; do
+            line=${line/"${BASH_REMATCH[0]}"/"${BASH_REMATCH[1]}"};
+        done;
+        __parse_short_options "${line// or /, }";
+    done
+}
+
+__parse_short_options () 
+{ 
+    local option option2 i IFS=' 	
+,/|';
+    option=;
+    local -a array;
+    read -a array <<< "$1";
+    for i in "${array[@]}";
+    do
+        case "$i" in 
+            ---*)
+                break
+            ;;
+            --?*)
+                break
+            ;;
+            -?*)
+                option=$i;
+                break
+            ;;
+            *)
+                break
+            ;;
+        esac;
+    done;
+    [[ -n $option ]] || return;
+    IFS=' 	
+';
+    if [[ $option =~ (\[((no|dont)-?)\]). ]]; then
+        option2=${option/"${BASH_REMATCH[1]}"/};
+        option2=${option2%%[<{().[]*};
+        printf '%s\n' "${option2/=*/=}";
+        option=${option/"${BASH_REMATCH[1]}"/"${BASH_REMATCH[2]}"};
+    fi;
+    option=${option%%[<{().[]*};
+    printf '%s\n' "${option/=*/=}"
+}
+

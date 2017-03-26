@@ -420,6 +420,7 @@ void cli_fn_help()
 	       "Send control command to or query the MiracleCast Wifi-Manager. If no arguments\n"
 	       "are given, an interactive command-line tool is provided.\n\n"
 	       "  -h --help             Show this help\n"
+	       "     --help-commands    Show avaliable commands\n"
 	       "     --version          Show package version\n"
 	       "     --log-level <lvl>  Maximum level for log messages\n"
 	       "\n"
@@ -497,9 +498,11 @@ static int parse_argv(int argc, char *argv[])
 	enum {
 		ARG_VERSION = 0x100,
 		ARG_LOG_LEVEL,
+      ARG_HELP_COMMANDS,
 	};
 	static const struct option options[] = {
 		{ "help",	no_argument,		NULL,	'h' },
+		{ "help-commands",	no_argument,		NULL,	ARG_HELP_COMMANDS },
 		{ "version",	no_argument,		NULL,	ARG_VERSION },
 		{ "log-level",	required_argument,	NULL,	ARG_LOG_LEVEL },
 		{}
@@ -509,7 +512,10 @@ static int parse_argv(int argc, char *argv[])
 	while ((c = getopt_long(argc, argv, "h", options, NULL)) >= 0) {
 		switch (c) {
 		case 'h':
-			return cli_help(cli_cmds);
+		   cli_fn_help();
+			return 0;
+		case ARG_HELP_COMMANDS:
+			return cli_help(cli_cmds, 20);
 		case ARG_VERSION:
 			puts(PACKAGE_STRING);
 			return 0;

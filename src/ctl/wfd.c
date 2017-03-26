@@ -103,27 +103,27 @@ struct resolution_bitmap resolutions_hh[] = {
 	{0, 0, 0, 0},
 };
 
-void wfd_print_resolutions(void)
+void wfd_print_resolutions(char * prefix)
 {
 	int i;
 
-	printf("CEA resolutions:\n");
+	printf("%sCEA resolutions:\n", prefix);
 	for (i = 0; resolutions_cea[i].hres != 0; i++) {
-		printf("\t%2d %08x %4dx%4d@%d\n",
+		printf("%s\t%2d %08x %4dx%4d@%d\n", prefix,
 			resolutions_cea[i].index, 1 << resolutions_cea[i].index,
 			resolutions_cea[i].hres, resolutions_cea[i].vres,
 			resolutions_cea[i].fps);
 	}
-	printf("VESA resolutions:\n");
+	printf("%sVESA resolutions:\n", prefix);
 	for (i = 0; resolutions_vesa[i].hres != 0; i++) {
-		printf("\t%2d %08x %4dx%4d@%d\n",
+		printf("%s\t%2d %08x %4dx%4d@%d\n", prefix,
 			resolutions_vesa[i].index, 1 << resolutions_vesa[i].index,
 			resolutions_vesa[i].hres, resolutions_vesa[i].vres,
 			resolutions_vesa[i].fps);
 	}
-	printf("HH resolutions:\n");
+	printf("%sHH resolutions:\n", prefix);
 	for (i = 0; resolutions_hh[i].hres != 0; i++) {
-		printf("\t%2d %08x %4dx%4d@%d\n",
+		printf("%s\t%2d %08x %4dx%4d@%d\n", prefix,
 			resolutions_hh[i].index, 1 << resolutions_hh[i].index,
 			resolutions_hh[i].hres, resolutions_hh[i].vres,
 			resolutions_hh[i].fps);

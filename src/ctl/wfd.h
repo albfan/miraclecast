@@ -21,7 +21,7 @@
 #ifndef WFD_H
 #define WFD_H
 
-void wfd_print_resolutions(void);
+void wfd_print_resolutions(char * prefix);
 int vfd_get_cea_resolution(uint32_t mask, int *hres, int *vres);
 int vfd_get_vesa_resolution(uint32_t mask, int *hres, int *vres);
 int vfd_get_hh_resolution(uint32_t mask, int *hres, int *vres);
