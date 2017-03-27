@@ -10,8 +10,10 @@ miracle_wifid_SOURCES = \
 	wifid-supplicant.c
 miracle_wifid_CPPFLAGS = \
 	$(AM_CPPFLAGS) \
-	$(DEPS_CFLAGS)
+	$(DEPS_CFLAGS) \
+	$(GLIB_CFLAGS)
 miracle_wifid_LDADD = \
 	../shared/libmiracle-shared.la \
-	$(DEPS_LIBS)
+	$(DEPS_LIBS) \
+	$(GLIB_LIBS)
 

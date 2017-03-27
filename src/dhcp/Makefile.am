@@ -14,11 +14,11 @@ miracle_dhcp_SOURCES = \
 miracle_dhcp_CPPFLAGS = \
 	$(AM_CPPFLAGS) \
 	$(DEPS_CFLAGS) \
-	$(GDHCP_CFLAGS)
+	$(GLIB_CFLAGS)
 miracle_dhcp_LDADD = \
 	../shared/libmiracle-shared.la \
 	$(DEPS_LIBS) \
-	$(GDHCP_LIBS)
+	$(GLIB_LIBS)
 
 
 

@@ -31,6 +31,7 @@
 #include "ctl.h"
 #include "shl_macro.h"
 #include "shl_util.h"
+#include "util.h"
 #include "config.h"
 
 static sd_bus *bus;
@@ -419,10 +420,11 @@ void cli_fn_help()
 	printf("%s [OPTIONS...] {COMMAND} ...\n\n"
 	       "Send control command to or query the MiracleCast Wifi-Manager. If no arguments\n"
 	       "are given, an interactive command-line tool is provided.\n\n"
-	       "  -h --help             Show this help\n"
-	       "     --help-commands    Show avaliable commands\n"
-	       "     --version          Show package version\n"
-	       "     --log-level <lvl>  Maximum level for log messages\n"
+	       "  -h --help                      Show this help\n"
+	       "     --help-commands             Show avaliable commands\n"
+	       "     --version                   Show package version\n"
+	       "     --log-level <lvl>           Maximum level for log messages\n"
+	       "     --log-journal-level <lvl>   Maximum level for journal log messages\n"
 	       "\n"
 	       "Commands:\n"
 	       , program_invocation_short_name);
@@ -498,6 +500,7 @@ static int parse_argv(int argc, char *argv[])
 	enum {
 		ARG_VERSION = 0x100,
 		ARG_LOG_LEVEL,
+		ARG_JOURNAL_LEVEL,
       ARG_HELP_COMMANDS,
 	};
 	static const struct option options[] = {
@@ -505,6 +508,7 @@ static int parse_argv(int argc, char *argv[])
 		{ "help-commands",	no_argument,		NULL,	ARG_HELP_COMMANDS },
 		{ "version",	no_argument,		NULL,	ARG_VERSION },
 		{ "log-level",	required_argument,	NULL,	ARG_LOG_LEVEL },
+		{ "log-journal-level",	required_argument,	NULL,	ARG_JOURNAL_LEVEL },
 		{}
 	};
 	int c;
@@ -522,6 +526,9 @@ static int parse_argv(int argc, char *argv[])
 		case ARG_LOG_LEVEL:
 			cli_max_sev = log_parse_arg(optarg);
 			break;
+		case ARG_JOURNAL_LEVEL:
+			log_max_sev = log_parse_arg(optarg);
+			break;
 		case '?':
 			return -EINVAL;
 		}
@@ -535,6 +542,23 @@ int main(int argc, char **argv)
 	int r;
 
 	setlocale(LC_ALL, "");
+
+   GKeyFile* gkf = load_ini_file();
+
+   if (gkf) {
+      gchar* log_level;
+      log_level = g_key_file_get_string (gkf, "wifictl", "log-journal-level", NULL);
+      if (log_level) {
+         log_max_sev = log_parse_arg(log_level);
+         g_free(log_level);
+      }
+      log_level = g_key_file_get_string (gkf, "wifictl", "log-level", NULL);
+      if (log_level) {
+         cli_max_sev = log_parse_arg(log_level);
+         g_free(log_level);
+      }
+      g_key_file_free(gkf);
+   }
 
 	r = parse_argv(argc, argv);
 	if (r < 0)

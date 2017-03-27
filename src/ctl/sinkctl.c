@@ -38,6 +38,7 @@
 #include "wfd.h"
 #include "shl_macro.h"
 #include "shl_util.h"
+#include "util.h"
 #include "config.h"
 
 static sd_bus *bus;
@@ -748,8 +749,9 @@ static int ctl_main(int argc, char *argv[])
 	if (r < 0)
 		return r;
 
-	left = argc - optind;
-	r = ctl_interactive(argv + optind, left <= 0 ? 0 : left);
+   left = argc - optind;
+   left = left <= 0 ? 0 : left;
+	r = ctl_interactive(argv + optind, left);
 
 	/* stop all scans */
 	shl_dlist_for_each(i, &wifi->links) {
@@ -854,8 +856,58 @@ static int parse_argv(int argc, char *argv[])
 int main(int argc, char **argv)
 {
 	int r;
+   bool free_argv = false;
 
 	setlocale(LC_ALL, "");
+
+   GKeyFile* gkf = load_ini_file();
+
+   gchar** autocmds_free = NULL;
+   if (gkf) {
+      player = g_key_file_get_string (gkf, "sinkctl", "external-player", NULL);
+      if (player) {
+			external_player = true;
+      }
+      gchar* log_level;
+      log_level = g_key_file_get_string (gkf, "sinkctl", "log-journal-level", NULL);
+      if (log_level) {
+         log_max_sev = log_parse_arg(log_level);
+         g_free(log_level);
+      }
+      log_level = g_key_file_get_string (gkf, "sinkctl", "log-level", NULL);
+      if (log_level) {
+         cli_max_sev = log_parse_arg(log_level);
+         g_free(log_level);
+      }
+      gchar* rstp_port_str = g_key_file_get_string (gkf, "sinkctl", "rstp-port", NULL);
+      if (rstp_port_str) {
+         rstp_port = atoi(rstp_port_str);
+         g_free(rstp_port_str);
+      }
+      gchar* autocmd;
+      autocmd = g_key_file_get_string (gkf, "sinkctl", "autocmd", NULL);
+      if (autocmd && argc == 1) {
+         gchar** autocmds = g_strsplit(autocmd, " ", -1);
+         autocmds_free = autocmds;
+         while (*autocmds) {
+            if (strcmp(*autocmds, "") != 0) {
+               gchar **newv = malloc((argc + 2) * sizeof(gchar*));
+               memmove(newv, argv, sizeof(gchar*) * argc);
+               newv[argc] = *autocmds;
+               newv[argc+1] = NULL;
+               argc++;
+               if (free_argv) {
+                  free(argv);
+               }
+               argv = newv;
+               free_argv = true;
+            }
+            autocmds++;
+         }
+         g_free(autocmd);
+      }
+      g_key_file_free(gkf);
+   }
 
 	r = parse_argv(argc, argv);
 	if (r < 0)
@@ -870,6 +922,10 @@ int main(int argc, char **argv)
 	}
 
 	r = ctl_main(argc, argv);
+   g_strfreev(autocmds_free);
+   if (free_argv) {
+      free(argv);
+   }
 	sd_bus_unref(bus);
 
 	return r < 0 ? EXIT_FAILURE : EXIT_SUCCESS;
