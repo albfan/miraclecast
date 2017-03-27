@@ -46,7 +46,7 @@ AC_ARG_ENABLE([log-debug],
 #
 
 PKG_CHECK_MODULES([DEPS], [libudev libsystemd > 219])
-PKG_CHECK_MODULES([GDHCP], [glib-2.0])
+PKG_CHECK_MODULES([GLIB], [glib-2.0])
 
 AC_CHECK_HEADERS(readline/readline.h,, AC_MSG_ERROR(GNU readline not found))
 

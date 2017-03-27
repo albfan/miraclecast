@@ -543,6 +543,18 @@ int main(int argc, char **argv)
 
 	srand(time(NULL));
 
+   GKeyFile* gkf = load_ini_file();
+
+   if (gkf) {
+      gchar* log_level;
+      log_level = g_key_file_get_string (gkf, "wifid", "log-level", NULL);
+      if (log_level) {
+         log_max_sev = log_parse_arg(log_level);
+         g_free(log_level);
+      }
+      g_key_file_free(gkf);
+   }
+
 	r = parse_argv(argc, argv);
 	if (r < 0)
 		return EXIT_FAILURE;

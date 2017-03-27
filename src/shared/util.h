@@ -31,6 +31,26 @@
 #include <systemd/sd-bus.h>
 #include <time.h>
 #include "shl_macro.h"
+#include <glib.h>
+
+static inline GKeyFile* load_ini_file() {
+   GKeyFile* gkf = NULL;
+   gchar* config_file;
+
+   gkf = g_key_file_new();
+   
+   config_file = g_build_filename(g_get_home_dir(), ".config", "miraclecastrc", NULL);
+   if (!g_key_file_load_from_file(gkf, config_file, G_KEY_FILE_NONE, NULL)) {
+      g_free(config_file);
+      config_file = g_build_filename(g_get_home_dir(), ".miraclecast", NULL);
+      if (!g_key_file_load_from_file(gkf, config_file, G_KEY_FILE_NONE, NULL)) {
+         g_key_file_free(gkf);
+         gkf = NULL;
+      }
+   }
+   g_free(config_file);
+   return gkf;
+}
 
 static inline void cleanup_sd_bus_message(sd_bus_message **ptr)
 {
