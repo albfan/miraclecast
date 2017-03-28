@@ -150,7 +150,7 @@ private class WfdCtl : GLib.Application
 									BUS_NAME_WIFID,
 									path);
 					links.insert(key, l);
-					info("found wireless interface: %s\n", l.interface_name);
+					info("found wireless interface: %s", l.interface_name);
 					link_added(key, l);
 				}
 				return l as DBusProxy;
@@ -162,7 +162,7 @@ private class WfdCtl : GLib.Application
 									BUS_NAME_WIFID,
 									path);
 					peers.insert(key, p);
-					info("peer added: %s\n", key);
+					info("peer added: %s (%s)", key, p.friendly_name);
 					peer_added(key, p);
 				}
 				return p as DBusProxy;
