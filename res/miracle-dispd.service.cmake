@@ -8,6 +8,7 @@ After=miracle-wifid.service
 BusName=org.freedesktop.miracle.wfd
 Environment=LOG_LEVEL=trace
 ExecStart=@CMAKE_INSTALL_PREFIX@/bin/miracle-dispd
+KillSignal=SIGKILL
 
 [Install]
 WantedBy=multi-user.target

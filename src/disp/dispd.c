@@ -513,6 +513,11 @@ int main(int argc, char **argv)
 		goto unref_loop;
 	}
 
+	r = sd_event_set_watchdog(event, true);
+	if (0 > r) {
+		goto unref_event;
+	}
+
 	source = sd_source_new(event);
 	if(!source) {
 		r = -ENOMEM;
