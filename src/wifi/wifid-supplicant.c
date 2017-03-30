@@ -1292,6 +1292,20 @@ static void supplicant_event_p2p_group_removed(struct supplicant *s,
 	supplicant_group_free(g);
 }
 
+static void supplicant_event_p2p_go_neg_failure(struct supplicant *s,
+					       struct wpas_message *ev)
+{
+	struct peer *p;
+
+	if (s->pending) {
+		log_debug("peer %s group owner negotiation failed",
+			  s->pending->friendly_name);
+		p = s->pending->p;
+		s->pending = NULL;
+		peer_supplicant_formation_failure(p, "group owner negotiation failed");
+	}
+}
+
 static void supplicant_event_p2p_group_formation_failure(struct supplicant *s,
 					       struct wpas_message *ev)
 {
@@ -1472,6 +1486,8 @@ static void supplicant_event(struct supplicant *s, struct wpas_message *m)
 			supplicant_event_p2p_group_started(s, m);
 		else if (!strcmp(name, "P2P-GROUP-REMOVED"))
 			supplicant_event_p2p_group_removed(s, m);
+		else if (!strcmp(name, "P2P-GO-NEG-FAILURE"))
+			supplicant_event_p2p_go_neg_failure(s, m);
 		else if (!strcmp(name, "P2P-GROUP-FORMATION-FAILURE"))
 			supplicant_event_p2p_group_formation_failure(s, m);
 		else if (!strcmp(name, "AP-STA-CONNECTED"))
