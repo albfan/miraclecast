@@ -309,6 +309,7 @@ static const sd_bus_vtable peer_dbus_vtable[] = {
 			SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
 	SD_BUS_SIGNAL("ProvisionDiscovery", "ss", 0),
 	SD_BUS_SIGNAL("GoNegRequest", "ss", 0),
+	SD_BUS_SIGNAL("FormationFailure", "s", 0),
 	SD_BUS_VTABLE_END
 };
 
