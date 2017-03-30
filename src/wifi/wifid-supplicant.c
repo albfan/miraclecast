@@ -1707,6 +1707,8 @@ static int supplicant_status_fn(struct wpas *w,
 	} else {
 		s->has_p2p = true;
 
+		link_supplicant_managed(s->l);
+
 		r = wpas_message_new_request(s->bus_global,
 					     "SET",
 					     &m);
@@ -2219,7 +2221,7 @@ static int supplicant_global_attach_fn(struct wpas *w,
 			  s->l->ifname);
 		goto error;
 	}
-
+	
 	/*
 	 * Devices with P2P_DEVICE support (instead of direct P2P_GO/CLIENT
 	 * support) are broken with a *lot* of wpa_supplicant versions on the
@@ -2577,7 +2579,6 @@ static int supplicant_timer_fn(sd_event_source *source,
 		} else {
 			/* wpas is running smoothly, disable timer */
 			sd_event_source_set_enabled(source, SD_EVENT_OFF);
-			link_supplicant_managed(s->l);
 		}
 	} else {
 		/* Who armed this timer? What timer is this? */
