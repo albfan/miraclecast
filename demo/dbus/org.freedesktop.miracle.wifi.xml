@@ -34,6 +34,9 @@
    <arg type="s"/>
    <arg type="s"/>
   </signal>
+  <signal name="FormationFailure">
+   <arg type="s"/>
+  </signal>
  </interface>
  <interface name="org.freedesktop.miracle.wifi.Link">
   <method name="Manage">
