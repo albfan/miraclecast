@@ -24,6 +24,7 @@
 #include <string.h>
 #include <time.h>
 #include <systemd/sd-event.h>
+#include <systemd/sd-daemon.h>
 #include <glib.h>
 #include <gst/gst.h>
 #include "ctl.h"
@@ -515,6 +516,7 @@ int main(int argc, char **argv)
 
 	r = sd_event_set_watchdog(event, true);
 	if (0 > r) {
+		log_warning("unable to start automatic watchdog support: %s", strerror(errno));
 		goto unref_event;
 	}
 
@@ -531,13 +533,13 @@ int main(int argc, char **argv)
 
 	r = sd_bus_default_system(&bus);
 	if(0 > r) {
-		log_warning("unabled to connect to system DBus: %s", strerror(errno));
+		log_warning("unable to connect to system DBus: %s", strerror(errno));
 		goto unref_source;
 	}
 
 	r = sd_bus_attach_event(bus, event, 0);
 	if(0 > r) {
-		log_warning("unabled to attache DBus event source to loop: %s",
+		log_warning("unable to attache DBus event source to loop: %s",
 						strerror(errno));
 		goto unref_bus;
 	}
@@ -554,11 +556,20 @@ int main(int argc, char **argv)
 
 	r = wfd_dbus_expose(wfd_dbus);
 	if(0 > r) {
-		log_warning("unabled to publish WFD service: %s", strerror(errno));
+		log_warning("unable to publish WFD service: %s", strerror(errno));
+		goto free_wfd_dbus;
+	}
+
+	r = sd_notify(false, "READY=1\n"
+			     "STATUS=Running..");
+	if (0 > r) {
+		log_warning("unable to notify systemd that we are ready: %s", strerror(errno));
 		goto free_wfd_dbus;
 	}
 
 	g_main_loop_run(loop);
+
+	sd_notify(false, "STATUS=Exiting..");
 
 free_wfd_dbus:
 	wfd_dbus_free(wfd_dbus);
@@ -580,6 +591,7 @@ unref_loop:
 	g_main_loop_unref(loop);
 deinit_gst:
 	gst_deinit();
+	sd_event_set_watchdog(event, false);
 	return r < 0 ? EXIT_FAILURE : EXIT_SUCCESS;
 }
 
