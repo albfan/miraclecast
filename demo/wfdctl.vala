@@ -40,6 +40,7 @@ errordomain WfdCtlError
 	NO_SUCH_NIC,
 	TIMEOUT,
 	MONITOR_GONE,
+	FORMATION_ERROR,
 }
 
 private void print(string format, ...)
@@ -323,7 +324,7 @@ private class WfdCtl : GLib.Application
 		if(!l.managed) {
 			info("wifid is acquiring ownership of %s...", opt_iface);
 
-			l.manage();
+			yield l.manage();
 			yield wait_prop_changed(l as DBusProxy, "Managed");
 		}
 	}
@@ -380,8 +381,13 @@ private class WfdCtl : GLib.Application
 
 		info("forming P2P group with %s (%s)...", p.p2_p_mac, p.friendly_name);
 
-		p.connect("auto", "");
+		ulong id = p.formation_failure.connect((r) => {
+			info("failed to form P2P group: %s", r);
+		});
+		yield p.connect("auto", "");
 		yield wait_prop_changed(p as DBusProxy, "Connected", 20);
+
+		(p as Object).disconnect(id);
 
 		info("P2P group formed");
 	}
@@ -449,7 +455,7 @@ private class WfdCtl : GLib.Application
 		info("establishing display session...");
 
 		Sink sink = find_sink_by_mac(opt_peer_mac);
-		string path = sink.start_session(opt_authority,
+		string path = yield sink.start_session(opt_authority,
 						@"x://$(opt_display)",
 						g.x,
 						g.y,
@@ -495,7 +501,7 @@ private class WfdCtl : GLib.Application
 
 		if(l.managed) {
 			info("wifid is releasing ownership of %s...", opt_iface);
-			l.unmanage();
+			yield l.unmanage();
 			yield wait_prop_changed(l as DBusProxy, "Managed");
 		}
 
@@ -520,26 +526,17 @@ private class WfdCtl : GLib.Application
 
 		quit();
 
-		print("Bye");
 	}
 
 	public void stop_wireless_display()
 	{
 		info("tearing down wireless display...");
 
-		try {
-			if(null != curr_session) {
-				curr_session.teardown();
-			}
-			else {
-				release_wnic_ownership.begin(() => {
-					quit();
-					print("Bye");
-				});
-			}
+		if(null != curr_session) {
+			curr_session.teardown.begin(quit);
 		}
-		catch(Error e) {
-			warning("%s", e.message);
+		else {
+			release_wnic_ownership.begin(quit);
 		}
 	}
 
@@ -667,7 +664,7 @@ private class WfdCtl : GLib.Application
 
 	private async void wait_prop_changed(DBusProxy o,
 					string name,
-					uint timeout = 0) throws WfdCtlError
+					uint timeout = 1) throws WfdCtlError
 	{
 		ulong prop_changed_id = o.g_properties_changed.connect((props) => {
 			string k;
@@ -726,5 +723,9 @@ int main(string[]? argv)
 		return 1;
 	}
 
-	return app.run(argv);
+	int r = app.run(argv);
+
+	print("Bye");
+
+	return r;
 }
