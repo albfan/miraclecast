@@ -464,6 +464,7 @@ static int wfd_session_handle_request(struct rtsp *bus,
 	return 0;
 
 error:
+	log_warning("error while handling request: %s", strerror(-r));
 	wfd_session_teardown(s);
 
 	return r;
@@ -525,12 +526,12 @@ int wfd_session_request(struct wfd_session *s,
 
 	r = wfd_session_do_request(s, id, args, &m);
 	if(0 > r) {
-		return r;
+		goto error;
 	}
 
 	r = rtsp_message_seal(m);
 	if(0 > r) {
-		return r;
+		goto error;
 	}
 
 	r = rtsp_call_async(s->rtsp,
@@ -540,7 +541,7 @@ int wfd_session_request(struct wfd_session *s,
 					0,
 					NULL);
 	if(0 > r) {
-		return r;
+		goto error;
 	}
 
 	s->last_request = id;
@@ -551,6 +552,10 @@ int wfd_session_request(struct wfd_session *s,
 					(char *) rtsp_message_get_raw(m));
 
 	return 0;
+
+error:
+	log_warning("error while requesting: %s", strerror(-r));
+	return r;
 }
 
 static int wfd_session_handle_io(sd_event_source *source,
@@ -610,6 +615,7 @@ static int wfd_session_handle_io(sd_event_source *source,
 
 end:
 	if (0 > r) {
+		log_warning("error while handling I/O: %s", strerror(-r));
 		wfd_session_teardown(s);
 	}
 

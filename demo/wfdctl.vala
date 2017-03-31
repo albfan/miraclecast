@@ -473,22 +473,45 @@ private class WfdCtl : GLib.Application
 				}
 
 				info("session status: %s", session_state_to_str(v.get_int32()));
+
+				if(6 == v.get_int32()) {
+					Idle.add(establish_session.callback);
+				}
+
+				break;
 			}
 		});
+		Error error = null;
+		uint id = Timeout.add_seconds(10, () => {
+			error = new WfdCtlError.TIMEOUT("failed to establish session");
+			Idle.add(establish_session.callback);
+			return false;
+		});
 
-		info("session status: %s", session_state_to_str(curr_session.state));
+		yield;
+
+		Source.remove(id);
+		if(null != error) {
+			throw error;
+		}
 	}
 
 	private async void wait_for_session_ending()
 	{
 		info("wait for session ending");
-		session_removed.connect((id, s) => {
+		ulong id = session_removed.connect((id, s) => {
+			if(s != curr_session) {
+				return;
+			}
+
 			info("session ended");
 			curr_session = null;
 			wait_for_session_ending.callback();
 		});
 
 		yield;
+
+		disconnect(id);
 	}
 
 	private async void release_wnic_ownership() throws Error
