@@ -623,18 +623,34 @@ static int wfd_out_session_create_pipeline(struct wfd_session *s)
 			vsrc_param4,
 		"!", "video/x-raw,",
 			"framerate=30/1",
-		"!", "vaapipostproc",
-			"scale-method=2",	/* high quality scaling mode */
-			"format=3",			/* yv12" */
-		"!", "vaapih264enc",
-			"rate-control=1",
-			"num-slices=1",		/* in WFD spec, one slice per frame */
-			"max-bframes=0",	/* in H264 CHP, no bframe supporting */
-			"cabac=true",		/* in H264 CHP, CABAC entropy codeing is supported, but need more processing to decode */
-			"dct8x8=true",		/* in H264 CHP, DTC is supported */
-			"cpb-length=50",	/* shortent buffer in order to decrease latency */
-			"keyframe-period=30",
-			/*  "bitrate=62500", */	/* the max bitrate of H264 level 4.2, crashing my dongle, let codec decide */
+		//"!", "vaapipostproc",
+		//	"scale-method=2",	/* high quality scaling mode */
+		//	"format=3",			/* yv12" */
+		//"!", "vaapih264enc",
+		//	"rate-control=1",
+		//	"num-slices=1",		/* in WFD spec, one slice per frame */
+		//	"max-bframes=0",	/* in H264 CHP, no bframe supporting */
+		//	"cabac=true",		/* in H264 CHP, CABAC entropy codeing is supported, but need more processing to decode */
+		//	"dct8x8=true",		/* in H264 CHP, DTC is supported */
+		//	"cpb-length=50",	/* shortent buffer in order to decrease latency */
+		//	"keyframe-period=30",
+		//	/*  "bitrate=62500", */	/* the max bitrate of H264 level 4.2, crashing my dongle, let codec decide */
+		"!", "videoscale",
+			"method=0",
+		"!", "videoconvert",
+			"dither=0",
+		"!", "video/x-raw,",
+			"format=YV12"
+		"!", "x264enc",
+			"pass=4",			/* constant quantizer */
+			"byte-stream=true",
+			"b-adapt=false",	/* no bframe suppport in CHP */
+			"key-int-max=30",	/* send IDR pictures per second */
+			"speed-preset=4",	/* faster */
+			"tune=4",
+		"!", "h264parse",
+		"!", "video/x-h264,",
+			"alignment=nal"
 		"!", "queue",
 			"max-size-buffers=0",
 			"max-size-bytes=0",
