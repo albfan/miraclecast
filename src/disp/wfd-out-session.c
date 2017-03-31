@@ -637,20 +637,23 @@ static int wfd_out_session_create_pipeline(struct wfd_session *s)
 		//	/*  "bitrate=62500", */	/* the max bitrate of H264 level 4.2, crashing my dongle, let codec decide */
 		"!", "videoscale",
 			"method=0",
+		"!", "video/x-raw,",
+			"width=1920,",
+			"height=1080",
 		"!", "videoconvert",
 			"dither=0",
 		"!", "video/x-raw,",
 			"format=YV12"
 		"!", "x264enc",
 			"pass=4",			/* constant quantizer */
-			"byte-stream=true",
 			"b-adapt=false",	/* no bframe suppport in CHP */
 			"key-int-max=30",	/* send IDR pictures per second */
 			"speed-preset=4",	/* faster */
-			"tune=4",
+			"tune=4",			/* zero latency */
 		"!", "h264parse",
 		"!", "video/x-h264,",
-			"alignment=nal"
+			"alignment=nal,",
+			"stream-format=byte-stream"
 		"!", "queue",
 			"max-size-buffers=0",
 			"max-size-bytes=0",
@@ -1061,8 +1064,8 @@ static int wfd_out_session_request_set_parameter(struct wfd_session *s,
 					//"wfd_uibc_capability: input_category_list=GENERIC\n;generic_cap_list=SingleTouch;hidc_cap_list=none;port=5100\n"
 					//"wfd_uibc_setting: disable\n",
 					WFD_RESOLUTION_STANDARD_CEA == os->std ? 0x80 : 0,
-					WFD_RESOLUTION_STANDARD_VESA == os->std ? os->mask: 0,
-					WFD_RESOLUTION_STANDARD_HH == os->std ? os->mask : 0,
+					0,
+					0,
 					wfd_session_get_stream_url(s),
 					s->rtp_ports[0],
 					s->rtp_ports[1]);
