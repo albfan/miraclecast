@@ -479,7 +479,7 @@ static int wfd_session_handle_reply(struct rtsp *bus,
 	struct wfd_session *s = userdata;
 
 	if(!m) {
-		r = 0;
+		r = -EPIPE;
 		goto error;
 	}
 
@@ -508,6 +508,7 @@ static int wfd_session_handle_reply(struct rtsp *bus,
 	return 0;
 
 error:
+	log_info("error while handling reply: %s", strerror(-r));
 	wfd_session_teardown(s);
 
 	return r;
