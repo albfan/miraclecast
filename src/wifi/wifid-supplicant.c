@@ -1702,12 +1702,14 @@ static int supplicant_status_fn(struct wpas *w,
 
 	if (!p2p_state) {
 		log_warning("wpa_supplicant or driver does not support P2P");
+		link_supplicant_p2p_state_known(s->l, -1);
 	} else if (!strcmp(p2p_state, "DISABLED")) {
 		log_warning("P2P support disabled on given interface");
+		link_supplicant_p2p_state_known(s->l, -1);
 	} else {
 		s->has_p2p = true;
 
-		link_supplicant_managed(s->l);
+		link_supplicant_p2p_state_known(s->l, 1);
 
 		r = wpas_message_new_request(s->bus_global,
 					     "SET",
@@ -2579,6 +2581,7 @@ static int supplicant_timer_fn(sd_event_source *source,
 		} else {
 			/* wpas is running smoothly, disable timer */
 			sd_event_source_set_enabled(source, SD_EVENT_OFF);
+			link_supplicant_managed(s->l);
 		}
 	} else {
 		/* Who armed this timer? What timer is this? */

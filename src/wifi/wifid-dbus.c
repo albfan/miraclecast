@@ -631,6 +631,24 @@ static int link_dbus_unmanage(sd_bus_message *msg,
 	return sd_bus_reply_method_return(msg, NULL);
 }
 
+static int link_dbus_get_p2p_state(sd_bus *bus,
+				      const char *path,
+				      const char *interface,
+				      const char *property,
+				      sd_bus_message *reply,
+				      void *data,
+				      sd_bus_error *err)
+{
+	struct link *l = data;
+	int r;
+
+	r = sd_bus_message_append(reply, "i", link_get_p2p_state(l));
+	if (r < 0)
+		return r;
+
+	return 1;
+}
+
 static int link_dbus_get_p2p_scanning(sd_bus *bus,
 				      const char *path,
 				      const char *interface,
@@ -740,6 +758,11 @@ static const sd_bus_vtable link_dbus_vtable[] = {
 	SD_BUS_PROPERTY("Managed",
 				 "b",
 				 link_dbus_get_managed,
+				 0,
+				 SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
+	SD_BUS_PROPERTY("P2PState",
+				 "i",
+				 link_dbus_get_p2p_state,
 				 0,
 				 SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
 	SD_BUS_WRITABLE_PROPERTY("P2PScanning",
