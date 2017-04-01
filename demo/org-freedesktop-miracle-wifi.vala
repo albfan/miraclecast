@@ -23,7 +23,7 @@ namespace Org {
 					public abstract GLib.ObjectPath link { owned get; }
 
 					[DBus (name = "P2PMac")]
-					public abstract string p2_p_mac { owned get; }
+					public abstract string p2p_mac { owned get; }
 
 					[DBus (name = "FriendlyName")]
 					public abstract string friendly_name { owned get; }
@@ -77,8 +77,11 @@ namespace Org {
 					[DBus (name = "Managed")]
 					public abstract bool managed {  get; }
 
+					[DBus (name = "P2PState")]
+					public abstract int p2p_state {  get; }
+
 					[DBus (name = "P2PScanning")]
-					public abstract bool p2_p_scanning {  get; set; }
+					public abstract bool p2p_scanning {  get; set; }
 
 					[DBus (name = "WfdSubelements")]
 					public abstract string wfd_subelements { owned get; set; }

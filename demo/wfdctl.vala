@@ -339,9 +339,17 @@ private class WfdCtl : GLib.Application
 			yield wait_prop_changed(l as DBusProxy, "WfdSubelements");
 		}
 
-		if(!l.p2_p_scanning) {
+		if(-1 == l.p2p_state) {
+			error("link %s has no P2P supporting", l.interface_name);
+		}
+		else if(0 == l.p2p_state) {
+			info("wait for P2P supporting status...");
+			yield wait_prop_changed(l as DBusProxy, "P2PState", 3);
+		}
+
+		if(!l.p2p_scanning) {
 			info("start P2P scanning...");
-			l.p2_p_scanning = true;
+			l.p2p_scanning = true;
 			yield wait_prop_changed(l as DBusProxy, "P2PScanning");
 		}
 
@@ -379,7 +387,7 @@ private class WfdCtl : GLib.Application
 		l = decode_path(l.substring(l.last_index_of_char('/') + 1));
 		Peer p = peers.lookup(l);
 
-		info("forming P2P group with %s (%s)...", p.p2_p_mac, p.friendly_name);
+		info("forming P2P group with %s (%s)...", p.p2p_mac, p.friendly_name);
 
 		ulong id = p.formation_failure.connect((r) => {
 			info("failed to form P2P group: %s", r);
