@@ -168,7 +168,10 @@ class Player(object):
         # You need to get the XID after window.show_all().  You shouldn't get it
         # in the on_sync_message() handler because threading issues will cause
         # segfaults there.
-        self.xid = self.drawingarea.get_property('window').get_xid()
+        window = self.drawingarea.get_property('window')
+        if hasattr(window,'get_xid'):
+           self.xid = self.drawingarea.get_property('window').get_xid()
+
         self.pipeline.set_state(Gst.State.PLAYING)
         Gtk.main()
 
