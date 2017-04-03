@@ -35,8 +35,10 @@ configure_file(input: 'org.freedesktop.miracle.wfd.service.in',
   install_dir: dbus_system_services_dir
 )
 install_data(
-  dbus_name_prefix + '.conf',
-  install_dir: join_paths('/', get_option('sysconfdir'), 'dbus-1/system.d')
+  'org.freedesktop.miracle.conf',
+  install_dir: join_paths('/', get_option('sysconfdir'), 'dbus-1', 'system.d')
 )
 
-meson.add_install_script('install-scripts', get_option('bindir'))
+install_data('miracle-gst', 'gstplayer', 'uibc-viewer',
+  install_dir: get_option('bindir'),
+  install_mode: 'rwxr-xr-x')
