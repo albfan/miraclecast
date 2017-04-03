@@ -28,11 +28,18 @@ if get_option('build-enable-debug')
   add_project_arguments('-DBUILD_ENABLE_DEBUG', language: 'c')
 endif
 
+if get_option('rely-udev')
+  add_project_arguments('-DRELY_UDEV', language: 'c')
+endif
+
 glib2 = dependency('glib-2.0')
 udev = dependency('libudev')
 libsystemd = dependency('libsystemd')
 
 subdir('src')
 subdir('res')
-subdir('test')
+
+if get_option('build-tests')
+  subdir('test')
+endif
 
