@@ -1,0 +1,16 @@
+option('build-enable-debug',
+  type: 'boolean',
+  value: true,
+  description: 'Enable Debug')
+option('rely-udev',
+  type: 'boolean',
+  value: false,
+  description: 'Rely in udev tag to select device')
+option('build-tests',
+  type: 'boolean',
+  value: true,
+  description: 'Enable TEST')
+option('build-demo',
+  type: 'boolean',
+  value: false,
+  description: 'Enable DEMO')
