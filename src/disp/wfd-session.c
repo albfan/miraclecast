@@ -357,8 +357,8 @@ static int wfd_session_post_handle_request_n_reply(struct wfd_session *s,
     const struct wfd_arg_list *args = &s->rtsp_disp_tbl[ror].rule;
 	enum rtsp_message_id next_request = RTSP_M_UNKNOWN;
 	enum wfd_session_arg_id arg_id;
-	enum wfd_session_state new_state;
-	const struct wfd_arg_list *req_args;
+	enum wfd_session_state new_state = WFD_SESSION_STATE_NULL;
+	const struct wfd_arg_list *req_args = NULL;
 	int i;
 
 	if(!args->len) {
@@ -563,7 +563,7 @@ static int wfd_session_handle_io(sd_event_source *source,
 				uint32_t mask,
 				void *userdata)
 {
-	int r, err = 0, conn;
+	int r = 0, err = 0, conn;
 	socklen_t len;
 	struct wfd_session *s = userdata;
 	_rtsp_unref_ struct rtsp *rtsp = NULL;
