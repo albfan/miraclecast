@@ -8,11 +8,11 @@ project('Miraclecast',
 add_project_arguments('-D_GNU_SOURCE', language: 'c')
 
 conf_data = configuration_data()
-conf_data.set('BUILD_BINDIR',
-  '"' + join_paths(get_option('prefix'), get_option('bindir')) + '"'
+conf_data.set_quoted('BUILD_BINDIR',
+  join_paths(get_option('prefix'), get_option('bindir'))
 )
-conf_data.set('PACKAGE_STRING',
-  '"@0@ @1@"'.format(meson.project_name(), meson.project_version())
+conf_data.set_quoted('PACKAGE_STRING',
+  '@0@ @1@'.format(meson.project_name(), meson.project_version())
 )
 configure_file(output: 'config.h',
   configuration: conf_data
