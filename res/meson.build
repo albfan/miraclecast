@@ -36,7 +36,7 @@ configure_file(input: 'org.freedesktop.miracle.wfd.service.in',
 )
 install_data(
   'org.freedesktop.miracle.conf',
-  install_dir: join_paths('/', get_option('sysconfdir'), 'dbus-1', 'system.d')
+  install_dir: join_paths(get_option('sysconfdir'), 'dbus-1', 'system.d')
 )
 
 install_data('miracle-gst', 'gstplayer', 'uibc-viewer',
