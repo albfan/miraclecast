@@ -317,16 +317,18 @@ int cli_init(sd_bus *bus, const struct cli_cmd *cmds)
 		}
 	}
 
-	r = sd_event_add_io(cli_event,
-			    &cli_stdin,
-			    fileno(stdin),
-			    EPOLLHUP | EPOLLERR | EPOLLIN,
-			    cli_stdin_fn,
-			    NULL);
-	if (r < 0) {
-		cli_vERR(r);
-		goto error;
-	}
+   if (isatty(fileno(stdin))) {
+	   r = sd_event_add_io(cli_event,
+	   		    &cli_stdin,
+	   		    fileno(stdin),
+	   		    EPOLLHUP | EPOLLERR | EPOLLIN,
+	   		    cli_stdin_fn,
+	   		    NULL);
+	   if (r < 0) {
+	   	cli_vERR(r);
+	   	goto error;
+	   }
+   }
 
 	cli_rl = true;
 
