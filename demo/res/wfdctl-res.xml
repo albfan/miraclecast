@@ -1,6 +1,0 @@
-<?xml version="1.0"?>
-<gresources>
-  <gresource prefix="/org/freedesktop/miracle">
-    <file compressed="true" preprocess="xml-stripblanks">wfdctl.ui</file>
-  </gresource>
-</gresources>
