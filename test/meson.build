@@ -11,9 +11,7 @@ if check.found()
     dependencies: deps
   )
 
-  test('rtsp test', test_rtsp)
-  test('wpas test', test_wpas)
-  test('valgrind test', test_valgrind)
+  valgrind = find_program('valgrind')
 
 #  set(VALGRIND CK_FORK=no valgrind --tool=memcheck --leak-check=yes --show-reachable=yes --leak-resolution=high --error-exitcode=1 --suppressions=${CMAKE_SOURCE_DIR}/test.supp)
 #

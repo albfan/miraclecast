@@ -1,14 +1,14 @@
 inc = include_directories('../..')
-deps = [libsystemd, libmiracle_shared_dep, glib2]
+miracle_wifictl_deps = [libsystemd, libmiracle_shared_dep]
 if readline.found()
-  deps += readline
+  miracle_wifictl_deps += readline
 endif
 
 miracle_wifictl_srcs = ['ctl-cli.c', 'ctl-wifi.c', 'wifictl.c']
 executable('miracle-wifictl', miracle_wifictl_srcs,
   install: true,
   include_directories: inc,
-  dependencies: deps
+  dependencies: miracle_wifictl_deps
 )
 
 miracle_sinkctl_srcs = ['ctl-cli.c',
@@ -20,5 +20,5 @@ miracle_sinkctl_srcs = ['ctl-cli.c',
 executable('miracle-sinkctl', miracle_sinkctl_srcs,
   install: true,
   include_directories: inc,
-  dependencies: deps
+  dependencies: miracle_wifictl_deps
 )

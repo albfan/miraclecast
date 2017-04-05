@@ -1,0 +1,16 @@
+[Unit]
+Description=Miraclecast WiFi Daemon
+After=dbus.service
+Requires=network.target
+
+[Service]
+BusName=@dbus_name_prefix@.wifi
+Environment=PATH=/sbin:/usr/bin
+ExecStart=@exec_path@/miracle-wifid \
+        --use-dev \
+        --log-level trace \
+        --lazy-managed
+
+[Install]
+WantedBy=multi-user.target
+Alias=dbus-@dbus_name_prefix@.wifi.service
