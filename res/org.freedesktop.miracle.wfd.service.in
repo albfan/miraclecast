@@ -1,0 +1,5 @@
+[D-BUS Service]
+Name=@dbus_name_prefix@.wfd
+Exec=/bin/sh -c 'LOG_LEVEL=trace @exec_path@/miracle-dispd'
+User=root
+SystemdService=dbus-@dbus_name_prefix@.wfd.service

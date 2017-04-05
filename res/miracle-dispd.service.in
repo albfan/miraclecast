@@ -1,0 +1,15 @@
+[Unit]
+Description=Miraclecast WiFi Display Service
+After=dbus.service
+Requires=miracle-wifid.service
+After=miracle-wifid.service
+
+[Service]
+BusName=@dbus_name_prefix@.wfd
+Environment=LOG_LEVEL=trace
+ExecStart=@exec_path@/miracle-dispd
+KillSignal=SIGKILL
+
+[Install]
+WantedBy=multi-user.target
+Alias=dbus-@dbus_name_prefix@.wfd.service

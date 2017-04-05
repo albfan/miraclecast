@@ -400,7 +400,7 @@ private class WfdCtl : GLib.Application
 		info("P2P group formed");
 	}
 
-#if GDK_VERSION_NEWER_THEN_3_22 && VALA_VERSION_NEWER_THEN_0_34
+#if GDK3_HAS_MONITOR_CLASS
 	private void get_monitor_geometry(out Gdk.Rectangle g) throws Error
 	{
 		Gdk.Monitor m;
@@ -623,7 +623,7 @@ private class WfdCtl : GLib.Application
 		}
 
 		int n_monitors;
-#if GDK_VERSION_NEWER_THEN_3_22 && VALA_VERSION_NEWER_THEN_0_34
+#if GDK3_HAS_MONITOR_CLASS
 		n_monitors = display.get_n_monitors();
 #else
 		n_monitors = display.get_default_screen().get_n_monitors();
