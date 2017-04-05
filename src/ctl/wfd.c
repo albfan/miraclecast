@@ -122,19 +122,19 @@ int wfd_get_resolutions(enum wfd_resolution_standard std,
 {
 	switch(std) {
 	case WFD_RESOLUTION_STANDARD_CEA:
-		if(0 >= index || index < SHL_ARRAY_LENGTH(resolutions_cea)) {
+		if(0 >= index || index >= SHL_ARRAY_LENGTH(resolutions_cea)) {
 			break;
 		}
 		*out = resolutions_cea[index];
 		return 0;
 	case WFD_RESOLUTION_STANDARD_VESA:
-		if(0 >= index || index < SHL_ARRAY_LENGTH(resolutions_vesa)) {
+		if(0 >= index || index >= SHL_ARRAY_LENGTH(resolutions_vesa)) {
 			break;
 		}
 		*out = resolutions_vesa[index];
 		return 0;
 	case WFD_RESOLUTION_STANDARD_HH:
-		if(0 >= index || index < SHL_ARRAY_LENGTH(resolutions_hh)) {
+		if(0 >= index || index >= SHL_ARRAY_LENGTH(resolutions_hh)) {
 			break;
 		}
 		*out = resolutions_hh[index];
