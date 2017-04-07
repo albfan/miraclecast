@@ -1,5 +1,9 @@
-
+find_package(PkgConfig)
+pkg_check_modules (GLIB2 REQUIRED glib-2.0)
+link_directories( ${GLIB2_LIBRARY_DIRS})
+include_directories( ${GLIB2_INCLUDE_DIRS})
 find_package(Readline)
+pkg_check_modules (GLIB2 REQUIRED glib-2.0)
 ########### next target ###############
 
 set(miracle-wifictl_SRCS ctl.h 
@@ -20,6 +24,7 @@ if(READLINE_FOUND)
 endif(READLINE_FOUND)
 
 target_link_libraries(miracle-wifictl miracle-shared)
+target_link_libraries(miracle-wifictl ${GLIB2_LIBRARIES})
 ########### next target ###############
 
 set(miracle-sinkctl_SRCS ctl.h 
@@ -31,6 +36,7 @@ set(miracle-sinkctl_SRCS ctl.h
                          wfd.c)
 
 add_executable(miracle-sinkctl ${miracle-sinkctl_SRCS})
+target_link_libraries(miracle-sinkctl ${GLIB2_LIBRARIES})
 
 install(TARGETS miracle-sinkctl DESTINATION bin)
 
