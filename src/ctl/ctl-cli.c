@@ -317,28 +317,27 @@ int cli_init(sd_bus *bus, const struct cli_cmd *cmds)
 		}
 	}
 
-   if (isatty(fileno(stdin))) {
-	   r = sd_event_add_io(cli_event,
-	   		    &cli_stdin,
-	   		    fileno(stdin),
-	   		    EPOLLHUP | EPOLLERR | EPOLLIN,
-	   		    cli_stdin_fn,
-	   		    NULL);
-	   if (r < 0) {
-	   	cli_vERR(r);
-	   	goto error;
-	   }
-   }
+	if (isatty(fileno(stdin))) {
+		r = sd_event_add_io(cli_event,
+			    &cli_stdin,
+			    fileno(stdin),
+			    EPOLLHUP | EPOLLERR | EPOLLIN,
+			    cli_stdin_fn,
+			    NULL);
+		if (r < 0) {
+			cli_vERR(r);
+			goto error;
+		}
+		cli_rl = true;
 
-	cli_rl = true;
+		rl_erase_empty_line = 1;
+		rl_callback_handler_install(NULL, cli_handler_fn);
 
-	rl_erase_empty_line = 1;
-	rl_callback_handler_install(NULL, cli_handler_fn);
-
-	rl_set_prompt(CLI_PROMPT);
-	printf("\r");
-	rl_on_new_line();
-	rl_redisplay();
+		rl_set_prompt(CLI_PROMPT);
+		printf("\r");
+		rl_on_new_line();
+		rl_redisplay();
+	}
 
 	return 0;
 
