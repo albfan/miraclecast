@@ -12,16 +12,16 @@ namespace Org {
 			public interface Device : GLib.Object {
 
 				[DBus (name = "Reapply")]
-				public abstract async void reapply(GLib.HashTable<string, GLib.HashTable<string, GLib.Variant>> connection, uint64 version_id, uint flags) throws DBusError, IOError;
+				public abstract void reapply(GLib.HashTable<string, GLib.HashTable<string, GLib.Variant>> connection, uint64 version_id, uint flags) throws DBusError, IOError;
 
 				[DBus (name = "GetAppliedConnection")]
-				public abstract async void get_applied_connection(uint flags, out GLib.HashTable<string, GLib.HashTable<string, GLib.Variant>> connection, out uint64 version_id) throws DBusError, IOError;
+				public abstract void get_applied_connection(uint flags, out GLib.HashTable<string, GLib.HashTable<string, GLib.Variant>> connection, out uint64 version_id) throws DBusError, IOError;
 
 				[DBus (name = "Disconnect")]
-				public abstract async void disconnect() throws DBusError, IOError;
+				public abstract void disconnect() throws DBusError, IOError;
 
 				[DBus (name = "Delete")]
-				public abstract async void delete() throws DBusError, IOError;
+				public abstract void delete() throws DBusError, IOError;
 
 				[DBus (name = "StateChanged")]
 				public signal void state_changed(uint new_state, uint old_state, uint reason);

@@ -14,7 +14,7 @@ namespace Org {
 				public interface Sink : GLib.Object {
 
 					[DBus (name = "StartSession")]
-					public abstract async GLib.ObjectPath start_session(string param0, string param1, uint param2, uint param3, uint param4, uint param5, string param6) throws DBusError, IOError;
+					public abstract GLib.ObjectPath start_session(string param0, string param1, uint param2, uint param3, uint param4, uint param5, string param6) throws DBusError, IOError;
 
 					[DBus (name = "Session")]
 					public abstract GLib.ObjectPath session { owned get; }
@@ -27,13 +27,13 @@ namespace Org {
 				public interface Session : GLib.Object {
 
 					[DBus (name = "Resume")]
-					public abstract async void resume() throws DBusError, IOError;
+					public abstract void resume() throws DBusError, IOError;
 
 					[DBus (name = "Pause")]
-					public abstract async void pause() throws DBusError, IOError;
+					public abstract void pause() throws DBusError, IOError;
 
 					[DBus (name = "Teardown")]
-					public abstract async void teardown() throws DBusError, IOError;
+					public abstract void teardown() throws DBusError, IOError;
 
 					[DBus (name = "Sink")]
 					public abstract GLib.ObjectPath sink { owned get; }
