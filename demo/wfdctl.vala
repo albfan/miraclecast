@@ -101,6 +101,8 @@ private class WfdCtl : GLib.Application
 
 	string curr_sink_mac;
 	Gdk.Display display;
+	Peer curr_peer;
+	Sink curr_sink;
 	Session curr_session;
 
 	const GLib.OptionEntry[] option_entries = {
@@ -218,7 +220,11 @@ private class WfdCtl : GLib.Application
 				key = decode_path(key);
 				Peer p = peers.lookup(key);
 				if(null == p) {
+					info("removing stray peer: %s", key);
 					break;
+				}
+				if(p == curr_peer) {
+					curr_peer = null;
 				}
 				peers.remove(key);
 				peer_removed(key, p);
@@ -227,7 +233,11 @@ private class WfdCtl : GLib.Application
 				key = decode_path(key);
 				Sink s = sinks.lookup(key);
 				if(null == s) {
+					info("removing stray sink: %s", key);
 					break;
+				}
+				if(s == curr_sink) {
+					curr_sink = null;
 				}
 				sinks.remove(key);
 				sink_removed(key, s);
@@ -236,7 +246,11 @@ private class WfdCtl : GLib.Application
 				key = decode_path(key);
 				Session s = sessions.lookup(key);
 				if(null == s) {
+					info("removing stray session: %s", key);
 					break;
+				}
+				if(s == curr_session) {
+					curr_session = null;
 				}
 				sessions.remove(key);
 				session_removed(key, s);
@@ -397,6 +411,8 @@ private class WfdCtl : GLib.Application
 
 		(p as Object).disconnect(id);
 
+		curr_peer = p;
+
 		info("P2P group formed");
 	}
 
@@ -502,24 +518,23 @@ private class WfdCtl : GLib.Application
 		if(null != error) {
 			throw error;
 		}
+
+		curr_sink = sink;
 	}
 
 	private async void wait_for_session_ending()
 	{
 		info("wait for session ending");
 		ulong id = session_removed.connect((id, s) => {
-			if(s != curr_session) {
-				return;
-			}
-
-			info("session ended");
-			curr_session = null;
 			wait_for_session_ending.callback();
 		});
 
 		yield;
 
 		disconnect(id);
+
+		info("session ended");
+		curr_session = null;
 	}
 
 	private async void release_wnic_ownership() throws Error
