@@ -312,7 +312,7 @@ private class WfdCtl : GLib.Application
 			info("NetworkManager is releasing ownership of %s...", opt_iface);
 
 			d.managed = false;
-			yield wait_prop_changed(d as DBusProxy, "Managed");
+			yield wait_prop_changed(d, "Managed");
 		}
 
 		Link l = find_link_by_name(opt_iface);
@@ -324,8 +324,8 @@ private class WfdCtl : GLib.Application
 		if(!l.managed) {
 			info("wifid is acquiring ownership of %s...", opt_iface);
 
-			yield l.manage();
-			yield wait_prop_changed(l as DBusProxy, "Managed");
+			l.manage();
+			yield wait_prop_changed(l, "Managed");
 		}
 	}
 
@@ -336,7 +336,7 @@ private class WfdCtl : GLib.Application
 			info("update wfd_subelems to broadcast what kind of device we are");
 
 			l.wfd_subelements = opt_wfd_subelems;
-			yield wait_prop_changed(l as DBusProxy, "WfdSubelements");
+			yield wait_prop_changed(l, "WfdSubelements");
 		}
 
 		if(-1 == l.p2p_state) {
@@ -344,13 +344,13 @@ private class WfdCtl : GLib.Application
 		}
 		else if(0 == l.p2p_state) {
 			info("wait for P2P supporting status...");
-			yield wait_prop_changed(l as DBusProxy, "P2PState", 3);
+			yield wait_prop_changed(l, "P2PState", 3);
 		}
 
 		if(!l.p2p_scanning) {
 			info("start P2P scanning...");
 			l.p2p_scanning = true;
-			yield wait_prop_changed(l as DBusProxy, "P2PScanning");
+			yield wait_prop_changed(l, "P2PScanning");
 		}
 
 		print("wait for peer '%s'...", opt_peer_mac);
@@ -392,8 +392,8 @@ private class WfdCtl : GLib.Application
 		ulong id = p.formation_failure.connect((r) => {
 			info("failed to form P2P group: %s", r);
 		});
-		yield p.connect("auto", "");
-		yield wait_prop_changed(p as DBusProxy, "Connected", 20);
+		p.connect("auto", "");
+		yield wait_prop_changed(p, "Connected", 20);
 
 		(p as Object).disconnect(id);
 
@@ -463,7 +463,7 @@ private class WfdCtl : GLib.Application
 		info("establishing display session...");
 
 		Sink sink = find_sink_by_mac(opt_peer_mac);
-		string path = yield sink.start_session(opt_authority,
+		string path = sink.start_session(opt_authority,
 						@"x://$(opt_display)",
 						g.x,
 						g.y,
@@ -532,15 +532,15 @@ private class WfdCtl : GLib.Application
 
 		if(l.managed) {
 			info("wifid is releasing ownership of %s...", opt_iface);
-			yield l.unmanage();
-			yield wait_prop_changed(l as DBusProxy, "Managed");
+			l.unmanage();
+			yield wait_prop_changed(l, "Managed");
 		}
 
 		Device d = find_device_by_name(opt_iface);
 		if(null != d && !d.managed) {
 			info("NetworkManager is acquiring ownership of %s...", opt_iface);
 			d.managed = true;
-			yield wait_prop_changed(d as DBusProxy, "Managed");
+			yield wait_prop_changed(d, "Managed");
 		}
 	}
 
@@ -564,7 +564,13 @@ private class WfdCtl : GLib.Application
 		info("tearing down wireless display...");
 
 		if(null != curr_session) {
-			curr_session.teardown.begin(quit);
+			try {
+				curr_session.teardown();
+			}
+			catch(Error e) {
+				warning("failed to tearing down normally: %s", e.message);
+				quit();
+			}
 		}
 		else {
 			release_wnic_ownership.begin(quit);
@@ -693,11 +699,11 @@ private class WfdCtl : GLib.Application
 		return find_link_by_name(nic_name) != null;
 	}
 
-	private async void wait_prop_changed(DBusProxy o,
+	private async void wait_prop_changed<T>(T o,
 					string name,
 					uint timeout = 1) throws WfdCtlError
 	{
-		ulong prop_changed_id = o.g_properties_changed.connect((props) => {
+		ulong prop_changed_id = (o as DBusProxy).g_properties_changed.connect((props) => {
 			string k;
 			Variant v;
 			foreach(var prop in props) {
@@ -725,7 +731,7 @@ private class WfdCtl : GLib.Application
 		if(0 < timeout) {
 			Source.remove(timeout_id);
 		}
-		o.disconnect(prop_changed_id);
+		(o as DBusProxy).disconnect(prop_changed_id);
 
 		if(timed_out) {
 			throw new WfdCtlError.TIMEOUT("timeout to wait for property %s change",

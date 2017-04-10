@@ -14,10 +14,10 @@ namespace Org {
 				public interface Peer : GLib.Object {
 
 					[DBus (name = "Connect")]
-					public abstract async void connect(string param0, string param1) throws DBusError, IOError;
+					public abstract void connect(string param0, string param1) throws DBusError, IOError;
 
 					[DBus (name = "Disconnect")]
-					public abstract async void disconnect() throws DBusError, IOError;
+					public abstract void disconnect() throws DBusError, IOError;
 
 					[DBus (name = "Link")]
 					public abstract GLib.ObjectPath link { owned get; }
@@ -57,10 +57,10 @@ namespace Org {
 				public interface Link : GLib.Object {
 
 					[DBus (name = "Manage")]
-					public abstract async void manage() throws DBusError, IOError;
+					public abstract void manage() throws DBusError, IOError;
 
 					[DBus (name = "Unmanage")]
-					public abstract async void unmanage() throws DBusError, IOError;
+					public abstract void unmanage() throws DBusError, IOError;
 
 					[DBus (name = "InterfaceIndex")]
 					public abstract uint interface_index {  get; }
