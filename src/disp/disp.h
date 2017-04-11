@@ -34,7 +34,7 @@
 #define wfd_session_has_id(s)	(0 < wfd_session_get_id(s))
 #define wfd_is_out_session(s)	(WFD_SESSION_DIR_OUT == wfd_session_get_dir(s))
 #define wfd_is_in_session(s)	(WFD_SESSION_DIR_IN == wfd_session_get_dir(s))
-#define _wfd_session_free_ _shl_cleanup_(wfd_session_free_p)
+#define _wfd_session_unref_ _shl_cleanup_(wfd_session_unrefp)
 
 struct wfd_sink;
 struct wfd_session;
@@ -76,10 +76,11 @@ int wfd_session_is_established(struct wfd_session *s);
 int wfd_session_resume(struct wfd_session *s);
 int wfd_session_pause(struct wfd_session *s);
 int wfd_session_teardown(struct wfd_session *s);
-void wfd_session_free(struct wfd_session *s);
+struct wfd_session * wfd_session_ref(struct wfd_session *s);
+void wfd_session_unref(struct wfd_session *s);
 uint64_t wfd_session_get_id(struct wfd_session *s);
 struct wfd_sink * wfd_out_session_get_sink(struct wfd_session *s);
-void wfd_session_free_p(struct wfd_session **s);
+void wfd_session_unrefp(struct wfd_session **s);
 unsigned int * wfd_session_to_htable(struct wfd_session *s);
 struct wfd_session * wfd_session_from_htable(unsigned int *e);
 

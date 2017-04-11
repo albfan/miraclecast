@@ -25,8 +25,6 @@
 #include <time.h>
 #include <systemd/sd-event.h>
 #include <systemd/sd-daemon.h>
-#include <glib.h>
-#include <gst/gst.h>
 #include "ctl.h"
 #include "disp.h"
 #include "wfd.h"
@@ -101,6 +99,43 @@ static void ctl_wfd_free(struct ctl_wfd *wfd)
 	}
 
 	free(wfd);
+}
+
+static int ctl_wfd_handle_shutdown(sd_event_source *s,
+				uint64_t usec,
+				void *userdata)
+{
+	struct ctl_wfd *wfd = userdata;
+
+	sd_event_source_set_enabled(s, false);
+	sd_event_source_unref(s);
+
+	sd_event_exit(wfd->loop, 0);
+
+	return 0;
+}
+
+void ctl_wfd_shutdown(struct ctl_wfd *wfd)
+{
+	uint64_t now;
+	int r = sd_event_now(ctl_wfd_get_loop(), CLOCK_MONOTONIC, &now);
+	if(0 > r) {
+		goto error;
+	}
+
+	r = sd_event_add_time(ctl_wfd_get_loop(),
+					NULL,
+					CLOCK_MONOTONIC,
+					now + 100 * 1000,
+					0,
+					ctl_wfd_handle_shutdown,
+					wfd);
+	if(0 <= r) {
+		return;
+	}
+
+error:
+	sd_event_exit(wfd->loop, 0);
 }
 
 int ctl_wfd_add_sink(struct ctl_wfd *wfd,
@@ -407,90 +442,9 @@ void cli_fn_help()
 {
 }
 
-/*
- * see: https://lists.freedesktop.org/archives/systemd-devel/2014-August/022329.html
- **/
-#define SD_SOURCE(p)	((SDSource *) (p))
-
-typedef struct _SDSource SDSource;
-
-struct _SDSource
-{
-	GSource source;
-	sd_event *event;
-	GPollFD pollfd;
-};
-
-static gboolean sd_source_prepare(GSource *source, gint *timeout)
-{
-	return sd_event_prepare(SD_SOURCE(source)->event) > 0 ? TRUE : FALSE;
-}
-
-static gboolean sd_source_check(GSource *source)
-{
-	return sd_event_wait(SD_SOURCE(source)->event, 0) > 0 ? TRUE : FALSE;
-}
-
-static gboolean sd_source_dispatch(GSource *source,
-				GSourceFunc callback,
-				gpointer userdata)
-{
-	return sd_event_dispatch(SD_SOURCE(source)->event) >= 0
-					? G_SOURCE_CONTINUE
-					: G_SOURCE_REMOVE;
-}
-
-static void sd_source_finalize(GSource *source)
-{
-	sd_event_unref(SD_SOURCE(source)->event);
-}
-
-static int sd_source_on_exit(sd_event_source *source, void *userdata)
-{
-	g_main_loop_quit(userdata);
-
-	sd_event_source_set_enabled(source, false);
-	sd_event_source_unref(source);
-
-	return 0;
-}
-
-static int sd_source_attach(GSource *source, GMainLoop *loop)
-{
-	g_source_set_name(source, "sd-event");
-	g_source_add_poll(source, &SD_SOURCE(source)->pollfd);
-	g_source_attach(source, g_main_loop_get_context(loop));
-
-	return sd_event_add_exit(SD_SOURCE(source)->event,
-					NULL,
-					sd_source_on_exit,
-					loop);
-}
-
-GSource * sd_source_new(sd_event *event)
-{
-	static GSourceFuncs funcs = {
-		sd_source_prepare,
-		sd_source_check,
-		sd_source_dispatch,
-		sd_source_finalize,
-	};
-	GSource *s = g_source_new(&funcs, sizeof(SDSource));
-	if(s) {
-		SD_SOURCE(s)->event = sd_event_ref(event);
-		SD_SOURCE(s)->pollfd.fd = sd_event_get_fd(event);
-		SD_SOURCE(s)->pollfd.events = G_IO_IN | G_IO_HUP;
-	}
-
-	return s;
-}
-
 int main(int argc, char **argv)
 {
 	int r;
-
-	GMainLoop *loop;
-	GSource *source;
 	sd_event *event;
 	sd_bus *bus;
 
@@ -501,17 +455,10 @@ int main(int argc, char **argv)
 		log_max_sev = log_parse_arg(getenv("LOG_LEVEL"));
 	}
 
-	gst_init(&argc, &argv);
-
-	loop = g_main_loop_new(NULL, FALSE);
-	if(!loop) {
-		r = -ENOMEM;
-		goto deinit_gst;
-	}
-
 	r = sd_event_default(&event);
 	if(0 > r) {
-		goto unref_loop;
+		log_warning("can't create default event loop");
+		goto end;
 	}
 
 	r = sd_event_set_watchdog(event, true);
@@ -520,33 +467,20 @@ int main(int argc, char **argv)
 		goto unref_event;
 	}
 
-	source = sd_source_new(event);
-	if(!source) {
-		r = -ENOMEM;
-		goto unref_event;
-	}
-
-	r = sd_source_attach(source, loop);
-	if(0 > r) {
-		goto unref_source;
-	}
-
 	r = sd_bus_default_system(&bus);
 	if(0 > r) {
 		log_warning("unable to connect to system DBus: %s", strerror(errno));
-		goto unref_source;
+		goto disable_watchdog;
 	}
 
 	r = sd_bus_attach_event(bus, event, 0);
 	if(0 > r) {
-		log_warning("unable to attache DBus event source to loop: %s",
-						strerror(errno));
 		goto unref_bus;
 	}
 
 	r = ctl_wfd_new(&wfd, event, bus);
 	if(0 > r) {
-		goto bus_detach_event;;
+		goto bus_detach_event;
 	}
 
 	r = wfd_dbus_new(&wfd_dbus, event, bus);
@@ -567,31 +501,23 @@ int main(int argc, char **argv)
 		goto free_wfd_dbus;
 	}
 
-	g_main_loop_run(loop);
+	sd_event_loop(event);
 
 	sd_notify(false, "STATUS=Exiting..");
 
 free_wfd_dbus:
 	wfd_dbus_free(wfd_dbus);
-	wfd_dbus = NULL;
 free_ctl_wfd:
 	ctl_wfd_free(wfd);
-	wfd = NULL;
 bus_detach_event:
 	sd_bus_detach_event(bus);
 unref_bus:
 	sd_bus_flush_close_unref(bus);
-unref_source:
-	g_source_ref(source);
-	g_source_destroy(source);
-unref_event:
-	sd_event_run(event, 0);
-	sd_event_unref(event);
-unref_loop:
-	g_main_loop_unref(loop);
-deinit_gst:
-	gst_deinit();
+disable_watchdog:
 	sd_event_set_watchdog(event, false);
+unref_event:
+	sd_event_unref(event);
+end:
 	return r < 0 ? EXIT_FAILURE : EXIT_SUCCESS;
 }
 

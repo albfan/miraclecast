@@ -93,6 +93,7 @@ struct wfd_session_vtable
 
 struct wfd_session
 {
+	int ref_count;
 	enum wfd_session_dir dir;
 	enum wfd_session_state state;
 	enum rtsp_message_id last_request;
@@ -112,7 +113,9 @@ struct wfd_session
 	} stream;
 };
 
-int wfd_session_init(struct wfd_session *s);
+int wfd_session_init(struct wfd_session *s,
+				enum wfd_session_dir dir,
+				const struct rtsp_dispatch_entry *disp_tbl);
 int wfd_session_gen_stream_url(struct wfd_session *s,
 				const char *local_addr,
 				enum wfd_stream_id id);
