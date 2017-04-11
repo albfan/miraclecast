@@ -46,6 +46,11 @@ extern int wfd_out_session_teardown(struct wfd_session *);
 extern void wfd_out_session_end(struct wfd_session *);
 extern void wfd_out_session_destroy(struct wfd_session *);
 static const char * rtsp_message_id_to_string(enum rtsp_message_id id);
+static int wfd_session_handle_request(struct rtsp *bus,
+				struct rtsp_message *m,
+				void *userdata);
+static bool wfd_session_is_hup(struct wfd_session *s);
+static void wfd_session_hup(struct wfd_session *s);
 
 const struct wfd_session_vtable session_vtbl[] = {
 	[WFD_SESSION_DIR_OUT] = {
@@ -177,10 +182,8 @@ int wfd_session_pause(struct wfd_session *s)
 
 int wfd_session_teardown(struct wfd_session *s)
 {
+	log_info("wfd_session_teardown(%p)", s);
 	assert(wfd_is_session(s));
-
-	/* notify and detach from sink */
-	wfd_fn_out_session_ended(s);
 
 	if(wfd_session_is_established(s)) {
 		if(!session_vtbl[s->dir].teardown) {
@@ -189,15 +192,33 @@ int wfd_session_teardown(struct wfd_session *s)
 
 		return session_vtbl[s->dir].teardown(s);;
 	}
-
-	//wfd_session_free(s);
+	else {
+		/* notify and detach from sink */
+		wfd_fn_out_session_ended(s);
+	}
 
 	return 0;
 }
 
-void wfd_session_free(struct wfd_session *s)
+struct wfd_session * wfd_session_ref(struct wfd_session *s)
+{
+	if(s) {
+		++ s->ref_count;
+	}
+
+	return s;
+}
+
+void wfd_session_unref(struct wfd_session *s)
 {
 	if(!s) {
+		return;
+	}
+
+	assert(1 <= s->ref_count);
+
+	-- s->ref_count;
+	if(s->ref_count) {
 		return;
 	}
 
@@ -220,11 +241,7 @@ void wfd_session_free(struct wfd_session *s)
 		s->stream.url = NULL;
 	}
 
-	if(s->rtsp) {
-		rtsp_detach_event(s->rtsp);
-		rtsp_unref(s->rtsp);
-		s->rtsp = NULL;
-	}
+	wfd_session_hup(s);
 
 	s->rtp_ports[0] = 0;
 	s->rtp_ports[1] = 0;
@@ -400,7 +417,7 @@ static int wfd_session_handle_request(struct rtsp *bus,
 	_rtsp_message_unref_ struct rtsp_message *rep = NULL;
 	struct wfd_session *s = userdata;
 	enum rtsp_message_id id;
-	char date[128];
+	char date[64];
 	uint64_t usec;
 	time_t sec;
 	int r;
@@ -427,6 +444,11 @@ static int wfd_session_handle_request(struct rtsp *bus,
 		goto error;
 	}
 
+	if(WFD_SESSION_STATE_TEARING_DOWN == wfd_session_get_state(s)) {
+		wfd_session_hup(s);
+		return 0;
+	}
+
 	r = sd_event_now(ctl_wfd_get_loop(), CLOCK_REALTIME, &usec);
 	if(0 > r) {
 		goto error;
@@ -437,7 +459,7 @@ static int wfd_session_handle_request(struct rtsp *bus,
 					"%a, %d %b %Y %T %z",
 					gmtime(&sec));
 
-	r = rtsp_message_append(rep, "<s>", "Date", date);
+	r = rtsp_message_append(rep, "<&>", "Date", date);
 	if(0 > r) {
 		goto error;
 	}
@@ -515,6 +537,17 @@ error:
 	return r;
 }
 
+int wfd_session_init(struct wfd_session *s,
+				enum wfd_session_dir dir,
+				const struct rtsp_dispatch_entry *disp_tbl)
+{
+	s->ref_count = 1;
+	s->dir = dir;
+	s->rtsp_disp_tbl = disp_tbl;
+
+	return 0;
+}
+
 int wfd_session_request(struct wfd_session *s,
 				enum rtsp_message_id id,
 				const struct wfd_arg_list *args)
@@ -589,6 +622,8 @@ static int wfd_session_handle_io(sd_event_source *source,
 			goto end;
 		}
 
+		log_trace("rtsp->ref = %ld", *(unsigned long *) rtsp);
+
 		conn = -1;
 
 		r = rtsp_attach_event(rtsp, ctl_wfd_get_loop(), 0);
@@ -620,6 +655,23 @@ end:
 	}
 
 	return r;
+}
+
+static bool wfd_session_is_hup(struct wfd_session *s)
+{
+	return NULL == s->rtsp;
+}
+
+static void wfd_session_hup(struct wfd_session *s)
+{
+	if(!s || !s->rtsp) {
+		return;
+	}
+
+	rtsp_remove_match(s->rtsp, wfd_session_handle_request, s);
+	rtsp_detach_event(s->rtsp);
+	rtsp_unref(s->rtsp);
+	s->rtsp = NULL;
 }
 
 int wfd_session_start(struct wfd_session *s, uint64_t id)
@@ -658,9 +710,11 @@ int wfd_session_start(struct wfd_session *s, uint64_t id)
 	return 0;
 }
 
-void wfd_session_free_p(struct wfd_session **s)
+void wfd_session_unrefp(struct wfd_session **s)
 {
-	wfd_session_free(*s);
+	if(s) {
+		wfd_session_unref(*s);
+	}
 }
 
 static const char * rtsp_message_id_to_string(enum rtsp_message_id id)

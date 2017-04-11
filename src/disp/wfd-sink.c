@@ -45,9 +45,10 @@ static int wfd_sink_set_session(struct wfd_sink *sink,
 		ctl_wfd_remove_session_by_id(ctl_wfd_get(),
 						wfd_session_get_id(sink->session),
 						NULL);
+		wfd_session_unref(sink->session);
 	}
 
-	sink->session = session;
+	sink->session = session ? wfd_session_ref(session) : NULL;
 	wfd_fn_sink_properties_changed(sink, "Session");
 
 	return 0;
@@ -90,11 +91,7 @@ void wfd_sink_free(struct wfd_sink *sink)
 		return;
 	}
 
-	if(sink->session) {
-		s = sink->session;
-		wfd_sink_set_session(sink, NULL);
-		wfd_session_free(s);
-	}
+	wfd_sink_set_session(sink, NULL);
 
 	if(sink->label) {
 		free(sink->label);
@@ -129,7 +126,7 @@ int wfd_sink_start_session(struct wfd_sink *sink,
 				const char *audio_dev)
 {
 	int r;
-	_wfd_session_free_ struct wfd_session *s = NULL;
+	_wfd_session_unref_ struct wfd_session *s = NULL;
 
 	assert(sink);
 	assert(out);
@@ -165,7 +162,6 @@ int wfd_sink_start_session(struct wfd_sink *sink,
 
 	sink->session = s;
 	*out = s;
-	s = NULL;
 
 	return 0;
 }

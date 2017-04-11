@@ -41,6 +41,7 @@ errordomain WfdCtlError
 	TIMEOUT,
 	MONITOR_GONE,
 	FORMATION_ERROR,
+	NO_P2P_SUPPORT,
 }
 
 private void print(string format, ...)
@@ -335,17 +336,20 @@ private class WfdCtl : GLib.Application
 							opt_iface);
 		}
 
-		if(!l.managed) {
-			info("wifid is acquiring ownership of %s...", opt_iface);
-
-			l.manage();
+		if(l.managed) {
+			info("wifid is releasing ownership of %s...", opt_iface);
+			l.unmanage();
 			yield wait_prop_changed(l, "Managed");
 		}
+
+		info("wifid is acquiring ownership of %s...", opt_iface);
+		l.manage();
+		yield wait_prop_changed(l, "Managed");
 	}
 
 	private async void start_p2p_scan() throws Error
 	{
-		Link l = find_link_by_name(opt_iface);
+		Link? l = find_link_by_name(opt_iface);
 		if(l.wfd_subelements != opt_wfd_subelems) {
 			info("update wfd_subelems to broadcast what kind of device we are");
 
@@ -354,7 +358,7 @@ private class WfdCtl : GLib.Application
 		}
 
 		if(-1 == l.p2p_state) {
-			error("link %s has no P2P supporting", l.interface_name);
+			throw new WfdCtlError.NO_P2P_SUPPORT("link %s has no P2P supporting", l.interface_name);
 		}
 		else if(0 == l.p2p_state) {
 			info("wait for P2P supporting status...");
@@ -568,24 +572,23 @@ private class WfdCtl : GLib.Application
 		yield form_p2p_group();
 		yield establish_session();
 		yield wait_for_session_ending();
-		yield release_wnic_ownership();
-
-		quit();
-
 	}
 
 	public void stop_wireless_display()
 	{
-		info("tearing down wireless display...");
-
 		if(null != curr_session) {
+			info("tearing down wireless display...");
+
 			try {
 				curr_session.teardown();
 			}
 			catch(Error e) {
 				warning("failed to tearing down normally: %s", e.message);
-				quit();
 			}
+
+			wait_prop_changed.begin(curr_sink, "Session", 3, () => {
+				release_wnic_ownership.begin(quit);
+			});
 		}
 		else {
 			release_wnic_ownership.begin(quit);
@@ -598,44 +601,27 @@ private class WfdCtl : GLib.Application
 			print("please specify a peer MAC with -p option");
 			return false;
 		}
+		print("peer-mac=%s", opt_peer_mac);
 
 		if(null == opt_display) {
 			opt_display = Environment.get_variable("DISPLAY");
-			if(null == opt_display) {
-				print("no video source found. play specify one by DISPLAY " +
-								"environment or -d option");
-				return false;
-			}
-			else {
-				print("no display name specified by -d, " +
-								"use DISPLAY environment variable instead");
-			}
 		}
+		print("display=%s", opt_display);
 
 		if(null == opt_authority) {
 			opt_authority = Environment.get_variable("XAUTHORITY");
-			if(null == opt_authority) {
-				print("no display authority found. play specify one by XAUTHORITY " +
-								"environment or -x option");
-				return false;
-			}
-			else {
-				print("no display authority specified by -x, " +
-								"use XAUTHORITY environment variable instead");
-			}
 		}
+		print("authority=%s", opt_authority);
 
 		if(null == opt_iface) {
 			opt_iface = "wlan0";
-			print("no wireless adapter specified by -i, use '%s' instead",
-							opt_iface);
 		}
+		print("interface=%s", opt_iface);
 
 		if(null == opt_wfd_subelems) {
 			opt_wfd_subelems = "000600111c4400c8";
-			print("no wfd_subelems specified by -w, use '%s' instead",
-							opt_wfd_subelems);
 		}
+		print("wfd_subelemens=%s", opt_wfd_subelems);
 
 		display = Gdk.Display.open(opt_display);
 		if(null == display) {
@@ -653,6 +639,7 @@ private class WfdCtl : GLib.Application
 			print("invalid screen number option: %d", opt_monitor_num);
 			return false;
 		}
+		print("monitor-num=%d", opt_monitor_num);
 
 		return true;
 	}
@@ -671,6 +658,16 @@ private class WfdCtl : GLib.Application
 				print("failed to cast to wireless display: %s", e.message);
 				release();
 			}
+
+			release_wnic_ownership.begin((o, r) => {
+				try {
+					release_wnic_ownership.end(r);
+				}
+				catch(Error e) {
+				}
+
+				quit();
+			});
 		});
 
 		hold();

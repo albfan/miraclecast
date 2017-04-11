@@ -22,6 +22,7 @@
 #include <systemd/sd-bus.h>
 #include "disp.h"
 #include "util.h"
+#include "shl_log.h"
 #include "wfd-dbus.h"
 
 #define wfd_dbus_object_added(o, argv...)					({		\
@@ -370,7 +371,7 @@ static int wfd_dbus_sink_start_session(sd_bus_message *m,
 				sd_bus_error *ret_error)
 {
 	struct wfd_sink *sink = userdata;
-	_wfd_session_free_ struct wfd_session *session = NULL;
+	_wfd_session_unref_ struct wfd_session *session = NULL;
 	_shl_free_ char *path = NULL;
 	const char *authority;
 	const char *display;
@@ -649,8 +650,18 @@ int _wfd_fn_session_properties_changed(struct wfd_session *s, char **names)
 					names);
 }
 
+static int wfd_dbus_shutdown(sd_bus_message *m,
+				void *userdata,
+				sd_bus_error *ret_error)
+{
+	ctl_wfd_shutdown(ctl_wfd_get());
+
+	return sd_bus_reply_method_return(m, NULL);
+}
+
 static const sd_bus_vtable wfd_dbus_vtable[] = {
 	SD_BUS_VTABLE_START(0),
+	SD_BUS_METHOD("Shutdown", NULL, NULL, wfd_dbus_shutdown, SD_BUS_VTABLE_UNPRIVILEGED),
 	SD_BUS_VTABLE_END,
 };
 
@@ -682,7 +693,7 @@ int wfd_dbus_expose(struct wfd_dbus *wfd_dbus)
 	int r = sd_bus_add_object_vtable(wfd_dbus->bus,
 					NULL,
 					"/org/freedesktop/miracle/wfd",
-					"org.freedesktop.miracle.wfd.Display",
+					"org.freedesktop.miracle.wfd",
 					wfd_dbus_vtable,
 					wfd_dbus);
 	if(0 > r) {
