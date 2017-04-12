@@ -23,7 +23,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
-#include <gst/gst.h>
+#include <sys/types.h>
+#include <sys/wait.h>
 #include <systemd/sd-event.h>
 #include <systemd/sd-daemon.h>
 #include "ctl.h"
@@ -77,8 +78,6 @@ error:
 
 static void ctl_wfd_free(struct ctl_wfd *wfd)
 {
-	int i;
-
 	if(!wfd) {
 		return;
 	}
@@ -87,13 +86,6 @@ static void ctl_wfd_free(struct ctl_wfd *wfd)
 	wfd->wifi = NULL;
 	shl_htable_clear_str(&wfd->sinks, NULL, NULL);
 	shl_htable_clear_uint(&wfd->sessions, NULL, NULL);
-
-	for(i = 0; i < SHL_ARRAY_LENGTH(wfd->signal_sources); ++ i) {
-		if(wfd->signal_sources[i]) {
-			sd_event_source_set_enabled(wfd->signal_sources[i], SD_EVENT_OFF);
-			sd_event_source_unref(wfd->signal_sources[i]);
-		}
-	}
 
 	if(wfd->loop) {
 		sd_event_unref(wfd->loop);
@@ -107,9 +99,6 @@ static int ctl_wfd_handle_shutdown(sd_event_source *s,
 				void *userdata)
 {
 	struct ctl_wfd *wfd = userdata;
-
-	sd_event_source_set_enabled(s, false);
-	sd_event_source_unref(s);
 
 	sd_event_exit(wfd->loop, 0);
 
@@ -283,12 +272,25 @@ static int ctl_wfd_fetch_info(sd_event_source *s, void *userdata)
 }
 
 static int ctl_wfd_handle_signal(sd_event_source *s,
-				const struct signalfd_siginfo *si,
+				const struct signalfd_siginfo *ssi,
 				void *userdata)
 {
+	int r;
+	siginfo_t siginfo;
 	struct ctl_wfd *wfd = userdata;
 
-	sd_event_source_set_enabled(s, false);
+	if(ssi->ssi_signo == SIGCHLD) {
+		r = waitid(P_PID, ssi->ssi_pid, &siginfo, WNOHANG | WEXITED);
+		if(0 > r) {
+			log_warning("failed to reaping child %d", ssi->ssi_pid);
+		}
+		else {
+			log_info("child %d exit: %d",
+							ssi->ssi_pid,
+							siginfo.si_code);
+		}
+		return 0;
+	}
 
 	return sd_event_exit(wfd->loop, 0);
 }
@@ -296,12 +298,12 @@ static int ctl_wfd_handle_signal(sd_event_source *s,
 static int ctl_wfd_init(struct ctl_wfd *wfd, sd_bus *bus)
 {
 	int i, r;
-	const int signals[SHL_ARRAY_LENGTH(wfd->signal_sources)] = {
-					SIGINT, SIGHUP, SIGQUIT, SIGTERM
+	const int signals[] = {
+		SIGINT, SIGHUP, SIGQUIT, SIGTERM, SIGCHLD,
 	};
 	struct ctl_wifi *wifi;
 
-	for(i = 0; i < SHL_ARRAY_LENGTH(wfd->signal_sources); i ++) {
+	for(i = 0; i < SHL_ARRAY_LENGTH(signals); i ++) {
 		sigset_t mask;
 		sigemptyset(&mask);
 		sigaddset(&mask, signals[i]);
@@ -311,7 +313,7 @@ static int ctl_wfd_init(struct ctl_wfd *wfd, sd_bus *bus)
 		}
 
 		r = sd_event_add_signal(wfd->loop,
-						&wfd->signal_sources[i],
+						NULL,
 						signals[i],
 						ctl_wfd_handle_signal,
 						wfd);
@@ -452,8 +454,6 @@ int main(int argc, char **argv)
 	setlocale(LC_ALL, "");
 	setlocale(LC_TIME, "en_US.UTF-8");
 
-	gst_init(&argc, &argv);
-
 	if(getenv("LOG_LEVEL")) {
 		log_max_sev = log_parse_arg(getenv("LOG_LEVEL"));
 	}
@@ -481,20 +481,20 @@ int main(int argc, char **argv)
 		goto unref_bus;
 	}
 
-	r = ctl_wfd_new(&wfd, event, bus);
+	r = wfd_dbus_new(&wfd_dbus, event, bus);
 	if(0 > r) {
 		goto bus_detach_event;
 	}
 
-	r = wfd_dbus_new(&wfd_dbus, event, bus);
+	r = ctl_wfd_new(&wfd, event, bus);
 	if(0 > r) {
-		goto free_ctl_wfd;
+		goto free_wfd_dbus;
 	}
 
 	r = wfd_dbus_expose(wfd_dbus);
 	if(0 > r) {
 		log_warning("unable to publish WFD service: %s", strerror(errno));
-		goto free_wfd_dbus;
+		goto free_ctl_wfd;
 	}
 
 	r = sd_notify(false, "READY=1\n"
@@ -508,10 +508,10 @@ int main(int argc, char **argv)
 
 	sd_notify(false, "STATUS=Exiting..");
 
-free_wfd_dbus:
-	wfd_dbus_free(wfd_dbus);
 free_ctl_wfd:
 	ctl_wfd_free(wfd);
+free_wfd_dbus:
+	wfd_dbus_free(wfd_dbus);
 bus_detach_event:
 	sd_bus_detach_event(bus);
 unref_bus:
@@ -521,7 +521,6 @@ disable_watchdog:
 unref_event:
 	sd_event_unref(event);
 end:
-	gst_deinit();
 	return r < 0 ? EXIT_FAILURE : EXIT_SUCCESS;
 }
 

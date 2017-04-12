@@ -516,7 +516,8 @@ private class WfdCtl : GLib.Application
 			}
 		});
 		Error error = null;
-		uint id = Timeout.add_seconds(10, () => {
+		var timeout_src = new TimeoutSource(10);
+		timeout_src.set_callback(() => {
 			error = new WfdCtlError.TIMEOUT("failed to establish session");
 			Idle.add(establish_session.callback);
 			return false;
@@ -524,7 +525,7 @@ private class WfdCtl : GLib.Application
 
 		yield;
 
-		Source.remove(id);
+		timeout_src.destroy();
 		if(null != error) {
 			throw error;
 		}
