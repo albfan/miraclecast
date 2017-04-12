@@ -143,8 +143,6 @@ struct ctl_wfd
 	struct shl_htable sessions;
 	size_t n_sessions;
 	unsigned int id_pool;
-
-	sd_event_source *signal_sources[4];
 };
 
 struct ctl_wfd * ctl_wfd_get();
@@ -160,6 +158,7 @@ int ctl_wfd_remove_session_by_id(struct ctl_wfd *wfd,
 				struct wfd_session **out);
 void ctl_wfd_shutdown(struct ctl_wfd *wfd);
 unsigned int ctl_wfd_alloc_session_id(struct ctl_wfd *wfd);
+void ctl_wfd_shutdown(struct ctl_wfd *wfd);
 static inline struct sd_event * ctl_wfd_get_loop()
 {
 	return ctl_wfd_get()->loop;

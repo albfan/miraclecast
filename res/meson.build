@@ -42,3 +42,11 @@ install_data(
 install_data('miracle-gst', 'gstplayer', 'uibc-viewer',
   install_dir: get_option('bindir'),
   install_mode: 'rwxr-xr-x')
+
+add_languages('vala')
+gio2 = dependency('gio-2.0')
+gst1 = dependency('gstreamer-1.0')
+gst1_base = dependency('gstreamer-base-1.0')
+executable('gstencoder', 'gstencoder.vala',
+  dependencies: [gst1, gst1_base, gio2],
+  install: true)

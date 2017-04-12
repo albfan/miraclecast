@@ -49,7 +49,6 @@ static const char * rtsp_message_id_to_string(enum rtsp_message_id id);
 static int wfd_session_handle_request(struct rtsp *bus,
 				struct rtsp_message *m,
 				void *userdata);
-static bool wfd_session_is_hup(struct wfd_session *s);
 static void wfd_session_hup(struct wfd_session *s);
 
 const struct wfd_session_vtable session_vtbl[] = {
@@ -655,11 +654,6 @@ end:
 	}
 
 	return r;
-}
-
-static bool wfd_session_is_hup(struct wfd_session *s)
-{
-	return NULL == s->rtsp;
 }
 
 static void wfd_session_hup(struct wfd_session *s)
