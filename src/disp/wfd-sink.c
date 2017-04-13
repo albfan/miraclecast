@@ -85,8 +85,6 @@ int wfd_sink_new(struct wfd_sink **out,
 
 void wfd_sink_free(struct wfd_sink *sink)
 {
-	struct wfd_session *s;
-
 	if(!sink) {
 		return;
 	}
