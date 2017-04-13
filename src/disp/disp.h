@@ -158,6 +158,7 @@ int ctl_wfd_find_session_by_id(struct ctl_wfd *wfd,
 int ctl_wfd_remove_session_by_id(struct ctl_wfd *wfd,
 				unsigned int id,
 				struct wfd_session **out);
+void ctl_wfd_shutdown(struct ctl_wfd *wfd);
 unsigned int ctl_wfd_alloc_session_id(struct ctl_wfd *wfd);
 static inline struct sd_event * ctl_wfd_get_loop()
 {
