@@ -23,6 +23,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <gst/gst.h>
 #include <systemd/sd-event.h>
 #include <systemd/sd-daemon.h>
 #include "ctl.h"
@@ -451,6 +452,8 @@ int main(int argc, char **argv)
 	setlocale(LC_ALL, "");
 	setlocale(LC_TIME, "en_US.UTF-8");
 
+	gst_init(&argc, &argv);
+
 	if(getenv("LOG_LEVEL")) {
 		log_max_sev = log_parse_arg(getenv("LOG_LEVEL"));
 	}
@@ -518,6 +521,7 @@ disable_watchdog:
 unref_event:
 	sd_event_unref(event);
 end:
+	gst_deinit();
 	return r < 0 ? EXIT_FAILURE : EXIT_SUCCESS;
 }
 
