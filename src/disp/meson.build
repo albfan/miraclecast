@@ -1,5 +1,7 @@
 inc = include_directories('../..', '../ctl',)
-deps = [libsystemd, libmiracle_shared_dep]
+gst1 = dependency('gstreamer-1.0')
+gst1_base = dependency('gstreamer-base-1.0')
+deps = [libsystemd, libmiracle_shared_dep, gst1, gst1_base]
 if readline.found()
   deps += [readline]
 endif
