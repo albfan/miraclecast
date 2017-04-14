@@ -202,16 +202,6 @@ void link_supplicant_p2p_state_known(struct link *l, int state)
 	link_dbus_properties_changed(l, "P2PState", NULL);
 }
 
-void link_supplicant_managed(struct link *l)
-{
-	if(l->managed) {
-		return;
-	}
-
-	l->managed = true;
-	link_dbus_properties_changed(l, "Managed", NULL);
-}
-
 int link_renamed(struct link *l, const char *ifname)
 {
 	char *t;
@@ -352,6 +342,11 @@ const char *link_get_mac_addr(struct link *l)
 
 void link_supplicant_started(struct link *l)
 {
+	if(l && !l->managed) {
+		l->managed = true;
+		link_dbus_properties_changed(l, "Managed", NULL);
+	}
+
 	if (!l || l->public)
 		return;
 
@@ -361,11 +356,13 @@ void link_supplicant_started(struct link *l)
 
 void link_supplicant_stopped(struct link *l)
 {
+	if(l && l->managed) {
+		l->managed = false;
+		link_dbus_properties_changed(l, "Managed", NULL);
+	}
+
 	if (!l || !l->public)
 		return;
-
-	l->managed = false;
-	link_dbus_properties_changed(l, "Managed", NULL);
 
 	log_info("link %s unmanaged", l->ifname);
 }

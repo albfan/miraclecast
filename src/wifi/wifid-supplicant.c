@@ -2581,7 +2581,6 @@ static int supplicant_timer_fn(sd_event_source *source,
 		} else {
 			/* wpas is running smoothly, disable timer */
 			sd_event_source_set_enabled(source, SD_EVENT_OFF);
-			link_supplicant_managed(s->l);
 		}
 	} else {
 		/* Who armed this timer? What timer is this? */
