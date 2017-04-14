@@ -123,7 +123,7 @@ static void manager_add_udev_link(struct manager *m,
 	bool managed = (!interface_name || !strcmp(interface_name, ifname)) && !lazy_managed;
 #endif
 	if (managed) {
-		link_set_managed(l, true);
+		link_manage(l, true);
 	} else {
 		log_debug("ignored device: %s", ifname);
 	}
@@ -163,12 +163,12 @@ static int manager_udev_fn(sd_event_source *source,
 
 #ifdef RELY_UDEV
 		if (udev_device_has_tag(d, "miracle") && !lazy_managed)
-			link_set_managed(l, true);
+			link_manage(l, true);
 		else
-			link_set_managed(l, false);
+			link_manage(l, false);
 #else
 		if ((!interface_name || !strcmp(interface_name, ifname)) && !lazy_managed) {
-			link_set_managed(l, true);
+			link_manage(l, true);
 		} else {
 			log_debug("ignored device: %s", ifname);
 		}
@@ -506,10 +506,7 @@ static int parse_argv(int argc, char *argv[])
 		ARG_LOG_TIME,
 		ARG_WPA_LOGLEVEL,
 		ARG_USE_DEV,
-<<<<<<< HEAD
 		ARG_CONFIG_METHODS,
-=======
->>>>>>> Make miracle-wifid conexists with other network tools
 		ARG_LAZY_MANAGED,
 	};
 	static const struct option options[] = {
@@ -521,10 +518,7 @@ static int parse_argv(int argc, char *argv[])
 		{ "wpa-loglevel",	required_argument,	NULL,	ARG_WPA_LOGLEVEL },
 		{ "interface",	required_argument,	NULL,	'i' },
 		{ "use-dev",	no_argument,	NULL,	ARG_USE_DEV },
-<<<<<<< HEAD
 		{ "config-methods",	required_argument,	NULL,	ARG_CONFIG_METHODS },
-=======
->>>>>>> Make miracle-wifid conexists with other network tools
 		{ "lazy-managed",	no_argument,	NULL,	ARG_LAZY_MANAGED },
 		{}
 	};
@@ -549,11 +543,8 @@ static int parse_argv(int argc, char *argv[])
 		case ARG_USE_DEV:
 			use_dev = true;
 			break;
-<<<<<<< HEAD
 		case ARG_CONFIG_METHODS:
 			config_methods = optarg;
-=======
->>>>>>> Make miracle-wifid conexists with other network tools
 		case ARG_LAZY_MANAGED:
 			lazy_managed = true;
 			break;

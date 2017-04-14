@@ -123,7 +123,7 @@ void link_free(struct link *l)
 
 	log_debug("free link: %s (%u)", l->ifname, l->ifindex);
 
-	link_set_managed(l, false);
+	link_manage(l, false);
 
 	link_dbus_removed(l);
 	l->public = false;
@@ -135,7 +135,7 @@ void link_free(struct link *l)
 
 	supplicant_free(l->s);
 
-	/* link_set_managed(l, false) already removed all peers */
+	/* link_manage(l, false) already removed all peers */
 	shl_htable_clear_str(&l->peers, NULL, NULL);
 
 	free(l->mac_addr);
@@ -196,7 +196,7 @@ bool link_get_managed(struct link *l)
 	return l->managed;
 }
 
-int link_set_managed(struct link *l, bool set)
+int link_manage(struct link *l, bool set)
 {
 	int r;
 
