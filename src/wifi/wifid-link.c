@@ -353,7 +353,7 @@ const char *link_get_mac_addr(struct link *l)
 	if (!l)
 		return NULL;
 
-    return l->mac_addr;
+	return l->mac_addr;
 }
 
 void link_supplicant_started(struct link *l)
@@ -368,7 +368,7 @@ void link_supplicant_started(struct link *l)
 
    if (l->m->friendly_name && l->managed)
 	   link_set_friendly_name(l, l->m->friendly_name);
-	log_info("link %s managed", l->ifname);
+	log_info("link is %s managed", l->ifname);
 }
 
 void link_supplicant_stopped(struct link *l)
@@ -381,7 +381,7 @@ void link_supplicant_stopped(struct link *l)
 	if (!l || !l->public)
 		return;
 
-	log_info("link %s unmanaged", l->ifname);
+	log_info("link is %s unmanaged", l->ifname);
 }
 
 void link_supplicant_p2p_scan_changed(struct link *l, bool new_value)
