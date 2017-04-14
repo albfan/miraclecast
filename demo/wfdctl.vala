@@ -277,6 +277,7 @@ private class WfdCtl : GLib.Application
 
 	private void fetch_info_from_dbus() throws Error
 	{
+		info("connecting to wifid...");
 		wifi = new DBusObjectManagerClient.for_bus_sync(
 						BusType.SYSTEM,
 						DBusObjectManagerClientFlags.NONE,
@@ -287,6 +288,7 @@ private class WfdCtl : GLib.Application
 		wifi.object_added.connect(on_object_added);
 		wifi.object_removed.connect(on_object_removed);
 
+		info("connecting to nm...");
 		nm = new DBusObjectManagerClient.for_bus_sync(
 						BusType.SYSTEM,
 						DBusObjectManagerClientFlags.NONE,
@@ -297,6 +299,7 @@ private class WfdCtl : GLib.Application
 		nm.object_added.connect(on_object_added);
 		nm.object_removed.connect(on_object_removed);
 
+		info("connecting to dispd...");
 		wfd = new DBusObjectManagerClient.for_bus_sync(
 						BusType.SYSTEM,
 						DBusObjectManagerClientFlags.NONE,
@@ -307,14 +310,17 @@ private class WfdCtl : GLib.Application
 		wfd.object_added.connect(on_object_added);
 		wfd.object_removed.connect(on_object_removed);
 
+		info("fetching from wifid...");
 		foreach(var o in wifi.get_objects()) {
 			add_object(o.get_object_path());
 		}
 
+		info("fetching from nm...");
 		foreach(var o in nm.get_objects()) {
 			add_object(o.get_object_path());
 		}
 
+		info("fetching from wfd...");
 		foreach(var o in wfd.get_objects()) {
 			add_object(o.get_object_path());
 		}
