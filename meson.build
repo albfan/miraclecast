@@ -4,8 +4,7 @@ project('Miraclecast',
   meson_version: '>=0.39',
   default_options: ['buildtype=debugoptimized',
   'c_std=gnu11',
-  'b_lundef=true',
-  'b_sanitize=address']
+  'b_lundef=true']
 )
 
 add_project_arguments('-D_GNU_SOURCE', language: 'c')
