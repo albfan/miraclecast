@@ -176,21 +176,6 @@ int link_get_p2p_state(struct link *l)
 	return l->p2p_state;
 }
 
-int link_set_p2p_state(struct link *l, int state)
-{
-	if (!l)
-		return log_EINVAL();
-	if (l->p2p_state == state)
-		return 0;
-	if(-1 > state || 1 < state)
-		return log_EINVAL();
-
-	l->p2p_state = state;
-	link_dbus_properties_changed(l, "P2PState", NULL);
-
-	return 0;
-}
-
 bool link_get_managed(struct link *l)
 {
 	return l->managed;
