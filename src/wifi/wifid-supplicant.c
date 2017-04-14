@@ -213,8 +213,10 @@ static void supplicant_group_free(struct supplicant_group *g)
 	}
 
 	LINK_FOREACH_PEER(p, g->s->l)
-		if (p->sp->g == g)
+		if (p->sp->g == g) {
 			supplicant_peer_drop_group(p->sp);
+			return;
+		}
 
 	shl_dlist_unlink(&g->list);
 
