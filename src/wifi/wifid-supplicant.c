@@ -1527,6 +1527,7 @@ static void supplicant_try_ready(struct supplicant *s)
 
 	s->running = true;
 	link_supplicant_started(s->l);
+	link_supplicant_p2p_state_known(s->l, s->has_p2p ? 1 : -1);
 
 	LINK_FOREACH_PEER(p, s->l)
 		peer_supplicant_started(p);
@@ -1710,8 +1711,6 @@ static int supplicant_status_fn(struct wpas *w,
 		link_supplicant_p2p_state_known(s->l, -1);
 	} else {
 		s->has_p2p = true;
-
-		link_supplicant_p2p_state_known(s->l, 1);
 
 		r = wpas_message_new_request(s->bus_global,
 					     "SET",
@@ -1913,6 +1912,7 @@ static void supplicant_stopped(struct supplicant *s)
 
 	if (s->running) {
 		s->running = false;
+		link_supplicant_p2p_state_known(s->l, 0);
 		link_supplicant_stopped(s->l);
 	}
 }
