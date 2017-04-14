@@ -612,7 +612,7 @@ static int link_dbus_manage(sd_bus_message *msg,
 				sd_bus_error *err)
 {
 	struct link *l = data;
-	int r = link_set_managed(l, true);
+	int r = link_manage(l, true);
 	if(r < 0)
 		return r;
 
@@ -624,7 +624,7 @@ static int link_dbus_unmanage(sd_bus_message *msg,
 				sd_bus_error *err)
 {
 	struct link *l = data;
-	int r = link_set_managed(l, false);
+	int r = link_manage(l, false);
 	if(r < 0)
 		return r;
 

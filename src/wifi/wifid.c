@@ -116,7 +116,7 @@ static void manager_add_udev_link(struct manager *m,
 #else
 	if ((!interface_name || !strcmp(interface_name, ifname)) && !lazy_managed) {
 #endif
-		link_set_managed(l, true);
+		link_manage(l, true);
 	} else {
 		log_debug("ignored device: %s", ifname);
 	}
@@ -156,12 +156,12 @@ static int manager_udev_fn(sd_event_source *source,
 
 #ifdef RELY_UDEV
 		if (udev_device_has_tag(d, "miracle") && !lazy_managed)
-			link_set_managed(l, true);
+			link_manage(l, true);
 		else
-			link_set_managed(l, false);
+			link_manage(l, false);
 #else
 		if ((!interface_name || !strcmp(interface_name, ifname)) && !lazy_managed) {
-			link_set_managed(l, true);
+			link_manage(l, true);
 		} else {
 			log_debug("ignored device: %s", ifname);
 		}
