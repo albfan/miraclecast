@@ -63,7 +63,7 @@ while getopts "r:d:as:p:h" optname
     esac
   done
 
-RUN="omxplayer -live -b - o hdmi rtp://localhost:$PORT"
+RUN="omxplayer -live -b -o hdmi rtp://@:$PORT"
 
 echo "running: $RUN"
 exec ${RUN}
