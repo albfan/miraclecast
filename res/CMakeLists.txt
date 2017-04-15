@@ -8,5 +8,5 @@ install(
 
 INSTALL(
     FILES org.freedesktop.miracle.conf
-    DESTINATION /etc/dbus-1/system.d 
+    DESTINATION ${SYSCONFDIR}/dbus-1/system.d
     )

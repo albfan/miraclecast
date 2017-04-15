@@ -20,6 +20,8 @@ if(BUILD_ENABLE_DEBUG)
     add_definitions(-DBUILD_ENABLE_DEBUG)
 endif()
 
+set(SYSCONFDIR "/etc" CACHE STRING "system config dir")
+
 find_package(PkgConfig)
 pkg_check_modules (GLIB2 REQUIRED glib-2.0)
 pkg_check_modules (UDEV REQUIRED libudev)
