@@ -29,34 +29,15 @@ The MiracleCast projects requires the following software to be installed:
 
  - copy the dbus policy **res/org.freedesktop.miracle.conf** to `/etc/dbus-1/system.d/`
 
-## Install
+## Build and install
 
-To compile MiracleCast, you can choose from [autotools](http://en.wikipedia.org/wiki/GNU_build_system) or [cmake](http://en.wikipedia.org/wiki/CMake):
+To compile MiracleCast, you can choose from:
 
-Autotools:
+ - [autotools](http://en.wikipedia.org/wiki/GNU_build_system)
+ - [cmake](http://en.wikipedia.org/wiki/CMake)
+ - [meson](http://mesonbuild.com/)
 
-    $ ./autogen.sh
-    $ mkdir build
-    $ cd build
-    $ ../configure --prefix=/usr/local #avoid --prefix for a standard install
-
-Cmake:
-
-    $ mkdir build
-    $ cd build
-    $ cmake ..
-
-Compile
-
-    $ make
-
-Test
-
-    $ make check #only with autotools by now
-
-Install 
-
-    $ sudo make install
+See more info on wiki [Building](https://github.com/albfan/miraclecast/wiki/Building)
 
 ## Automatic interface selection with udev
 
