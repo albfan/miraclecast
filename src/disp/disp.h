@@ -58,16 +58,30 @@ enum wfd_session_state
 	WFD_SESSION_STATE_TEARING_DOWN,
 };
 
+struct wfd_rectangle
+{
+	int x;
+	int y;
+	int width;
+	int height;
+};
+
+enum wfd_display_server_type
+{
+	WFD_DISPLAY_SERVER_TYPE_UNKNOWN = 0,
+	WFD_DISPLAY_SERVER_TYPE_X,
+};
+
+enum wfd_audio_server_type
+{
+	WFD_AUDIO_SERVER_TYPE_UNKNOWN = 0,
+	WFD_AUDIO_SERVER_TYPE_PULSE_AUDIO,
+};
+
 int wfd_out_session_new(struct wfd_session **out,
-				struct wfd_sink *sink,
-				const char *authority,
-				const char *display,
-				uint32_t x,
-				uint32_t y,
-				uint32_t width,
-				uint32_t height,
-				const char *audio_dev);
-int wfd_session_start(struct wfd_session *s, uint64_t id);
+				unsigned int id,
+				struct wfd_sink *sink);
+int wfd_session_start(struct wfd_session *s);
 enum wfd_session_dir wfd_session_get_dir(struct wfd_session *s);
 uint64_t wfd_session_get_id(struct wfd_session *s);
 const char * wfd_session_get_stream_url(struct wfd_session *s);
@@ -80,6 +94,20 @@ struct wfd_session * wfd_session_ref(struct wfd_session *s);
 void wfd_session_unref(struct wfd_session *s);
 uint64_t wfd_session_get_id(struct wfd_session *s);
 struct wfd_sink * wfd_out_session_get_sink(struct wfd_session *s);
+enum wfd_display_server_type wfd_session_get_disp_type(struct wfd_session *s);
+int wfd_session_set_disp_type(struct wfd_session *s, enum wfd_display_server_type);
+const char * wfd_session_get_disp_name(struct wfd_session *s);
+int wfd_session_set_disp_name(struct wfd_session *s, const char *disp_name);
+const char * wfd_session_get_disp_params(struct wfd_session *s);
+int wfd_session_set_disp_params(struct wfd_session *s, const char *disp_params);
+const char * wfd_session_get_disp_auth(struct wfd_session *s);
+int wfd_session_set_disp_auth(struct wfd_session *s, const char *disp_auth);
+const struct wfd_rectangle * wfd_session_get_disp_dimension(struct wfd_session *s);
+int wfd_session_set_disp_dimension(struct wfd_session *s, const struct wfd_rectangle *rect);
+enum wfd_audio_server_type wfd_session_get_audio_type(struct wfd_session *s);
+int wfd_session_set_audio_type(struct wfd_session *s, enum wfd_audio_server_type audio_type);
+const char * wfd_session_get_audio_dev_name(struct wfd_session *s);
+int wfd_session_set_audio_dev_name(struct wfd_session *s, char *audio_dev_name);
 void wfd_session_unrefp(struct wfd_session **s);
 unsigned int * wfd_session_to_htable(struct wfd_session *s);
 struct wfd_session * wfd_session_from_htable(unsigned int *e);
@@ -107,15 +135,7 @@ void wfd_sink_free(struct wfd_sink *sink);
 
 const char * wfd_sink_get_label(struct wfd_sink *sink);
 const union wfd_sube * wfd_sink_get_dev_info(struct wfd_sink *sink);
-int wfd_sink_start_session(struct wfd_sink *sink,
-				struct wfd_session **out,
-				const char *authority,
-				const char *display,
-				uint32_t x,
-				uint32_t y,
-				uint32_t width,
-				uint32_t height,
-				const char *audio_dev);
+int wfd_sink_create_session(struct wfd_sink *sink, struct wfd_session **out);
 void wfd_sink_handle_session_ended(struct wfd_sink *sink);
 bool wfd_sink_is_session_started(struct wfd_sink *sink);
 static inline void wfd_sink_freep(struct wfd_sink **s)

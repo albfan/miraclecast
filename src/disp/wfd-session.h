@@ -111,9 +111,19 @@ struct wfd_session
 		uint16_t rtp_port;
 		uint16_t rtcp_port;
 	} stream;
+
+	enum wfd_display_server_type disp_type;
+	char *disp_name;
+	char *disp_params;
+	char *disp_auth;
+	struct wfd_rectangle disp_dimen;
+
+	enum wfd_audio_server_type audio_type;
+	char *audio_dev_name;
 };
 
 int wfd_session_init(struct wfd_session *s,
+				unsigned int id,
 				enum wfd_session_dir dir,
 				const struct rtsp_dispatch_entry *disp_tbl);
 int wfd_session_gen_stream_url(struct wfd_session *s,

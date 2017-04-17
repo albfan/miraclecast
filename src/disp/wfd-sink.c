@@ -113,18 +113,10 @@ struct ctl_peer * wfd_sink_get_peer(struct wfd_sink *sink)
 	return sink->peer;
 }
 
-int wfd_sink_start_session(struct wfd_sink *sink,
-				struct wfd_session **out,
-				const char *authority,
-				const char *display,
-				uint32_t x,
-				uint32_t y,
-				uint32_t width,
-				uint32_t height,
-				const char *audio_dev)
+int wfd_sink_create_session(struct wfd_sink *sink, struct wfd_session **out)
 {
 	int r;
-	_wfd_session_unref_ struct wfd_session *s = NULL;
+	_wfd_session_unref_ struct wfd_session *sess = NULL;
 
 	assert(sink);
 	assert(out);
@@ -133,33 +125,23 @@ int wfd_sink_start_session(struct wfd_sink *sink,
 		return -EALREADY;
 	}
 
-	r = wfd_out_session_new(&s,
-					sink,
-					authority,
-					display,
-					x,
-					y,
-					width,
-					height,
-					audio_dev);
+	r = wfd_out_session_new(&sess,
+					ctl_wfd_alloc_session_id(ctl_wfd_get()),
+					sink);
 	if(0 > r) {
 		return r;
 	}
 
-	r = wfd_session_start(s, ctl_wfd_alloc_session_id(ctl_wfd_get()));
+	r = wfd_sink_set_session(sink, sess);
 	if(0 > r) {
 		return r;
 	}
 
-	r = wfd_sink_set_session(sink, s);
-	if(0 > r) {
-		return r;
-	}
+	sink->session = sess;
+	*out = wfd_session_ref(sess);
+	sess = NULL;
 
 	wfd_fn_sink_properties_changed(sink, "Session");
-
-	sink->session = s;
-	*out = s;
 
 	return 0;
 }
