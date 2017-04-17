@@ -32,12 +32,6 @@
 #define LOCAL_RTP_PORT		16384
 #define LOCAL_RTCP_PORT		16385
 
-enum wfd_display_type
-{
-	WFD_DISPLAY_TYPE_UNKNOWN,
-	WFD_DISPLAY_TYPE_X,
-};
-
 struct wfd_out_session
 {
 	struct wfd_session parent;
@@ -48,18 +42,10 @@ struct wfd_out_session
 
 	sd_event_source *encoder_source;
 
-	enum wfd_display_type display_type;
-	char *authority;
-	char *display_name;
 	const char *display_param_name;
 	const char *display_param_value;
-	uint16_t x;
-	uint16_t y;
-	uint16_t width;
-	uint16_t height;
 	enum wfd_resolution_standard std;
 	uint32_t mask;
-	char *audio_dev;
 
 	/*GstElement *pipeline;*/
 	/*GstBus *bus;*/
@@ -70,96 +56,51 @@ static int force_proc_exit(pid_t pid);
 static const struct rtsp_dispatch_entry out_session_rtsp_disp_tbl[];
 
 int wfd_out_session_new(struct wfd_session **out,
-				struct wfd_sink *sink,
-				const char *authority,
-				const char *display,
-				uint32_t x,
-				uint32_t y,
-				uint32_t width,
-				uint32_t height,
-				const char *audio_dev)
+				unsigned int id,
+				struct wfd_sink *sink)
 {
-	_shl_free_ char *display_schema = NULL;
-	_shl_free_ char *display_name = NULL;
-	char *display_param;
 	_wfd_session_unref_ struct wfd_session *s;
 	struct wfd_out_session *os;
-	enum wfd_display_type display_type;
-	enum wfd_resolution_standard std;
-	uint32_t mask;
+	//enum wfd_resolution_standard std;
+	//uint32_t mask;
 	int r;
 
-	r = sscanf(display, "%m[^:]://%ms",
-					&display_schema,
-					&display_name);
-	if(r != 2) {
-		return -EINVAL;
-	}
-
-	if(!strcmp("x", display_schema)) {
-		display_type = WFD_DISPLAY_TYPE_X;
-	}
-	else {
-		return -EINVAL;
-	}
-
-	display_param = strchr(display_name, '?');
-	if(display_param) {
-		*display_param ++ = '\0';
-	}
-
-	if(!width || !height) {
-		return -EINVAL;
-	}
-
-	r = vfd_get_mask_from_resolution(width, height, &std, &mask);
-	if(0 > r) {
-		return -EINVAL;
-	}
+//	r = vfd_get_mask_from_resolution(width, height, &std, &mask);
+//	if(0 > r) {
+//		return -EINVAL;
+//	}
 
 	s = calloc(1, sizeof(struct wfd_out_session));
 	if(!s) {
 		return -ENOMEM;
 	}
 
+	r = wfd_session_init(s,
+					id,
+					WFD_SESSION_DIR_OUT,
+					out_session_rtsp_disp_tbl);
+	if(0 > r) {
+		return r;
+	}
+
 	os = wfd_out_session(s);
-	os->authority = strdup(authority);
-	if(!os->authority) {
-		free(s);
-		return -ENOMEM;
-	}
-
-	os->audio_dev = strdup(audio_dev);
-	if(!os->audio_dev) {
-		free(s);
-		return -ENOMEM;
-	}
-
-	wfd_session_init(s, WFD_SESSION_DIR_OUT, out_session_rtsp_disp_tbl);
 	os->fd = -1;
 	os->sink = sink;
-	os->display_type = display_type;
-	os->display_name = display_name;
-	os->x = x;
-	os->y = y;
-	os->width = width;
-	os->height = height;
-	os->mask = mask;
-	os->std = std;
+//	os->mask = mask;
+//	os->std = std;
+//
+//	if(display_param) {
+//		os->display_param_name = display_param;
+//		display_param = strchr(display_param, '=');
+//		if(!display_param) {
+//			return -EINVAL;
+//		}
+//		*display_param ++ = '\0';
+//		os->display_param_value = display_param;
+//	}
 
-	if(display_param) {
-		os->display_param_name = display_param;
-		display_param = strchr(display_param, '=');
-		if(!display_param) {
-			return -EINVAL;
-		}
-		*display_param ++ = '\0';
-		os->display_param_value = display_param;
-	}
-
-	*out = wfd_session(s);
+	*out = s;
 	s = NULL;
-	display_name = NULL;
 
 	return 0;
 }
@@ -318,21 +259,6 @@ void wfd_out_session_destroy(struct wfd_session *s)
 		/*sd_event_source_unref(os->gst_launch_source);*/
 		/*os->gst_launch_source = NULL;*/
 	/*}*/
-
-	if(os->audio_dev) {
-		free(os->audio_dev);
-		os->audio_dev = NULL;
-	}
-
-	if(os->display_name) {
-		free(os->display_name);
-		os->display_name = NULL;
-	}
-
-	if(os->authority) {
-		free(os->authority);
-		os->authority = NULL;
-	}
 
 	/*if(os->bus) {*/
 		/*gst_bus_remove_watch(os->bus);*/

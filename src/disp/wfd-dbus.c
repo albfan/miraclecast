@@ -371,43 +371,92 @@ static int wfd_dbus_sink_start_session(sd_bus_message *m,
 				sd_bus_error *ret_error)
 {
 	struct wfd_sink *sink = userdata;
-	_wfd_session_unref_ struct wfd_session *session = NULL;
-	_shl_free_ char *path = NULL;
-	const char *authority;
-	const char *display;
-	uint32_t x, y, width, height;
+	_wfd_session_unref_ struct wfd_session *sess = NULL;
+	_shl_free_ char *path = NULL, *disp_type_name = NULL, *disp_name = NULL;
+	char *disp_params;
+	const char *disp, *disp_auth;
 	const char *audio_dev;
+	struct wfd_rectangle rect;
 	int r;
 
 	r = sd_bus_message_read(m,
 					"ssuuuus",
-					&authority,
-					&display,
-					&x,
-					&y,
-					&width,
-					&height,
+					&disp_auth,
+					&disp,
+					&rect.x,
+					&rect.y,
+					&rect.width,
+					&rect.height,
 					&audio_dev);
 	if(0 > r) {
 		return r;
 	}
 
-	r = wfd_sink_start_session(sink,
-					&session,
-					authority,
-					display,
-					x, y, width, height,
-					audio_dev);
+	r = sscanf(disp, "%m[^:]://%ms",
+					&disp_type_name,
+					&disp_name);
+	if(r != 2) {
+		return -EINVAL;
+	}
+
+	if(strcmp("x", disp_type_name)) {
+		return -EINVAL;
+	}
+
+	r = wfd_sink_create_session(sink, &sess);
 	if(0 > r) {
 		return r;
 	}
 
-	r = wfd_dbus_get_session_path(session, &path);
+	wfd_session_set_disp_type(sess, WFD_DISPLAY_SERVER_TYPE_X);
 	if(0 > r) {
 		return r;
 	}
 
-	session = NULL;
+	disp_params = strchr(disp_name, '?');
+	if(disp_params) {
+		*disp_params ++ = '\0';
+	}
+
+	r = wfd_session_set_disp_name(sess, disp_name);
+	if(0 > r) {
+		return r;
+	}
+
+	r = wfd_session_set_disp_params(sess, disp_params);
+	if(0 > r) {
+		return r;
+	}
+
+	r = wfd_session_set_disp_auth(sess, disp_auth);
+	if(0 > r) {
+		return r;
+	}
+
+	r = wfd_session_set_disp_dimension(sess, &rect);
+	if(0 > r) {
+		return r;
+	}
+
+	r = wfd_session_set_audio_type(sess, WFD_AUDIO_SERVER_TYPE_PULSE_AUDIO);
+	if(0 > r) {
+		return r;
+	}
+
+	r = wfd_session_set_audio_type(sess, WFD_AUDIO_SERVER_TYPE_PULSE_AUDIO);
+	if(0 > r) {
+		return r;
+	}
+
+	r = wfd_session_start(sess);
+	if(0 > r) {
+		return r;
+	}
+
+	r = wfd_dbus_get_session_path(sess, &path);
+	if(0 > r) {
+		return r;
+	}
 
 	return sd_bus_reply_method_return(m, "o", path);
 }

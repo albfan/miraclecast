@@ -240,6 +240,21 @@ void wfd_session_unref(struct wfd_session *s)
 		s->stream.url = NULL;
 	}
 
+	if(s->disp_auth) {
+		free(s->disp_auth);
+		s->disp_auth = NULL;
+	}
+
+	if(s->disp_name) {
+		free(s->disp_name);
+		s->disp_name = NULL;
+	}
+
+	if(s->audio_dev_name) {
+		free(s->audio_dev_name);
+		s->audio_dev_name = NULL;
+	}
+
 	wfd_session_hup(s);
 
 	s->rtp_ports[0] = 0;
@@ -537,10 +552,12 @@ error:
 }
 
 int wfd_session_init(struct wfd_session *s,
+				unsigned int id,
 				enum wfd_session_dir dir,
 				const struct rtsp_dispatch_entry *disp_tbl)
 {
 	s->ref_count = 1;
+	s->id = id;
 	s->dir = dir;
 	s->rtsp_disp_tbl = disp_tbl;
 
@@ -668,14 +685,13 @@ static void wfd_session_hup(struct wfd_session *s)
 	s->rtsp = NULL;
 }
 
-int wfd_session_start(struct wfd_session *s, uint64_t id)
+int wfd_session_start(struct wfd_session *s)
 {
 	int r;
 	_shl_close_ int fd = -1;
 	uint32_t mask;
 
 	assert(wfd_is_session(s));
-	assert(id);
 
 	if(WFD_SESSION_STATE_NULL != s->state) {
 		return -EINPROGRESS;
@@ -698,8 +714,131 @@ int wfd_session_start(struct wfd_session *s, uint64_t id)
 
 	fd = -1;
 
-	s->id = id;
 	wfd_session_set_state(s, WFD_SESSION_STATE_CONNECTING);
+
+	return 0;
+}
+
+enum wfd_display_server_type wfd_session_get_disp_type(struct wfd_session *s)
+{
+	return s->disp_type;
+}
+
+int wfd_session_set_disp_type(struct wfd_session *s, enum wfd_display_server_type disp_type)
+{
+	s->disp_type = disp_type;
+
+	return 0;
+}
+
+const char * wfd_session_get_disp_name(struct wfd_session *s)
+{
+	return s->disp_name;
+}
+
+int wfd_session_set_disp_name(struct wfd_session *s, const char *disp_name)
+{
+	char *name = disp_name ? strdup(disp_name) : NULL;
+	if(!name) {
+		return -ENOMEM;
+	}
+
+	if(s->disp_name) {
+		free(s->disp_name);
+	}
+
+	s->disp_name = name;
+
+	return 0;
+}
+
+const char * wfd_session_get_disp_params(struct wfd_session *s)
+{
+	return s->disp_params;
+}
+
+int wfd_session_set_disp_params(struct wfd_session *s, const char *disp_params)
+{
+	char *params = disp_params ? strdup(disp_params) : NULL;
+	if(disp_params && !params) {
+		return -ENOMEM;
+	}
+
+	if(s->disp_params) {
+		free(s->disp_params);
+	}
+
+	s->disp_params = params;
+
+	return 0;
+}
+
+const char * wfd_session_get_disp_auth(struct wfd_session *s)
+{
+	return s->disp_auth;
+}
+
+int wfd_session_set_disp_auth(struct wfd_session *s, const char *disp_auth)
+{
+	char *auth = disp_auth ? strdup(disp_auth) : NULL;
+	if(!auth) {
+		return -ENOMEM;
+	}
+
+	if(s->disp_auth) {
+		free(s->disp_auth);
+	}
+
+	s->disp_auth = auth;
+
+	return 0;
+}
+
+const struct wfd_rectangle * wfd_session_get_disp_dimension(struct wfd_session *s)
+{
+	return &s->disp_dimen;
+}
+
+int wfd_session_set_disp_dimension(struct wfd_session *s, const struct wfd_rectangle *rect)
+{
+	assert(rect);
+
+	if(rect) {
+		s->disp_dimen = *rect;
+	}
+
+	return 0;
+}
+
+enum wfd_audio_server_type wfd_session_get_audio_type(struct wfd_session *s)
+{
+	return s->audio_type;
+}
+
+int wfd_session_set_audio_type(struct wfd_session *s, enum wfd_audio_server_type audio_type)
+{
+	s->audio_type = audio_type;
+
+	return 0;
+}
+
+const char * wfd_session_get_audio_dev_name(struct wfd_session *s)
+{
+	return s->audio_dev_name;
+}
+
+int wfd_session_set_audio_dev_name(struct wfd_session *s, char *audio_dev_name)
+{
+	char *name = audio_dev_name ? strdup(audio_dev_name) : NULL;
+	if(!name) {
+		return -ENOMEM;
+	}
+
+	if(s->audio_dev_name) {
+		free(s->audio_dev_name);
+	}
+
+	s->audio_dev_name = name;
 
 	return 0;
 }
