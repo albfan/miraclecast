@@ -26,18 +26,28 @@ fi
 cd $oldpwd
 
 if [ "x$1" = "xc" ]; then
+  shift
+  args="$args $@"
   $topdir/configure CFLAGS='-g -O0 -ftrapv' $args
   make clean
 elif [ "x$1" = "xg" ]; then
-  $topdir/configure CFLAGS='-g -Og -ftrapv' $args
+  shift
+  args="$args $@"
+  $topdir/configure CFLAGS='-g -O0 -ftrapv' $args
   make clean
 elif [ "x$1" = "xa" ]; then
+  shift
+  args="$args $@"
   $topdir/configure CFLAGS='-g -O0 -Wsuggest-attribute=pure -Wsuggest-attribute=const -ftrapv' $args
   make clean
 elif [ "x$1" = "xl" ]; then
+  shift
+  args="$args $@"
   $topdir/configure CC=clang CFLAGS='-g -O0 -ftrapv' $args
   make clean
 elif [ "x$1" = "xs" ]; then
+  shift
+  args="$args $@"
   scan-build $topdir/configure CFLAGS='-std=gnu99 -g -O0 -ftrapv' $args
   scan-build make
 else
