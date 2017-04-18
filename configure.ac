@@ -88,7 +88,7 @@ then
       AC_MSG_ERROR([ccache must be disabled when --enable-gcov option is used. You can disable ccache by setting environment variable CCACHE_DISABLE=1.])
     fi
   
-    ltp_version_list="1.6 1.7 1.8 1.11 1.12"
+    ltp_version_list="1.6 1.7 1.8 1.10 1.11 1.12"
     AC_CHECK_PROG(LTP, lcov, lcov)
     AC_CHECK_PROG(LTP_GENHTML, genhtml, genhtml)
   
