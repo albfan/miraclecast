@@ -49,4 +49,5 @@ gst1 = dependency('gstreamer-1.0')
 gst1_base = dependency('gstreamer-base-1.0')
 executable('gstencoder', 'gstencoder.vala',
   dependencies: [gst1, gst1_base, gio2],
-  install: true)
+  install: true,
+  vala_args: ['--pkg=posix'])
