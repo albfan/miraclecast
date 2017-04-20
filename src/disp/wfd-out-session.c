@@ -16,18 +16,19 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with MiracleCast; If not, see <http://www.gnu.org/licenses/>.
  */
-#define LOG_SUBSYSTEM "wfd-session"
-
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <arpa/inet.h>
 #include <unistd.h>
 #include <time.h>
 #include <stdio.h>
+#include <fcntl.h>
 #include "wfd-session.h"
 #include "shl_log.h"
+#include "util.h"
 #include "rtsp.h"
 #include "ctl.h"
+#include "dispd-encoder.h"
 
 #define LOCAL_RTP_PORT		16384
 #define LOCAL_RTCP_PORT		16385

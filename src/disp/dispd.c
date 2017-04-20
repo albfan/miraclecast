@@ -16,7 +16,7 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with MiracleCast; If not, see <http://www.gnu.org/licenses/>.
  */
-#define LOG_SUBSYSTEM "wfdctl"
+#define LOG_SUBSYSTEM "dispd"
 
 #include <locale.h>
 #include <signal.h>
