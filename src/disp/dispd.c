@@ -73,7 +73,7 @@ int ctl_wfd_new(struct ctl_wfd **out, sd_event *loop, sd_bus *bus)
 
 error:
 	ctl_wfd_free(wfd);
-	return r;
+	return log_ERRNO();
 }
 
 static void ctl_wfd_free(struct ctl_wfd *wfd)
@@ -144,14 +144,14 @@ int ctl_wfd_add_sink(struct ctl_wfd *wfd,
 
 	r = wfd_sink_new(&s, p, sube);
 	if(0 > r) {
-		return r;
+		return log_ERRNO();
 	}
 
 	r = shl_htable_insert_str(&wfd->sinks,
 					wfd_sink_to_htable(s),
 					NULL);
 	if(0 > r) {
-		return r;
+		return log_ERRNO();
 	}
 
 	++wfd->n_sinks;
@@ -167,11 +167,13 @@ int ctl_wfd_find_sink_by_label(struct ctl_wfd *wfd,
 {
 	char **entry;
 	int r = shl_htable_lookup_str(&wfd->sinks, label, NULL, &entry);
-	if(r) {
-		*out = wfd_sink_from_htable(entry);
+	if(0 > r) {
+		return log_ERRNO();
 	}
 
-	return r;
+	*out = wfd_sink_from_htable(entry);
+
+	return 0;
 }
 
 static int ctl_wfd_remove_sink_by_label(struct ctl_wfd *wfd,
@@ -209,14 +211,14 @@ int ctl_wfd_add_session(struct ctl_wfd *wfd, struct wfd_session *s)
 
 	r = shl_htable_insert_uint(&wfd->sessions, wfd_session_to_htable(s));
 	if(0 > r) {
-		return r;
+		return log_ERRNO();
 	}
 
 	++wfd->n_sessions;
 
 	wfd_fn_session_new(s);
 
-	return r;
+	return 0;
 }
 
 int ctl_wfd_find_session_by_id(struct ctl_wfd *wfd,
@@ -324,12 +326,14 @@ static int ctl_wfd_init(struct ctl_wfd *wfd, sd_bus *bus)
 
 	r = ctl_wifi_new(&wifi, bus);
 	if(0 > r) {
-		r = -ENOMEM;
+		log_vENOMEM();
 		goto end;
 	}
 
 	r = sd_event_add_defer(wfd->loop, NULL, ctl_wfd_fetch_info, wfd);
 	if(0 > r) {
+		log_vERRNO();
+
 		ctl_wifi_free(wifi);
 		goto end;
 	}
