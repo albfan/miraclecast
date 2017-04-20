@@ -14,7 +14,8 @@ miracle_dispd_src = ['../ctl/ctl-cli.c',
   'wfd-out-session.c',
   'dispd.c',
   '../ctl/wfd.c',
-  'wfd-arg.c'
+  'wfd-arg.c',
+  'dispd-encoder.c'
 ]
 executable('miracle-dispd',
   miracle_dispd_src,
