@@ -17,9 +17,10 @@
  * along with MiracleCast; If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "wfd.h"
-#include "shl_htable.h"
 #include <systemd/sd-event.h>
+#include "shl_htable.h"
+#include "ctl.h"
+#include "wfd.h"
 
 #ifndef DISP_DISP_H
 #define DISP_DISP_H
@@ -52,7 +53,7 @@ enum wfd_session_state
 	WFD_SESSION_STATE_CONNECTING,
 	WFD_SESSION_STATE_CAPS_EXCHANGING,
 	WFD_SESSION_STATE_ESTABLISHED,
-	WFD_SESSION_STATE_SETING_UP,
+	WFD_SESSION_STATE_SETTING_UP,
 	WFD_SESSION_STATE_PAUSED,
 	WFD_SESSION_STATE_PLAYING,
 	WFD_SESSION_STATE_TEARING_DOWN,
@@ -81,19 +82,26 @@ enum wfd_audio_server_type
 int wfd_out_session_new(struct wfd_session **out,
 				unsigned int id,
 				struct wfd_sink *sink);
+struct wfd_session * wfd_session_ref(struct wfd_session *s);
+void wfd_session_unref(struct wfd_session *s);
+
+void wfd_session_unrefp(struct wfd_session **s);
+unsigned int * wfd_session_to_htable(struct wfd_session *s);
+struct wfd_session * wfd_session_from_htable(unsigned int *e);
+
 int wfd_session_start(struct wfd_session *s);
-enum wfd_session_dir wfd_session_get_dir(struct wfd_session *s);
-uint64_t wfd_session_get_id(struct wfd_session *s);
-const char * wfd_session_get_stream_url(struct wfd_session *s);
-enum wfd_session_state wfd_session_get_state(struct wfd_session *s);
-int wfd_session_is_established(struct wfd_session *s);
 int wfd_session_resume(struct wfd_session *s);
 int wfd_session_pause(struct wfd_session *s);
 int wfd_session_teardown(struct wfd_session *s);
-struct wfd_session * wfd_session_ref(struct wfd_session *s);
-void wfd_session_unref(struct wfd_session *s);
+
+int wfd_session_is_established(struct wfd_session *s);
+uint64_t wfd_session_get_id(struct wfd_session *s);
+const char * wfd_session_get_stream_url(struct wfd_session *s);
+enum wfd_session_state wfd_session_get_state(struct wfd_session *s);
+enum wfd_session_dir wfd_session_get_dir(struct wfd_session *s);
 uint64_t wfd_session_get_id(struct wfd_session *s);
 struct wfd_sink * wfd_out_session_get_sink(struct wfd_session *s);
+
 enum wfd_display_server_type wfd_session_get_disp_type(struct wfd_session *s);
 int wfd_session_set_disp_type(struct wfd_session *s, enum wfd_display_server_type);
 const char * wfd_session_get_disp_name(struct wfd_session *s);
@@ -108,9 +116,12 @@ enum wfd_audio_server_type wfd_session_get_audio_type(struct wfd_session *s);
 int wfd_session_set_audio_type(struct wfd_session *s, enum wfd_audio_server_type audio_type);
 const char * wfd_session_get_audio_dev_name(struct wfd_session *s);
 int wfd_session_set_audio_dev_name(struct wfd_session *s, char *audio_dev_name);
-void wfd_session_unrefp(struct wfd_session **s);
-unsigned int * wfd_session_to_htable(struct wfd_session *s);
-struct wfd_session * wfd_session_from_htable(unsigned int *e);
+uid_t wfd_session_get_client_uid(struct wfd_session *s);
+int wfd_session_set_client_uid(struct wfd_session *s, uid_t uid);
+uid_t wfd_session_get_client_gid(struct wfd_session *s);
+int wfd_session_set_client_gid(struct wfd_session *s, uid_t gid);
+pid_t wfd_session_get_client_pid(struct wfd_session *s);
+int wfd_session_set_client_pid(struct wfd_session *s, pid_t pid);
 
 /* wfd sink */
 #define _wfd_sink_free_ _shl_cleanup_(wfd_sink_freep)
@@ -130,19 +141,20 @@ struct wfd_sink
 int wfd_sink_new(struct wfd_sink **out,
 				struct ctl_peer *peer,
 				union wfd_sube *sube);
-
 void wfd_sink_free(struct wfd_sink *sink);
-
-const char * wfd_sink_get_label(struct wfd_sink *sink);
-const union wfd_sube * wfd_sink_get_dev_info(struct wfd_sink *sink);
-int wfd_sink_create_session(struct wfd_sink *sink, struct wfd_session **out);
-void wfd_sink_handle_session_ended(struct wfd_sink *sink);
-bool wfd_sink_is_session_started(struct wfd_sink *sink);
 static inline void wfd_sink_freep(struct wfd_sink **s)
 {
 	wfd_sink_free(*s);
 	*s = NULL;
 }
+
+int wfd_sink_create_session(struct wfd_sink *sink, struct wfd_session **out);
+
+const char * wfd_sink_get_label(struct wfd_sink *sink);
+const union wfd_sube * wfd_sink_get_dev_info(struct wfd_sink *sink);
+bool wfd_sink_is_session_started(struct wfd_sink *sink);
+
+void wfd_sink_handle_session_ended(struct wfd_sink *sink);
 
 /* wfd handling */
 #define ctl_wfd_foreach_sink(_i, _w) \
@@ -166,6 +178,13 @@ struct ctl_wfd
 };
 
 struct ctl_wfd * ctl_wfd_get();
+void ctl_wfd_shutdown(struct ctl_wfd *wfd);
+
+static inline struct sd_event * ctl_wfd_get_loop()
+{
+	return ctl_wfd_get()->loop;
+}
+
 int ctl_wfd_find_sink_by_label(struct ctl_wfd *wfd,
 				const char *label,
 				struct wfd_sink **out);
@@ -176,13 +195,7 @@ int ctl_wfd_find_session_by_id(struct ctl_wfd *wfd,
 int ctl_wfd_remove_session_by_id(struct ctl_wfd *wfd,
 				unsigned int id,
 				struct wfd_session **out);
-void ctl_wfd_shutdown(struct ctl_wfd *wfd);
 unsigned int ctl_wfd_alloc_session_id(struct ctl_wfd *wfd);
-void ctl_wfd_shutdown(struct ctl_wfd *wfd);
-static inline struct sd_event * ctl_wfd_get_loop()
-{
-	return ctl_wfd_get()->loop;
-}
 
 int wfd_fn_session_new(struct wfd_session *s);
 int wfd_fn_session_free(struct wfd_session *s);
