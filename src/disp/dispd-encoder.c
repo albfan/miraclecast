@@ -16,8 +16,6 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with MiracleCast; If not, see <http://www.gnu.org/licenses/>.
  */
-#define LOG_SUBSYSTEM "dispd-encoder"
-
 #include <systemd/sd-event.h>
 #include <systemd/sd-bus.h>
 #include <stdlib.h>
