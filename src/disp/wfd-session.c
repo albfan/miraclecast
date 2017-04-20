@@ -202,7 +202,7 @@ int wfd_session_teardown(struct wfd_session *s)
 struct wfd_session * wfd_session_ref(struct wfd_session *s)
 {
 	if(s) {
-		++ s->ref_count;
+		++ s->ref;
 	}
 
 	return s;
@@ -214,10 +214,10 @@ void wfd_session_unref(struct wfd_session *s)
 		return;
 	}
 
-	assert(1 <= s->ref_count);
+	assert(1 <= s->ref);
 
-	-- s->ref_count;
-	if(s->ref_count) {
+	-- s->ref;
+	if(s->ref) {
 		return;
 	}
 
@@ -556,7 +556,7 @@ int wfd_session_init(struct wfd_session *s,
 				enum wfd_session_dir dir,
 				const struct rtsp_dispatch_entry *disp_tbl)
 {
-	s->ref_count = 1;
+	s->ref = 1;
 	s->id = id;
 	s->dir = dir;
 	s->rtsp_disp_tbl = disp_tbl;

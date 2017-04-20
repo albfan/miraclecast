@@ -93,7 +93,7 @@ struct wfd_session_vtable
 
 struct wfd_session
 {
-	int ref_count;
+	int ref;
 	enum wfd_session_dir dir;
 	enum wfd_session_state state;
 	enum rtsp_message_id last_request;
