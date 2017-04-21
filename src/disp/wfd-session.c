@@ -61,7 +61,7 @@ const struct wfd_session_vtable session_vtbl[] = {
 	}
 };
 
-static inline int wfd_session_do_request(struct wfd_session *s,
+static int wfd_session_do_request(struct wfd_session *s,
 				enum rtsp_message_id id,
 				const struct wfd_arg_list *args,
 				struct rtsp_message **out)
@@ -78,7 +78,7 @@ static inline int wfd_session_do_request(struct wfd_session *s,
 	return (*s->rtsp_disp_tbl[id].request)(s, args, out);
 }
 
-static inline int wfd_session_do_handle_request(struct wfd_session *s,
+static int wfd_session_do_handle_request(struct wfd_session *s,
 				enum rtsp_message_id id,
 				struct rtsp_message *req,
 				struct rtsp_message **out_rep)
@@ -97,7 +97,7 @@ static inline int wfd_session_do_handle_request(struct wfd_session *s,
 					out_rep);
 }
 
-static inline int wfd_session_do_handle_reply(struct wfd_session *s,
+static int wfd_session_do_handle_reply(struct wfd_session *s,
 				enum rtsp_message_id id,
 				struct rtsp_message *m)
 {
@@ -112,7 +112,7 @@ static inline int wfd_session_do_handle_reply(struct wfd_session *s,
 	return (*s->rtsp_disp_tbl[id].handle_reply)(s, m);
 }
 
-uint64_t wfd_session_get_id(struct wfd_session *s)
+unsigned int wfd_session_get_id(struct wfd_session *s)
 {
 	return s->id;
 }

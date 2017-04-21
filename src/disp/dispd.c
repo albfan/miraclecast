@@ -167,13 +167,11 @@ int ctl_wfd_find_sink_by_label(struct ctl_wfd *wfd,
 {
 	char **entry;
 	int r = shl_htable_lookup_str(&wfd->sinks, label, NULL, &entry);
-	if(0 > r) {
-		return log_ERRNO();
+	if(r && out) {
+		*out = wfd_sink_from_htable(entry);
 	}
 
-	*out = wfd_sink_from_htable(entry);
-
-	return 0;
+	return r;
 }
 
 static int ctl_wfd_remove_sink_by_label(struct ctl_wfd *wfd,
@@ -369,7 +367,7 @@ void ctl_fn_peer_new(struct ctl_peer *p)
 	r = wfd_sube_parse(sube_str, &sube);
 	if(0 > r) {
 		log_debug("peer %s has invalid subelement", p->label);
-		return;
+		return log_vERRNO();
 	}
 
 	if(wfd_sube_device_is_sink(&sube)) {
@@ -379,7 +377,7 @@ void ctl_fn_peer_new(struct ctl_peer *p)
 							p->friendly_name,
 							p->p2p_mac,
 							strerror(errno));
-			return;
+			return log_vERRNO();
 		}
 
 		r = wfd_fn_sink_new(s);
@@ -387,7 +385,7 @@ void ctl_fn_peer_new(struct ctl_peer *p)
 			log_warning("failed to publish newly added sink (%s): %s",
 							wfd_sink_get_label(s),
 							strerror(errno));
-			return;
+			return log_vERRNO();
 		}
 
 		log_info("sink %s added", s->label);

@@ -115,7 +115,7 @@ internal class GstEncoder : DispdEncoder, GLib.Object
 							startx=%u starty=%u endx=%u endy=%u
 						! video/x-raw, framerate=%u/1
 						! videoscale method=0
-						! video/x-raw, width=640, height=480
+						! video/x-raw, width=1920, height=1080
 						! videoconvert dither=0
 						! video/x-raw, format=YV12
 						! x264enc pass=4 b-adapt=false key-int-max=%u speed-preset=4 tune=4
@@ -137,10 +137,10 @@ internal class GstEncoder : DispdEncoder, GLib.Object
 							: 0,
 						configs.contains(DispdEncoderConfig.WIDTH)
 							? configs.get(DispdEncoderConfig.WIDTH).get_uint32() - 1
-							: 640,
+							: 1919,
 						configs.contains(DispdEncoderConfig.HEIGHT)
 							? configs.get(DispdEncoderConfig.HEIGHT).get_uint32() - 1
-							: 480,
+							: 1079,
 						framerate,
 						framerate,
 						configs.contains(DispdEncoderConfig.AUDIO_TYPE)
