@@ -63,3 +63,32 @@ install(
     FILES org.freedesktop.miracle.conf
     DESTINATION /etc/dbus-1/system.d 
     )
+
+find_program(VALAC valac)
+if(NOT VALAC)
+	message(FATAL_ERROR "valac not found")
+endif()
+
+add_custom_command(OUTPUT gstencoder.c
+				COMMAND ${VALAC} --target-glib=2.50 -C
+								--pkg=gstreamer-1.0
+								--pkg=gio-2.0
+								--pkg=posix
+								${CMAKE_CURRENT_SOURCE_DIR}/gstencoder.vala
+				DEPENDS gstencoder.vala
+				WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+
+include_directories(${GIO2_INCLUDE_DIRS}
+					${GDK3_INCLUDE_DIRS}
+					${CMAKE_CURRENT_SOURCE_DIR})
+
+pkg_check_modules(GST1 REQUIRED gstreamer-1.0)
+pkg_check_modules(GIO2 REQUIRED gio-2.0)
+
+include_directories(${GST1_INCLUDE_DIRS} ${GIO_INCLUDE_DIRS})
+
+add_executable(gstencoder gstencoder)
+
+target_link_libraries(gstencoder ${GST1_LIBRARIES} ${GIO2_LIBRARIES})
+
+install(TARGETS gstencoder DESTINATION bin)

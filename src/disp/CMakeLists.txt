@@ -5,6 +5,7 @@ set(miracle-dispd_SRCS ../ctl/ctl-cli.c
 						wfd-session.c
 						wfd-out-session.c
 						dispd.c
+						dispd-encoder.c
 						../ctl/wfd.c
 						wfd-arg.c)
 
