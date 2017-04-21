@@ -47,7 +47,6 @@ static const char * rtsp_message_id_to_string(enum rtsp_message_id id);
 static int wfd_session_handle_request(struct rtsp *bus,
 				struct rtsp_message *m,
 				void *userdata);
-static void wfd_session_hup(struct wfd_session *s);
 
 const struct wfd_session_vtable session_vtbl[] = {
 	[WFD_SESSION_DIR_OUT] = {
@@ -179,7 +178,6 @@ int wfd_session_pause(struct wfd_session *s)
 
 int wfd_session_teardown(struct wfd_session *s)
 {
-	log_info("wfd_session_teardown(%p)", s);
 	assert(wfd_is_session(s));
 
 	if(wfd_session_is_established(s)) {
@@ -191,36 +189,28 @@ int wfd_session_teardown(struct wfd_session *s)
 	}
 	else {
 		/* notify and detach from sink */
+		wfd_session_terminate(s);
 		wfd_fn_out_session_ended(s);
 	}
 
 	return 0;
 }
 
-struct wfd_session * wfd_session_ref(struct wfd_session *s)
-{
-	if(s) {
-		++ s->ref;
-	}
-
-	return s;
-}
-
-void wfd_session_unref(struct wfd_session *s)
+int wfd_session_terminate(struct wfd_session *s)
 {
 	if(!s) {
-		return;
-	}
-
-	assert(1 <= s->ref);
-
-	-- s->ref;
-	if(s->ref) {
-		return;
+		return 0;
 	}
 
 	if(session_vtbl[s->dir].destroy) {
 		(*session_vtbl[s->dir].destroy)(s);
+	}
+
+	if(s->rtsp) {
+		rtsp_remove_match(s->rtsp, wfd_session_handle_request, s);
+		rtsp_detach_event(s->rtsp);
+		rtsp_unref(s->rtsp);
+		s->rtsp = NULL;
 	}
 
 	if(s->vformats) {
@@ -253,11 +243,38 @@ void wfd_session_unref(struct wfd_session *s)
 		s->audio_dev_name = NULL;
 	}
 
-	wfd_session_hup(s);
-
 	s->rtp_ports[0] = 0;
 	s->rtp_ports[1] = 0;
 	s->last_request = RTSP_M_UNKNOWN;
+
+	s->state = WFD_SESSION_STATE_TERMINATING;
+
+	return 0;
+}
+
+struct wfd_session * wfd_session_ref(struct wfd_session *s)
+{
+	if(s) {
+		++ s->ref;
+	}
+
+	return s;
+}
+
+void wfd_session_unref(struct wfd_session *s)
+{
+	if(!s) {
+		return;
+	}
+
+	assert(1 <= s->ref);
+
+	-- s->ref;
+	if(s->ref) {
+		return;
+	}
+
+	wfd_session_terminate(s);
 
 	free(s);
 }
@@ -456,11 +473,6 @@ static int wfd_session_handle_request(struct rtsp *bus,
 		goto error;
 	}
 
-	if(WFD_SESSION_STATE_TEARING_DOWN == wfd_session_get_state(s)) {
-		wfd_session_hup(s);
-		return 0;
-	}
-
 	r = sd_event_now(ctl_wfd_get_loop(), CLOCK_REALTIME, &usec);
 	if(0 > r) {
 		goto error;
@@ -498,11 +510,9 @@ static int wfd_session_handle_request(struct rtsp *bus,
 	return 0;
 
 error:
-	log_warning("error while handling request: %s", strerror(-r));
-	wfd_session_teardown(s);
+	wfd_session_terminate(s);
 
-	return r;
-
+	return log_ERRNO();
 }
 
 static int wfd_session_handle_reply(struct rtsp *bus,
@@ -544,7 +554,7 @@ static int wfd_session_handle_reply(struct rtsp *bus,
 
 error:
 	log_info("error while handling reply: %s", strerror(-r));
-	wfd_session_teardown(s);
+	wfd_session_terminate(s);
 
 	return r;
 }
@@ -621,33 +631,31 @@ static int wfd_session_handle_io(sd_event_source *source,
 	if (mask & EPOLLERR) {
 		r = getsockopt(fd, SOL_SOCKET, SO_ERROR, &err, &len);
 		if(0 > r) {
-			goto end;
+			return log_ERRNO();
 		}
 	}
 
 	if (mask & EPOLLIN || mask & EPOLLOUT) {
 		r = (*session_vtbl[s->dir].handle_io)(s, err, &conn);
 		if(0 > r) {
-			goto end;
+			return log_ERRNO();
 		}
 
 		r = rtsp_open(&rtsp, conn);
 		if (0 > r) {
-			goto end;
+			return log_ERRNO();
 		}
-
-		log_trace("rtsp->ref = %ld", *(unsigned long *) rtsp);
 
 		conn = -1;
 
 		r = rtsp_attach_event(rtsp, ctl_wfd_get_loop(), 0);
 		if (0 > r) {
-			goto end;
+			return log_ERRNO();
 		}
 
 		r = rtsp_add_match(rtsp, wfd_session_handle_request, s);
 		if (0 > r) {
-			goto end;
+			return log_ERRNO();
 		}
 
 		s->rtsp = rtsp;
@@ -659,28 +667,10 @@ static int wfd_session_handle_io(sd_event_source *source,
 	}
 
 	if(mask & EPOLLHUP) {
-		r = -ESHUTDOWN;
-	}
-
-end:
-	if (0 > r) {
-		log_warning("error while handling I/O: %s", strerror(-r));
 		wfd_session_teardown(s);
 	}
 
-	return r;
-}
-
-static void wfd_session_hup(struct wfd_session *s)
-{
-	if(!s || !s->rtsp) {
-		return;
-	}
-
-	rtsp_remove_match(s->rtsp, wfd_session_handle_request, s);
-	rtsp_detach_event(s->rtsp);
-	rtsp_unref(s->rtsp);
-	s->rtsp = NULL;
+	return 0;
 }
 
 int wfd_session_start(struct wfd_session *s)

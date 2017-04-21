@@ -110,25 +110,25 @@ internal class GstEncoder : DispdEncoder, GLib.Object
 						? configs.get(DispdEncoderConfig.FRAMERATE).get_uint32()
 						: 30;
 		StringBuilder desc = new StringBuilder();
-		desc.append_printf("""
-						ximagesrc name=vsrc use-damage=false show-pointer=false
-							startx=%u starty=%u endx=%u endy=%u
-						! video/x-raw, framerate=%u/1
-						! videoscale method=0
-						! video/x-raw, width=1920, height=1080
-						! videoconvert dither=0
-						! video/x-raw, format=YV12
-						! x264enc pass=4 b-adapt=false key-int-max=%u speed-preset=4 tune=4
-						! h264parse
-						! video/x-h264, alignment=nal, stream-format=byte-stream
-						%s
-						! mpegtsmux name=muxer
-						! rtpmp2tpay
-						! .send_rtp_sink_0 rtpbin name=session do-retransmission=true
-							do-sync-event=true do-lost=true ntp-time-source=3
-							buffer-mode=0 latency=20 max-misorder-time=30
-						! application/x-rtp
-						! udpsink sync=false async=false host="%s" port=%u """,
+		desc.append_printf(
+						"ximagesrc name=vsrc use-damage=false show-pointer=false " +
+							"startx=%u starty=%u endx=%u endy=%u " +
+						"! video/x-raw, framerate=%u/1 " +
+						"! videoscale method=0 " +
+						"! video/x-raw, width=1920, height=1080 " +
+						"! videoconvert dither=0 " +
+						"! video/x-raw, format=YV12 " +
+						"! x264enc pass=4 b-adapt=false key-int-max=%u speed-preset=4 tune=4 " +
+						"! h264parse " +
+						"! video/x-h264, alignment=nal, stream-format=byte-stream " +
+						"%s " +
+						"! mpegtsmux name=muxer " +
+						"! rtpmp2tpay " +
+						"! .send_rtp_sink_0 rtpbin name=session do-retransmission=true " +
+							"do-sync-event=true do-lost=true ntp-time-source=3 " +
+							"buffer-mode=0 latency=20 max-misorder-time=30 " +
+						"! application/x-rtp " +
+						"! udpsink sync=false async=false host=\"%s\" port=%u ",
 						configs.contains(DispdEncoderConfig.X)
 							? configs.get(DispdEncoderConfig.X).get_uint32()
 							: 0,
@@ -293,7 +293,6 @@ internal class GstEncoder : DispdEncoder, GLib.Object
 		}
 
 		pipeline.set_state(Gst.State.NULL);
-		pipeline = null;
 	}
 
 	public async void prepare() throws Error

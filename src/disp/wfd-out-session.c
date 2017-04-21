@@ -243,7 +243,6 @@ int wfd_out_session_teardown(struct wfd_session *s)
 
 void wfd_out_session_destroy(struct wfd_session *s)
 {
-//	pid_t pid;
 	struct wfd_out_session *os = wfd_out_session(s);
 	if(0 <= os->fd) {
 		close(os->fd);
@@ -251,6 +250,7 @@ void wfd_out_session_destroy(struct wfd_session *s)
 	}
 
 	if(os->encoder) {
+		dispd_encoder_stop(os->encoder);
 		dispd_encoder_set_handler(os->encoder, NULL, NULL);
 		dispd_encoder_unref(os->encoder);
 		os->encoder = NULL;

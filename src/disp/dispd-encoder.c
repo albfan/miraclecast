@@ -39,6 +39,8 @@ struct dispd_encoder
 	sd_event_source *pipe_source;
 
 	sd_bus *bus;
+	sd_bus_slot *name_disappeared_slot;
+	sd_bus_slot *state_change_notify_slot;
 
 	char *name;
 
@@ -87,7 +89,6 @@ static int dispd_encoder_exec(const char *cmd, int fd, struct wfd_session *s)
 					(char *[]){ (char *) cmd, NULL },
 					(char *[]){ disp,
 						auth,
-						"GST_DEBUG=3",
 						"G_MESSAGES_DEBUG=all",
 						NULL
 					});
@@ -102,23 +103,30 @@ static void dispd_encoder_close_pipe(struct dispd_encoder *e)
 	}
 
 	close(sd_event_source_get_io_fd(e->pipe_source));
-	sd_event_source_set_enabled(e->pipe_source, false);
+
 	sd_event_source_unref(e->pipe_source);
 	e->pipe_source = NULL;
+
+	dispd_encoder_unref(e);
 }
 
-static void dispd_encoder_kill_child(struct dispd_encoder *e)
+static int dispd_encoder_kill_child(struct dispd_encoder *e)
 {
+	int r;
 	pid_t pid;
 
 	if(!e->child_source) {
-		return;
+		return 0;
 	}
 
+	// TODO add timer in case child can't be terminated by SIGTERM
 	sd_event_source_get_child_pid(e->child_source, &pid);
-	kill(pid, SIGKILL);
-	sd_event_source_set_enabled(e->child_source, false);
-	sd_event_source_unref(e->child_source);
+	r = kill(pid, SIGTERM);
+	if(0 > r) {
+		return log_ERRNO();
+	}
+
+	return 1;
 }
 
 static void dispd_encoder_notify_state_change(struct dispd_encoder *e,
@@ -135,6 +143,29 @@ static void dispd_encoder_notify_state_change(struct dispd_encoder *e,
 	dispd_encoder_unref(e);
 }
 
+static void dispd_encoder_cleanup(struct dispd_encoder *e)
+{
+	if(e->child_source) {
+		sd_event_source_unref(e->child_source);
+		e->child_source = NULL;
+		dispd_encoder_unref(e);
+	}
+
+	dispd_encoder_close_pipe(e);
+
+	if(e->name_disappeared_slot) {
+		sd_bus_slot_unref(e->name_disappeared_slot);
+		e->name_disappeared_slot = NULL;
+		dispd_encoder_unref(e);
+	}
+
+	if(e->state_change_notify_slot) {
+		sd_bus_slot_unref(e->state_change_notify_slot);
+		e->state_change_notify_slot = NULL;
+		dispd_encoder_unref(e);
+	}
+}
+
 static int dispd_encoder_on_terminated(sd_event_source *source,
 				const siginfo_t *si,
 				void *userdata)
@@ -143,9 +174,8 @@ static int dispd_encoder_on_terminated(sd_event_source *source,
 
 	log_info("encoder %d terminated", si->si_pid);
 
-	if(e) {
-		dispd_encoder_set_state(e, DISPD_ENCODER_STATE_TERMINATED);
-	}
+	dispd_encoder_set_state(e, DISPD_ENCODER_STATE_TERMINATED);
+	dispd_encoder_cleanup(e);
 
 	return 0;
 }
@@ -190,7 +220,7 @@ int dispd_encoder_spawn(struct dispd_encoder **out, struct wfd_session *s)
 					pid,
 					WEXITED,
 					dispd_encoder_on_terminated,
-					e);
+					dispd_encoder_ref(e));
 	if(0 > r) {
 		goto close_pipe;
 	}
@@ -200,7 +230,7 @@ int dispd_encoder_spawn(struct dispd_encoder **out, struct wfd_session *s)
 					fds[0],
 					EPOLLIN,
 					dispd_encoder_on_unique_name,
-					e);
+					dispd_encoder_ref(e));
 	if(0 > r) {
 		goto close_pipe;
 	}
@@ -265,6 +295,8 @@ void dispd_encoder_unref(struct dispd_encoder *e)
 		return;
 	}
 
+	/* since we encrease ref count at creation of every sources and slots,
+	 * once we get here, it means no sources and slots exist anymore */
 	if(e->bus) {
 		sd_bus_unref(e->bus);
 	}
@@ -272,9 +304,6 @@ void dispd_encoder_unref(struct dispd_encoder *e)
 	if(e->name) {
 		free(e->name);
 	}
-
-	dispd_encoder_close_pipe(e);
-	dispd_encoder_kill_child(e);
 
 	free(e);
 }
@@ -405,10 +434,19 @@ static int on_encoder_disappeared(sd_bus_message *m,
 				sd_bus_error *ret_error)
 {
 	struct dispd_encoder *e = userdata;
+	int r;
 
-	log_info("encoder disappered");
-	
-	dispd_encoder_set_state(e, DISPD_ENCODER_STATE_TERMINATED);
+	log_info("encoder %s disappered", e->name);
+
+	r = dispd_encoder_kill_child(e);
+	if(0 > r) {
+		return r;
+	}
+	else if(r) {
+		return 0;
+	}
+
+	dispd_encoder_cleanup(e);
 
 	return 0;
 }
@@ -459,10 +497,11 @@ static int dispd_encoder_on_unique_name(sd_event_source *source,
 							"member='PropertiesChanged',"
 							"arg0='org.freedesktop.miracle.encoder'",
 					e->name);
-	r = sd_bus_add_match(e->bus, NULL,
-						 buf,
-						 on_encoder_properties_changed,
-						 e);
+	r = sd_bus_add_match(e->bus,
+						&e->state_change_notify_slot,
+						buf,
+						on_encoder_properties_changed,
+						dispd_encoder_ref(e));
 	if(0 > r) {
 		goto error;
 	}
@@ -475,11 +514,11 @@ static int dispd_encoder_on_unique_name(sd_event_source *source,
 							"member='NameOwnerChanged',"
 							"arg0namespace='%s'",
 					e->name);
-	r = sd_bus_add_match(e->bus, NULL,
-						 buf,
-						 on_encoder_disappeared,
-						 e);
-
+	r = sd_bus_add_match(e->bus,
+						&e->name_disappeared_slot,
+						buf,
+						on_encoder_disappeared,
+						dispd_encoder_ref(e));
 
 	dispd_encoder_set_state(e, DISPD_ENCODER_STATE_SPAWNED);
 
@@ -670,27 +709,34 @@ static int dispd_encoder_call(struct dispd_encoder *e, const char *method)
 {
 	_cleanup_sd_bus_message_ sd_bus_message *call = NULL;
 	_cleanup_sd_bus_message_ sd_bus_message *reply = NULL;
-	sd_bus_error error = { 0 };
-	int r = sd_bus_message_new_method_call(e->bus,
+	_cleanup_sd_bus_error_ sd_bus_error error = SD_BUS_ERROR_NULL;
+	int r;
+
+	assert(e);
+	assert(method);
+	assert(e->bus);
+
+	r = sd_bus_message_new_method_call(e->bus,
 					&call,
 					e->name,
 					"/org/freedesktop/miracle/encoder",
 					"org.freedesktop.miracle.encoder",
 					method);
 	if(0 > r) {
-		return r;
+		goto error;
 	}
 
 	r = sd_bus_call(e->bus, call, 0, &error, &reply);
 	if(0 > r) {
-		log_warning("error invoke method %s: %s, %s",
-						method,
-						error.name,
-						error.message);
-		sd_bus_error_free(&error);
+		goto error;
 	}
 
-	return r;
+	return 0;
+
+error:
+	dispd_encoder_kill_child(e);
+
+	return log_ERRNO();
 }
 
 int dispd_encoder_start(struct dispd_encoder *e)
