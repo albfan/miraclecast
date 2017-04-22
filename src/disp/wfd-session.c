@@ -149,7 +149,7 @@ void wfd_session_set_state(struct wfd_session *s,
 	wfd_fn_session_properties_changed(s, "State");
 }
 
-bool wfd_session_is_established(struct wfd_session *s)
+int wfd_session_is_established(struct wfd_session *s)
 {
 	assert_retv(wfd_is_session(s), false);
 
