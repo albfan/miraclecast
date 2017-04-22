@@ -1526,11 +1526,12 @@ static void supplicant_try_ready(struct supplicant *s)
 		s->has_wfd = false;
 
 	s->running = true;
-	link_supplicant_started(s->l);
-	link_supplicant_p2p_state_known(s->l, s->has_p2p ? 1 : -1);
 
 	LINK_FOREACH_PEER(p, s->l)
 		peer_supplicant_started(p);
+
+	link_supplicant_started(s->l);
+	link_supplicant_p2p_state_known(s->l, s->has_p2p ? 1 : -1);
 }
 
 static int supplicant_p2p_set_disallow_freq_fn(struct wpas *w,
