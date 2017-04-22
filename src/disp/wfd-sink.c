@@ -16,7 +16,6 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with MiracleCast; If not, see <http://www.gnu.org/licenses/>.
  */
-#include <assert.h>
 #include <time.h>
 #include <systemd/sd-event.h>
 #include "ctl.h"
@@ -27,6 +26,8 @@ static int wfd_sink_set_session(struct wfd_sink *sink,
 				struct wfd_session *session)
 {
 	int r;
+
+	assert_ret(sink);
 
 	if(sink->session == session) {
 		return 0;
@@ -58,9 +59,10 @@ int wfd_sink_new(struct wfd_sink **out,
 {
 	struct wfd_sink *sink;
 
-	assert(out);
-	assert(peer);
-	assert(sube && wfd_sube_device_is_sink(sube));
+	assert_ret(out);
+	assert_ret(peer);
+	assert_ret(sube);
+	assert_ret(wfd_sube_device_is_sink(sube));
 	
 	sink = calloc(1, sizeof(struct wfd_sink));
 	if(!sink) {
@@ -98,16 +100,22 @@ void wfd_sink_free(struct wfd_sink *sink)
 
 const char * wfd_sink_get_label(struct wfd_sink *sink)
 {
+	assert_retv(sink, NULL);
+
 	return sink->label;
 }
 
 const union wfd_sube * wfd_sink_get_dev_info(struct wfd_sink *sink)
 {
+	assert_retv(sink, NULL);
+
 	return &sink->dev_info;
 }
 
 struct ctl_peer * wfd_sink_get_peer(struct wfd_sink *sink)
 {
+	assert_retv(sink, NULL);
+
 	return sink->peer;
 }
 
@@ -116,8 +124,8 @@ int wfd_sink_create_session(struct wfd_sink *sink, struct wfd_session **out)
 	int r;
 	_wfd_session_unref_ struct wfd_session *sess = NULL;
 
-	assert(sink);
-	assert(out);
+	assert_ret(sink);
+	assert_ret(out);
 
 	if(wfd_sink_is_session_started(sink)) {
 		return -EALREADY;
@@ -146,7 +154,7 @@ int wfd_sink_create_session(struct wfd_sink *sink, struct wfd_session **out)
 
 int wfd_fn_out_session_ended(struct wfd_session *s)
 {
-	assert(wfd_is_out_session(s));
+	assert_ret(wfd_is_out_session(s));
 
 	wfd_sink_set_session(wfd_out_session_get_sink(s), NULL);
 
@@ -155,5 +163,7 @@ int wfd_fn_out_session_ended(struct wfd_session *s)
 
 bool wfd_sink_is_session_started(struct wfd_sink *sink)
 {
+	assert_retv(sink, false);
+
 	return NULL != sink->session;
 }
