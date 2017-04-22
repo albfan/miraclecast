@@ -588,7 +588,7 @@ static int wfd_out_session_handle_play_request(struct wfd_session *s,
 
 	*out_rep = (rtsp_message_ref(m), m);
 
-	return r;
+	return 0;
 }
 
 static void on_encoder_state_changed(struct dispd_encoder *e,

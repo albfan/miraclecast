@@ -236,4 +236,13 @@ extern const char *LOG_SUBSYSTEM;
 #define log_vEUNMANAGED() \
 	((void)log_EUNMANAGED())
 
+#define assert_ret(c) \
+	if(!(c)) return (log_error("assertion " #c " failed"), -EINVAL)
+
+#define assert_retv(c, v) \
+	if(!(c)) return (log_error("assertion " #c " failed"), (v))
+
+#define assert_vret(c) \
+	if(!(c)) { log_error("assertion " #c " failed"); return; }
+
 #endif /* SHL_LOG_H */

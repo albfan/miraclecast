@@ -20,7 +20,6 @@
 #include <systemd/sd-bus.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include <assert.h>
 #include <errno.h>
 #include <stdarg.h>
 #include "dispd-encoder.h"
@@ -77,7 +76,7 @@ static int dispd_encoder_exec(const char *cmd, int fd, struct wfd_session *s)
 	 */
 	r = dup2(fd, 3);
 	if(0 > r) {
-		return r;
+		return log_ERRNO();
 	}
 
 	if(fd != 3) {
@@ -132,7 +131,7 @@ static int dispd_encoder_kill_child(struct dispd_encoder *e)
 static void dispd_encoder_notify_state_change(struct dispd_encoder *e,
 				enum dispd_encoder_state state)
 {
-	assert(e);
+	assert_vret(e);
 
 	if(!e->handler) {
 		return;
@@ -187,8 +186,8 @@ int dispd_encoder_spawn(struct dispd_encoder **out, struct wfd_session *s)
 	int fds[2] = { -1, -1 };
 	int r;
 
-	assert(out);
-	assert(s);
+	assert_ret(out);
+	assert_ret(s);
 
 	r = dispd_encoder_new(&e);
 	if(0 > r) {
@@ -238,7 +237,7 @@ int dispd_encoder_spawn(struct dispd_encoder **out, struct wfd_session *s)
 	close(fds[1]);
 	*out = dispd_encoder_ref(e);
 
-	goto end;
+	return 0;
 
 close_pipe:
 	close(fds[0]);
@@ -247,18 +246,18 @@ kill_encoder:
 	// dispd will do the cleanup
 	kill(pid, SIGKILL);
 end:
-	return r;
+	return log_ERRNO();
 }
 
 static int dispd_encoder_new(struct dispd_encoder **out)
 {
 	_shl_free_ struct dispd_encoder *e = NULL;
 
-	assert(out);
+	assert_ret(out);
    
 	e = calloc(1, sizeof(struct dispd_encoder));
 	if(!e) {
-		return -ENOMEM;
+		return log_ENOMEM();
 	}
 
 	e->ref = 1;
@@ -270,8 +269,8 @@ static int dispd_encoder_new(struct dispd_encoder **out)
 
 struct dispd_encoder * dispd_encoder_ref(struct dispd_encoder *e)
 {
-	assert(e);
-	assert(0 < e->ref);
+	assert_retv(e, NULL);
+	assert_retv(0 < e->ref, NULL);
 
 	++ e->ref;
 
@@ -287,8 +286,8 @@ void dispd_encoder_unrefp(struct dispd_encoder **e)
 
 void dispd_encoder_unref(struct dispd_encoder *e)
 {
-	assert(e);
-	assert(0 < e->ref);
+	assert_vret(e);
+	assert_vret(0 < e->ref);
 
 	--e->ref;
 	if(e->ref) {
@@ -312,7 +311,7 @@ void dispd_encoder_set_handler(struct dispd_encoder *e,
 				dispd_encoder_state_change_handler handler,
 				void *userdata)
 {
-	assert(e);
+	assert_vret(e);
 
 	e->handler = handler;
 	e->userdata = userdata;
@@ -320,14 +319,14 @@ void dispd_encoder_set_handler(struct dispd_encoder *e,
 
 dispd_encoder_state_change_handler dispd_encoder_get_handler(struct dispd_encoder *e)
 {
-	assert(e);
+	assert_retv(e, NULL);
 
 	return e->handler;
 }
 
 enum dispd_encoder_state dispd_encoder_get_state(struct dispd_encoder *e)
 {
-	assert(e);
+	assert_retv(e, DISPD_ENCODER_STATE_NULL);
 	
 	return e->state;
 }
@@ -354,7 +353,7 @@ static const char * state_to_name(enum dispd_encoder_state s)
 static void dispd_encoder_set_state(struct dispd_encoder *e,
 				enum dispd_encoder_state state)
 {
-	assert(e);
+	assert_vret(e);
 	
 	if(e->state == state) {
 		return;
@@ -440,7 +439,7 @@ static int on_encoder_disappeared(sd_bus_message *m,
 
 	r = dispd_encoder_kill_child(e);
 	if(0 > r) {
-		return r;
+		return log_ERRNO();
 	}
 	else if(r) {
 		return 0;
@@ -525,6 +524,7 @@ static int dispd_encoder_on_unique_name(sd_event_source *source,
 	goto end;
 
 error:
+	log_vERRNO();
 	dispd_encoder_kill_child(e);
 end:
 	dispd_encoder_close_pipe(e);
@@ -540,22 +540,22 @@ static int config_append(sd_bus_message *m,
 	int r;
 	va_list argv;
 
-	assert(m);
-	assert(t);
+	assert_ret(m);
+	assert_ret(t);
 
 	r = sd_bus_message_open_container(m, 'e', "iv");
 	if(0 > r) {
-		return r;
+		return log_ERRNO();
 	}
 
 	r = sd_bus_message_append(m, "i", k);
 	if(0 > r) {
-		return r;
+		return log_ERRNO();
 	}
 
 	r = sd_bus_message_open_container(m, 'v', t);
 	if(0 > r) {
-		return r;
+		return log_ERRNO();
 	}
 
 	va_start(argv, t);
@@ -572,15 +572,20 @@ static int config_append(sd_bus_message *m,
 	va_end(argv);
 
 	if(0 > r) {
-		return r;
+		return log_ERRNO();
 	}
 
 	r = sd_bus_message_close_container(m);
 	if(0 > r) {
-		return r;
+		return log_ERRNO();
 	}
 
-	return sd_bus_message_close_container(m);
+	r = sd_bus_message_close_container(m);
+	if(0 > r) {
+		return log_ERRNO();
+	}
+
+	return 0;
 }
 
 int dispd_encoder_configure(struct dispd_encoder *e, struct wfd_session *s)
@@ -592,9 +597,10 @@ int dispd_encoder_configure(struct dispd_encoder *e, struct wfd_session *s)
 	struct wfd_sink *sink;
 	int r;
 
-	assert(e);
-	assert(s);
-	assert(wfd_is_out_session(s));
+	assert_ret(e);
+	assert_ret(e->bus);
+	assert_ret(s);
+	assert_ret(wfd_is_out_session(s));
 
 	r = sd_bus_message_new_method_call(e->bus,
 					&call,
@@ -603,12 +609,12 @@ int dispd_encoder_configure(struct dispd_encoder *e, struct wfd_session *s)
 					"org.freedesktop.miracle.encoder",
 					"Configure");
 	if(0 > r) {
-		return r;
+		return log_ERRNO();
 	}
 
 	r = sd_bus_message_open_container(call, 'a', "{iv}");
 	if(0 > r) {
-		return r;
+		return log_ERRNO();
 	}
 
 	sink = wfd_out_session_get_sink(s);
@@ -617,7 +623,7 @@ int dispd_encoder_configure(struct dispd_encoder *e, struct wfd_session *s)
 					"s",
 					sink->peer->remote_address);
 	if(0 > r) {
-		return r;
+		return log_ERRNO();
 	}
 
 	r = config_append(call,
@@ -625,7 +631,7 @@ int dispd_encoder_configure(struct dispd_encoder *e, struct wfd_session *s)
 					"u",
 					s->stream.rtp_port);
 	if(0 > r) {
-		return r;
+		return log_ERRNO();
 	}
 
 	if(s->stream.rtcp_port) {
@@ -634,7 +640,7 @@ int dispd_encoder_configure(struct dispd_encoder *e, struct wfd_session *s)
 						"u",
 						s->stream.rtcp_port);
 		if(0 > r) {
-			return r;
+			return log_ERRNO();
 		}
 	}
 
@@ -643,7 +649,7 @@ int dispd_encoder_configure(struct dispd_encoder *e, struct wfd_session *s)
 					"s",
 					sink->peer->local_address);
 	if(0 > r) {
-		return r;
+		return log_ERRNO();
 	}
 
 	if(s->stream.rtcp_port) {
@@ -652,7 +658,7 @@ int dispd_encoder_configure(struct dispd_encoder *e, struct wfd_session *s)
 						"u",
 						s->stream.rtcp_port);
 		if(0 > r) {
-			return r;
+			return log_ERRNO();
 		}
 	}
 
@@ -663,7 +669,7 @@ int dispd_encoder_configure(struct dispd_encoder *e, struct wfd_session *s)
 						"u",
 						rect->x);
 		if(0 > r) {
-			return r;
+			return log_ERRNO();
 		}
 
 		r = config_append(call,
@@ -671,7 +677,7 @@ int dispd_encoder_configure(struct dispd_encoder *e, struct wfd_session *s)
 						"u",
 						rect->y);
 		if(0 > r) {
-			return r;
+			return log_ERRNO();
 		}
 
 		r = config_append(call,
@@ -679,7 +685,7 @@ int dispd_encoder_configure(struct dispd_encoder *e, struct wfd_session *s)
 						"u",
 						rect->width);
 		if(0 > r) {
-			return r;
+			return log_ERRNO();
 		}
 
 		r = config_append(call,
@@ -687,22 +693,23 @@ int dispd_encoder_configure(struct dispd_encoder *e, struct wfd_session *s)
 						"u",
 						rect->height);
 		if(0 > r) {
-			return r;
+			return log_ERRNO();
 		}
 	}
 
 	r = sd_bus_message_close_container(call);
 	if(0 > r) {
-		return r;
+		return log_ERRNO();
 	}
 
 	r = sd_bus_call(e->bus, call, 0, &error, &reply);
 	if(0 > r) {
 		log_warning("%s: %s", error.name, error.message);
 		sd_bus_error_free(&error);
+		return log_ERRNO();
 	}
 
-	return r;
+	return 0;
 }
 
 static int dispd_encoder_call(struct dispd_encoder *e, const char *method)
@@ -712,9 +719,9 @@ static int dispd_encoder_call(struct dispd_encoder *e, const char *method)
 	_cleanup_sd_bus_error_ sd_bus_error error = SD_BUS_ERROR_NULL;
 	int r;
 
-	assert(e);
-	assert(method);
-	assert(e->bus);
+	assert_ret(e);
+	assert_ret(method);
+	assert_ret(e->bus);
 
 	r = sd_bus_message_new_method_call(e->bus,
 					&call,

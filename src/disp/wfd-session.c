@@ -22,6 +22,7 @@
 #include "wfd-dbus.h"
 #include "wfd-session.h"
 #include "shl_macro.h"
+#include "shl_log.h"
 
 #define rtsp_message_id_is_valid(_id) (				\
 		(_id) >= RTSP_M1_REQUEST_SINK_OPTIONS &&	\
@@ -65,12 +66,12 @@ static int wfd_session_do_request(struct wfd_session *s,
 				const struct wfd_arg_list *args,
 				struct rtsp_message **out)
 {
-	if(!rtsp_message_id_is_valid(id)) {
-		return -EINVAL;
-	}
+	assert_ret(s);
+	assert_ret(rtsp_message_id_is_valid(id));
+	assert_ret(out);
 
 	if(!s->rtsp_disp_tbl[id].request) {
-		log_warning("!!! request not implemented !!!");
+		log_warning("!!! request %d not implemented !!!", id);
 		return -ENOTSUP;
 	}
 
@@ -80,8 +81,13 @@ static int wfd_session_do_request(struct wfd_session *s,
 static int wfd_session_do_handle_request(struct wfd_session *s,
 				enum rtsp_message_id id,
 				struct rtsp_message *req,
-				struct rtsp_message **out_rep)
+				struct rtsp_message **rep)
 {
+	assert_ret(s);
+	assert_ret(rtsp_message_id_is_valid(id));
+	assert_ret(req);
+	assert_ret(rep);
+
 	if(!rtsp_message_id_is_valid(id)) {
 		return -EINVAL;
 	}
@@ -93,13 +99,17 @@ static int wfd_session_do_handle_request(struct wfd_session *s,
 
 	return (*s->rtsp_disp_tbl[id].handle_request)(s,
 					req,
-					out_rep);
+					rep);
 }
 
 static int wfd_session_do_handle_reply(struct wfd_session *s,
 				enum rtsp_message_id id,
-				struct rtsp_message *m)
+				struct rtsp_message *rep)
 {
+	assert_ret(s);
+	assert_ret(rtsp_message_id_is_valid(id));
+	assert_ret(rep);
+
 	if(!rtsp_message_id_is_valid(id)) {
 		return -EINVAL;
 	}
@@ -108,22 +118,28 @@ static int wfd_session_do_handle_reply(struct wfd_session *s,
 		return 0;
 	}
 
-	return (*s->rtsp_disp_tbl[id].handle_reply)(s, m);
+	return (*s->rtsp_disp_tbl[id].handle_reply)(s, rep);
 }
 
 unsigned int wfd_session_get_id(struct wfd_session *s)
 {
+	assert_retv(s, (unsigned int) -1);
+
 	return s->id;
 }
 
 enum wfd_session_state wfd_session_get_state(struct wfd_session *s)
 {
+	assert_retv(s, WFD_SESSION_STATE_NULL);
+
 	return s->state;
 }
 
 void wfd_session_set_state(struct wfd_session *s,
 				enum wfd_session_state state)
 {
+	assert_vret(wfd_is_session(s));
+
 	if(state == s->state) {
 		return;
 	}
@@ -133,16 +149,16 @@ void wfd_session_set_state(struct wfd_session *s,
 	wfd_fn_session_properties_changed(s, "State");
 }
 
-int wfd_session_is_established(struct wfd_session *s)
+bool wfd_session_is_established(struct wfd_session *s)
 {
-	assert(wfd_is_session(s));
+	assert_retv(wfd_is_session(s), false);
 
 	return WFD_SESSION_STATE_ESTABLISHED <= s->state;
 }
 
 int wfd_session_resume(struct wfd_session *s)
 {
-	assert(wfd_is_session(s));
+	assert_ret(wfd_is_session(s));
 
 	if(WFD_SESSION_STATE_PLAYING == s->state) {
 		return 0;
@@ -160,7 +176,7 @@ int wfd_session_resume(struct wfd_session *s)
 
 int wfd_session_pause(struct wfd_session *s)
 {
-	assert(wfd_is_session(s));
+	assert_ret(wfd_is_session(s));
 
 	if(WFD_SESSION_STATE_PAUSED == s->state) {
 		return 0;
@@ -178,7 +194,7 @@ int wfd_session_pause(struct wfd_session *s)
 
 int wfd_session_teardown(struct wfd_session *s)
 {
-	assert(wfd_is_session(s));
+	assert_ret(wfd_is_session(s));
 
 	if(wfd_session_is_established(s)) {
 		if(!session_vtbl[s->dir].teardown) {
@@ -198,9 +214,7 @@ int wfd_session_teardown(struct wfd_session *s)
 
 int wfd_session_terminate(struct wfd_session *s)
 {
-	if(!s) {
-		return 0;
-	}
+	assert_ret(wfd_is_session(s));
 
 	if(session_vtbl[s->dir].destroy) {
 		(*session_vtbl[s->dir].destroy)(s);
@@ -267,7 +281,7 @@ void wfd_session_unref(struct wfd_session *s)
 		return;
 	}
 
-	assert(1 <= s->ref);
+	assert_vret(1 <= s->ref);
 
 	-- s->ref;
 	if(s->ref) {
@@ -281,21 +295,29 @@ void wfd_session_unref(struct wfd_session *s)
 
 enum wfd_session_dir wfd_session_get_dir(struct wfd_session *s)
 {
+	assert_retv(s, WFD_SESSION_DIR_OUT);
+
 	return s->dir;
 }
 
 unsigned int * wfd_session_to_htable(struct wfd_session *s)
 {
+	assert_retv(s, NULL);
+
 	return &s->id;
 }
 
 struct wfd_session * wfd_session_from_htable(unsigned int *e)
 {
+	assert_retv(e, NULL);
+
 	return shl_htable_entry(e, struct wfd_session, id);
 }
 
 const char * wfd_session_get_stream_url(struct wfd_session *s)
 {
+	assert_retv(wfd_is_session(s), NULL);
+
 	return s->stream.url;
 }
 
@@ -306,25 +328,30 @@ int wfd_session_gen_stream_url(struct wfd_session *s,
 	char *url;
 	int r;
 
-	if(!wfd_stream_id_is_valid(id)) {
-		return -EINVAL;
-	}
-   
+	assert_ret(wfd_is_session(s));
+	assert_ret(local_addr);
+	assert_ret(wfd_stream_id_is_valid(id));
+
 	r = asprintf(&url, "rtsp://%s/wfd1.0/streamid=%d", local_addr, id);
-	if(0 <= r) {
-		free(s->stream.url);
-		s->stream.url = url;
-		url = NULL;
+	if(0 > r) {
+		return log_ERRNO();
 	}
 
-	return r;
+	free(s->stream.url);
+	s->stream.url = url;
+
+	return 0;
 }
 
 static enum rtsp_message_id wfd_session_message_to_id(struct wfd_session *s,
 				struct rtsp_message *m)
 {
 
-	const char *method = m ? rtsp_message_get_method(m) : NULL;
+	const char *method;
+
+	assert_retv(wfd_is_session(s), RTSP_M_UNKNOWN);
+   
+	method = m ? rtsp_message_get_method(m) : NULL;
 	if(!method) {
 		return RTSP_M_UNKNOWN;
 	}
@@ -400,13 +427,17 @@ static enum rtsp_message_id wfd_session_message_to_id(struct wfd_session *s,
 static int wfd_session_post_handle_request_n_reply(struct wfd_session *s,
                 enum rtsp_message_id ror)
 {
-    const struct wfd_arg_list *args = &s->rtsp_disp_tbl[ror].rule;
+    const struct wfd_arg_list *args;
 	enum rtsp_message_id next_request = RTSP_M_UNKNOWN;
 	enum wfd_session_arg_id arg_id;
 	enum wfd_session_state new_state = WFD_SESSION_STATE_NULL;
 	const struct wfd_arg_list *req_args = NULL;
 	int i;
 
+	assert_ret(s);
+	assert_ret(RTSP_M_UNKNOWN != ror);
+
+	args = &s->rtsp_disp_tbl[ror].rule;
 	if(!args->len) {
 		return 0;
 	}
@@ -512,7 +543,7 @@ static int wfd_session_handle_request(struct rtsp *bus,
 error:
 	wfd_session_terminate(s);
 
-	return log_ERRNO();
+	return log_ERR(r);
 }
 
 static int wfd_session_handle_reply(struct rtsp *bus,
@@ -553,10 +584,9 @@ static int wfd_session_handle_reply(struct rtsp *bus,
 	return 0;
 
 error:
-	log_info("error while handling reply: %s", strerror(-r));
 	wfd_session_terminate(s);
 
-	return r;
+	return log_ERR(r);
 }
 
 int wfd_session_init(struct wfd_session *s,
@@ -579,7 +609,7 @@ int wfd_session_request(struct wfd_session *s,
 	int r;
 	_rtsp_message_unref_ struct rtsp_message *m = NULL;
 
-	assert(s);
+	assert_ret(s);
 
 	r = wfd_session_do_request(s, id, args, &m);
 	if(0 > r) {
@@ -679,7 +709,7 @@ int wfd_session_start(struct wfd_session *s)
 	_shl_close_ int fd = -1;
 	uint32_t mask;
 
-	assert(wfd_is_session(s));
+	assert_ret(wfd_is_session(s));
 
 	if(WFD_SESSION_STATE_NULL != s->state) {
 		return -EINPROGRESS;
@@ -687,7 +717,7 @@ int wfd_session_start(struct wfd_session *s)
 
 	r = (*session_vtbl[s->dir].initiate_io)(s, &fd, &mask);
 	if(0 > r) {
-		return r;
+		return log_ERRNO();
 	}
 
 	r = sd_event_add_io(ctl_wfd_get_loop(),
@@ -697,7 +727,7 @@ int wfd_session_start(struct wfd_session *s)
 				wfd_session_handle_io,
 				s);
 	if (r < 0) {
-		return r;
+		return log_ERRNO();
 	}
 
 	fd = -1;
@@ -789,7 +819,7 @@ const struct wfd_rectangle * wfd_session_get_disp_dimension(struct wfd_session *
 
 int wfd_session_set_disp_dimension(struct wfd_session *s, const struct wfd_rectangle *rect)
 {
-	assert(rect);
+	assert_ret(rect);
 
 	if(rect) {
 		s->disp_dimen = *rect;
