@@ -11,8 +11,6 @@ if check.found()
     dependencies: deps
   )
 
-  valgrind = find_program('valgrind')
-
   test('rtsp test', test_rtsp)
   test('wpas test', test_wpas)
   test('valgrind test', test_valgrind)
