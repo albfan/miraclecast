@@ -293,6 +293,8 @@ internal class GstEncoder : DispdEncoder, GLib.Object
 		}
 
 		pipeline.set_state(Gst.State.NULL);
+		state = DispdEncoderState.NULL;
+		defered_terminate();
 	}
 
 	public async void prepare() throws Error
@@ -310,6 +312,14 @@ internal class GstEncoder : DispdEncoder, GLib.Object
 							Posix.strerror(Posix.errno));
 		}
 		Posix.fsync(3);
+	}
+
+	private void defered_terminate()
+	{
+		Timeout.add(100, () => {
+			loop.quit();
+			return false;
+		});
 	}
 
 	private void check_configs() throws DispdEncoderError
@@ -331,10 +341,12 @@ internal class GstEncoder : DispdEncoder, GLib.Object
 		switch(m.type) {
 		case Gst.MessageType.EOS:
 			error("unexpected EOS");
+			defered_terminate();
 			break;
 		case Gst.MessageType.ERROR:
 			m.parse_error(out e, out d);
 			error("unexpected error: %s\n%s".printf(e.message, d));
+			defered_terminate();
 			break;
 		case Gst.MessageType.STATE_CHANGED:
 			Gst.State oldstate;
@@ -353,13 +365,6 @@ internal class GstEncoder : DispdEncoder, GLib.Object
 				if(Gst.State.PLAYING == oldstate) {
 					state = DispdEncoderState.PAUSED;
 				}
-				break;
-			case Gst.State.NULL:
-				state = DispdEncoderState.NULL;
-				Timeout.add(100, () => {
-					loop.quit();
-					return false;
-				});
 				break;
 			}
 			break;
