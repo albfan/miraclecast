@@ -189,6 +189,8 @@ internal class GstEncoder : DispdEncoder, GLib.Object
 								: 16385);
 		}
 
+		info("pipeline description: %s", desc.str);
+
 		this.configs = configs;
 
 		try {
