@@ -35,6 +35,7 @@ struct dispd_encoder
 
 	sd_event *loop;
 	sd_event_source *child_source;
+	sd_event_source *child_term_time_source;
 	sd_event_source *pipe_source;
 
 	sd_bus *bus;
@@ -49,7 +50,7 @@ struct dispd_encoder
 };
 
 static int dispd_encoder_new(struct dispd_encoder **out);
-static int dispd_encoder_on_unique_name(sd_event_source *source,
+static int on_unique_readable(sd_event_source *source,
 				int fd,
 				uint32_t events,
 				void *userdata);
@@ -150,6 +151,18 @@ static void dispd_encoder_cleanup(struct dispd_encoder *e)
 		dispd_encoder_unref(e);
 	}
 
+	if(e->child_term_time_source) {
+		sd_event_source_unref(e->child_term_time_source);
+		e->child_term_time_source = NULL;
+		dispd_encoder_unref(e);
+	}
+
+	if(e->child_source) {
+		sd_event_source_unref(e->child_source);
+		e->child_source = NULL;
+		dispd_encoder_unref(e);
+	}
+
 	dispd_encoder_close_pipe(e);
 
 	if(e->name_disappeared_slot) {
@@ -165,7 +178,7 @@ static void dispd_encoder_cleanup(struct dispd_encoder *e)
 	}
 }
 
-static int dispd_encoder_on_terminated(sd_event_source *source,
+static int on_child_terminated(sd_event_source *source,
 				const siginfo_t *si,
 				void *userdata)
 {
@@ -218,7 +231,7 @@ int dispd_encoder_spawn(struct dispd_encoder **out, struct wfd_session *s)
 					&e->child_source,
 					pid,
 					WEXITED,
-					dispd_encoder_on_terminated,
+					on_child_terminated,
 					dispd_encoder_ref(e));
 	if(0 > r) {
 		goto close_pipe;
@@ -228,7 +241,7 @@ int dispd_encoder_spawn(struct dispd_encoder **out, struct wfd_session *s)
 					&e->pipe_source,
 					fds[0],
 					EPOLLIN,
-					dispd_encoder_on_unique_name,
+					on_unique_readable,
 					dispd_encoder_ref(e));
 	if(0 > r) {
 		goto close_pipe;
@@ -450,7 +463,7 @@ static int on_encoder_disappeared(sd_bus_message *m,
 	return 0;
 }
 
-static int dispd_encoder_on_unique_name(sd_event_source *source,
+static int on_unique_readable(sd_event_source *source,
 				int fd,
 				uint32_t events,
 				void *userdata)
@@ -730,11 +743,13 @@ static int dispd_encoder_call(struct dispd_encoder *e, const char *method)
 					"org.freedesktop.miracle.encoder",
 					method);
 	if(0 > r) {
+		log_vERR(r);
 		goto error;
 	}
 
 	r = sd_bus_call(e->bus, call, 0, &error, &reply);
 	if(0 > r) {
+		log_warning("%s: %s", error.name, error.message);
 		goto error;
 	}
 
@@ -743,20 +758,67 @@ static int dispd_encoder_call(struct dispd_encoder *e, const char *method)
 error:
 	dispd_encoder_kill_child(e);
 
-	return log_ERRNO();
+	return r;
 }
 
 int dispd_encoder_start(struct dispd_encoder *e)
 {
+	assert_ret(e);
+
 	return dispd_encoder_call(e, "Start");
 }
 
 int dispd_encoder_pause(struct dispd_encoder *e)
 {
+	assert_ret(e);
+
 	return dispd_encoder_call(e, "Pause");
+}
+
+static int on_child_term_timeout(sd_event_source *s,
+				uint64_t usec,
+				void *userdata)
+{
+	struct dispd_encoder *e = userdata;
+
+	dispd_encoder_kill_child(e);
+
+	return 0;
 }
 
 int dispd_encoder_stop(struct dispd_encoder *e)
 {
-	return dispd_encoder_call(e, "Stop");
+	uint64_t now;
+	sd_event *loop;
+	int r;
+
+	assert_ret(e);
+
+	r = dispd_encoder_call(e, "Stop");
+	if(0 > r) {
+		return r;
+	}
+
+	loop = ctl_wfd_get_loop();
+	r = sd_event_now(loop, CLOCK_MONOTONIC, &now);
+	if(0 > r) {
+		log_vERR(r);
+		goto error;
+	}
+
+	r = sd_event_add_time(loop,
+					&e->child_term_time_source,
+					CLOCK_MONOTONIC,
+					now + (1000 * 1000),
+					0,
+					on_child_term_timeout,
+					dispd_encoder_ref(e));
+	if(0 > r) {
+		log_vERR(r);
+		goto error;
+	}
+
+error:
+	dispd_encoder_kill_child(e);
+	return r;
 }
