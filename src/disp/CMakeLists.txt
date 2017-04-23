@@ -11,8 +11,6 @@ set(miracle-dispd_SRCS ../ctl/ctl-cli.c
 
 include_directories(${CMAKE_SOURCE_DIR}/src/ctl
 					${CMAKE_BINARY_DIR}
-					${GSTREAMER_INCLUDE_DIRS}
-					${GSTREAMER_BASE_INCLUDE_DIRS}
 					${CMAKE_SOURCE_DIR}/src
 					${CMAKE_SOURCE_DIR}/src/shared)
 
@@ -30,7 +28,5 @@ endif(READLINE_FOUND)
 
 target_link_libraries(miracle-dispd
 				miracle-shared
-				${GSTREAMER_LIBRARIES}
-				${GSTREAMER_BASE_LIBRARIES}
 				${READLINE_LIBRARY})
 
