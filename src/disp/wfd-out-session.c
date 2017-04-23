@@ -93,8 +93,7 @@ int wfd_out_session_new(struct wfd_session **out,
 //		os->display_param_value = display_param;
 //	}
 
-	*out = s;
-	s = NULL;
+	*out = wfd_session_ref(s);
 
 	return 0;
 }
@@ -501,8 +500,7 @@ static int wfd_out_session_handle_pause_request(struct wfd_session *s,
 		return log_ERRNO();
 	}
 
-	*out_rep = m;
-	m = NULL;
+	*out_rep = (rtsp_message_ref(m), m);
 
 	return 0;
 }
