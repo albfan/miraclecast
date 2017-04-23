@@ -221,6 +221,11 @@ extern const char *LOG_SUBSYSTEM;
 #define log_vEPIPE() \
 	((void)log_EPIPE())
 
+#define log_EPROTO() \
+	(log_error("protocol error"), -EPROTO)
+#define log_vEPROTO() \
+	((void)log_EPROTO())
+
 #define log_ERRNO() \
 	(log_error("syscall failed (%d): %m", errno), -errno)
 #define log_vERRNO() \
