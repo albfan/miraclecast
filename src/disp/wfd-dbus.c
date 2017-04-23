@@ -309,12 +309,12 @@ int _wfd_fn_sink_properties_changed(struct wfd_sink *s, char **names)
 	struct wfd_dbus *wfd_dbus = wfd_dbus_get();
 
 	if(!wfd_dbus) {
-		return -ECANCELED;
+		return log_ERR(-ECANCELED);
 	}
 	
 	r = wfd_dbus_get_sink_path(s, &path);
 	if(0 > r) {
-		return log_ERRNO();
+		return log_ERR(r);
 	}
 
 	r = sd_bus_emit_properties_changed_strv(wfd_dbus->bus,
@@ -322,7 +322,7 @@ int _wfd_fn_sink_properties_changed(struct wfd_sink *s, char **names)
 					"org.freedesktop.miracle.wfd.Sink",
 					names);
 	if(0 > r) {
-		return log_ERRNO();
+		return log_ERR(r);
 	}
 
 	return 0;

@@ -56,9 +56,12 @@ int wfd_out_session_new(struct wfd_session **out,
 	struct wfd_out_session *os;
 	int r;
 
+	assert_ret(out);
+	assert_ret(id);
+	assert_ret(sink);
 	s = calloc(1, sizeof(struct wfd_out_session));
 	if(!s) {
-		return -ENOMEM;
+		return log_ENOMEM();
 	}
 
 	r = wfd_session_init(s,
@@ -66,7 +69,7 @@ int wfd_out_session_new(struct wfd_session **out,
 					WFD_SESSION_DIR_OUT,
 					out_session_rtsp_disp_tbl);
 	if(0 > r) {
-		return log_ERRNO();
+		return log_ERR(r);
 	}
 
 	os = wfd_out_session(s);
@@ -147,30 +150,25 @@ int wfd_out_session_initiate_io(struct wfd_session *s,
 	int enable;
 	int r;
 
-	if(!os->sink->peer->connected) {
-		log_info("peer not connected yet");
-		return -ENOTCONN;
-	}
+	assert_retv(os->sink->peer->connected, -ENOTCONN);
+	assert_retv(os->fd, -EINPROGRESS);
 
 	r = wfd_sube_parse_with_id(WFD_SUBE_ID_DEVICE_INFO,
 					p->l->wfd_subelements,
 					&sube);
 	if(0 > r) {
 		log_warning("WfdSubelements property of link must be set before P2P scan");
-		return -EINVAL;
+		return log_ERR(-EINVAL);
 	}
 	else if(WFD_SUBE_ID_DEVICE_INFO != sube.id) {
-		return -EAFNOSUPPORT;
-	}
-
-	if(-1 != os->fd) {
-		return EINPROGRESS;
+		return log_ERR(-EAFNOSUPPORT);
 	}
 
 	r = inet_pton(AF_INET, p->local_address, &addr.sin_addr);
-	if (!r) {
-		return -EAFNOSUPPORT;
+	if (0 >= r) {
+		return log_ERR(-EAFNOSUPPORT);
 	}
+
 	addr.sin_family = AF_INET;
 	addr.sin_port = htons(wfd_sube_device_get_rtsp_port(&sube));
 
@@ -178,7 +176,7 @@ int wfd_out_session_initiate_io(struct wfd_session *s,
 					SOCK_STREAM | SOCK_CLOEXEC | SOCK_NONBLOCK,
 					0);
 	if (0 > fd) {
-		return fd;
+		return log_ERRNO();
 	}
 
 	enable = true;
@@ -207,7 +205,7 @@ int wfd_out_session_initiate_io(struct wfd_session *s,
 		return log_ERRNO();
 	}
 
-	log_trace("socket listening on %s:%hu",
+	log_trace("socket listen on %s:%hu",
 					p->local_address,
 					wfd_sube_device_get_rtsp_port(&sube));
 
@@ -242,7 +240,11 @@ int wfd_out_session_teardown(struct wfd_session *s)
 
 void wfd_out_session_destroy(struct wfd_session *s)
 {
-	struct wfd_out_session *os = wfd_out_session(s);
+	struct wfd_out_session *os;
+
+	assert_vret(s);
+
+	os = wfd_out_session(s);
 	if(0 <= os->fd) {
 		close(os->fd);
 		os->fd = -1;
@@ -276,7 +278,7 @@ static int wfd_out_session_handle_get_parameter_reply(struct wfd_session *s,
 	if(!rtsp_message_read(m, "{<&>}", "wfd_video_formats", &l)) {
 		r = wfd_video_formats_from_string(l, &vformats);
 		if(0 > r) {
-			return log_ERRNO();
+			return log_ERR(r);
 		}
 
 		if(s->vformats) {
@@ -288,7 +290,7 @@ static int wfd_out_session_handle_get_parameter_reply(struct wfd_session *s,
 	if(!rtsp_message_read(m, "{<&>}", "wfd_audio_codecs", &l)) {
 		r = wfd_audio_codecs_from_string(l, &acodecs);
 		if(0 > r) {
-			return log_ERRNO();
+			return log_ERR(r);
 		}
 		
 		if(s->acodecs) {
@@ -299,7 +301,7 @@ static int wfd_out_session_handle_get_parameter_reply(struct wfd_session *s,
 
 	if(!rtsp_message_read(m, "{<&>}", "wfd_client_rtp_ports", &l)) {
 		if(strncmp("RTP/AVP/UDP;unicast", l, 19)) {
-			return -EPROTO;
+			return log_EPROTO();
 		}
 
 		r = sscanf(l + 20, "%hd %hd %ms",
@@ -307,15 +309,15 @@ static int wfd_out_session_handle_get_parameter_reply(struct wfd_session *s,
 						&rtp_ports[1],
 						&t);
 		if(3 != r) {
-			return -EPROTO;
+			return log_EPROTO();
 		}
 
 		if(strncmp("mode=play", t, 9)) {
-			return -EPROTO;
+			return log_EPROTO();
 		}
 
 		if(!rtp_ports[0] && !rtp_ports[1]) {
-			return -EPROTO;
+			return log_EPROTO();
 		}
 
 		s->rtp_ports[0] = rtp_ports[0];
@@ -335,7 +337,7 @@ static int wfd_out_session_request_get_parameter(struct wfd_session *s,
 					"GET_PARAMETER",
 					"rtsp://localhost/wfd1.0");
 	if (0 > r) {
-		goto error;
+		return log_ERR(r);
 	}
 
 	r = rtsp_message_append(m, "{&}",
@@ -345,16 +347,13 @@ static int wfd_out_session_request_get_parameter(struct wfd_session *s,
 			//"wfd_uibc_capability"
 	);
 	if (0 > r) {
-		goto error;
+		return log_ERR(r);
 	}
 
 	*out = m;
 	m = NULL;
 
 	return 0;
-
-error:
-	return log_ERRNO();
 }
 
 static bool find_strv(const char *str, char **strv)
@@ -379,14 +378,19 @@ static int wfd_out_session_handle_options_request(struct wfd_session *s,
 
 	r = rtsp_message_read(req, "<s>", "Require", &require);
 	if(0 > r) {
-		return log_ERRNO();
+		return log_ERR(r);
 	}
 
 	if(strcmp("org.wfa.wfd1.0", require)) {
-		return rtsp_message_new_reply_for(req,
+		r = rtsp_message_new_reply_for(req,
 						out_rep, 
 						RTSP_CODE_OPTION_NOT_SUPPORTED,
 						"Invalid specification");
+		if(0 > r) {
+			return log_ERR(r);
+		}
+
+		return 0;
 	}
 
 	r = rtsp_message_new_reply_for(req,
@@ -394,14 +398,14 @@ static int wfd_out_session_handle_options_request(struct wfd_session *s,
 					RTSP_CODE_OK,
 					NULL);
 	if(0 > r) {
-		return log_ERRNO();
+		return log_ERR(r);
 	}
 
 	r = rtsp_message_append(rep,
 					"<&>",
 					"Public", "org.wfa.wfd1.0, SETUP, TEARDOWN, PLAY, PAUSE, GET_PARAMETER, SET_PARAMETER");
 	if(0 > r) {
-		return log_ERRNO();
+		return log_ERR(r);
 	}
 
 	*out_rep = rep;
@@ -419,12 +423,12 @@ static int wfd_out_session_handle_options_reply(struct wfd_session *s,
 
 	r = rtsp_message_read(m, "<&>", "Public", &public);
 	if(0 > r) {
-		return log_ERRNO();
+		return log_ERR(r);
 	}
 
 	r = sscanf(public, "%m[^,], %m[^,], %ms", &methods[0], &methods[1], &methods[2]);
 	if(3 != r) {
-		return -EPROTO;
+		return log_EPROTO();
 	}
 
 	methods[3] = NULL;
@@ -435,7 +439,7 @@ static int wfd_out_session_handle_options_reply(struct wfd_session *s,
 	free(methods[1]);
 	free(methods[0]);
 	if(!r) {
-		return -EPROTO;
+		return log_EPROTO();
 	}
 
 	return 0;
@@ -450,14 +454,14 @@ static int wfd_out_session_request_options(struct wfd_session *s,
 					&m,
 					"OPTIONS", "*");
 	if (0 > r) {
-		return log_ERRNO();
+		return log_ERR(r);
 	}
 
 	r = rtsp_message_append(m,
 					"<s>",
 					"Require", "org.wfa.wfd1.0");
 	if (0 > r) {
-		return log_ERRNO();
+		return log_ERR(r);
 	}
 
 	*out = m;
@@ -489,7 +493,7 @@ static int wfd_out_session_handle_pause_request(struct wfd_session *s,
 
 	r = dispd_encoder_pause(wfd_out_session(s)->encoder);
 	if(0 > r) {
-		return log_ERRNO();
+		return log_ERR(r);
 	}
 
 	r = rtsp_message_new_reply_for(req,
@@ -497,7 +501,7 @@ static int wfd_out_session_handle_pause_request(struct wfd_session *s,
 					RTSP_CODE_OK,
 					NULL);
 	if(0 > r) {
-		return log_ERRNO();
+		return log_ERR(r);
 	}
 
 	*out_rep = (rtsp_message_ref(m), m);
@@ -540,7 +544,7 @@ static int wfd_out_session_handle_teardown_request(struct wfd_session *s,
 	/*m = NULL;*/
 
 	if(0 > r) {
-		return log_ERRNO();
+		return log_ERR(r);
 	}
 
 	return 0;
@@ -561,27 +565,30 @@ static int wfd_out_session_handle_play_request(struct wfd_session *s,
 					RTSP_CODE_OK,
 					NULL);
 	if(0 > r) {
-		return log_ERRNO();
+		return log_ERR(r);
 	}
 
 	r = asprintf(&v, "%X", wfd_session_get_id(s));
 	if(0 > r) {
-		return log_ERRNO();
+		return log_ERR(r);
 	}
 	
 	r = rtsp_message_append(m, "<&>", "Session", v);
 	if(0 > r) {
-		return log_ERRNO();
+		return log_ERR(r);
 	}
 
 	r = sd_event_now(ctl_wfd_get_loop(), CLOCK_MONOTONIC, &now);
 	if(0 > r) {
-		return log_ERRNO();
+		return log_ERR(r);
 	}
 
 	e = wfd_out_session(s)->encoder;
 	if(DISPD_ENCODER_STATE_CONFIGURED <= dispd_encoder_get_state(e)) {
 		r = dispd_encoder_start(e);
+		if(0 > r) {
+			return log_ERR(r);
+		}
 	}
 
 	*out_rep = (rtsp_message_ref(m), m);
@@ -598,13 +605,15 @@ static void on_encoder_state_changed(struct dispd_encoder *e,
 
 	switch(state) {
 		case DISPD_ENCODER_STATE_SPAWNED:
-			if(WFD_SESSION_STATE_SETTING_UP == wfd_session_get_state(s)) {
+			if(wfd_session_is_state(s, WFD_SESSION_STATE_SETTING_UP)) {
 				r = dispd_encoder_configure(wfd_out_session(s)->encoder, s);
+				log_vERR(r);
 			}
 			break;
 		case DISPD_ENCODER_STATE_CONFIGURED:
-			if(WFD_SESSION_STATE_SETTING_UP == wfd_session_get_state(s)) {
+			if(wfd_session_is_state(s, WFD_SESSION_STATE_SETTING_UP)) {
 				r = dispd_encoder_start(e);
+				log_vERR(r);
 			}
 			break;
 		case DISPD_ENCODER_STATE_READY:
@@ -623,10 +632,6 @@ static void on_encoder_state_changed(struct dispd_encoder *e,
 			break;
 	}
 
-	if(0 > r) {
-		return log_vERRNO();
-	}
-
 	return;
 }
 
@@ -642,17 +647,17 @@ static int wfd_out_session_handle_setup_request(struct wfd_session *s,
 
 	r = rtsp_message_read(req, "<s>", "Transport", &l);
 	if(0 > r) {
-		return -EPROTO;
+		return log_EPROTO();
 	}
 
 	if(strncmp("RTP/AVP/UDP;unicast;", l, 20)) {
-		return -EPROTO;
+		return log_EPROTO();
 	}
 
 	l += 20;
 
 	if(strncmp("client_port=", l, 12)) {
-		return -EPROTO;
+		return log_EPROTO();
 	}
 
 	l += 12;
@@ -660,14 +665,14 @@ static int wfd_out_session_handle_setup_request(struct wfd_session *s,
 	errno = 0;
 	s->stream.rtp_port = strtoul(l, &l, 10);
 	if(errno) {
-		return -errno;
+		return log_EPROTO();
 	}
 
 	if('-' == *l) {
 		errno = 0;
 		s->stream.rtcp_port = strtoul(l + 1, NULL, 10);
 		if(errno) {
-			return -errno;
+			return log_EPROTO();
 		}
 	}
 	else {
@@ -719,10 +724,15 @@ static int wfd_out_session_handle_idr_request(struct wfd_session *s,
 				struct rtsp_message *req,
 				struct rtsp_message **out_rep)
 {
-	return rtsp_message_new_reply_for(req,
+	int r = rtsp_message_new_reply_for(req,
 					out_rep,
 					RTSP_CODE_OK,
 					NULL);
+	if(0 > r) {
+		return log_ERR(r);
+	}
+
+	return 0;
 }
 
 static int wfd_out_session_request_trigger(struct wfd_session *s,

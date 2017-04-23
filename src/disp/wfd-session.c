@@ -66,16 +66,22 @@ static int wfd_session_do_request(struct wfd_session *s,
 				const struct wfd_arg_list *args,
 				struct rtsp_message **out)
 {
+	int r;
+
 	assert_ret(s);
 	assert_ret(rtsp_message_id_is_valid(id));
 	assert_ret(out);
 
 	if(!s->rtsp_disp_tbl[id].request) {
-		log_warning("!!! request %d not implemented !!!", id);
-		return -ENOTSUP;
+		return log_ERR(-ENOTSUP);
 	}
 
-	return (*s->rtsp_disp_tbl[id].request)(s, args, out);
+	r = (*s->rtsp_disp_tbl[id].request)(s, args, out);
+	if(0 > r) {
+		return log_ERR(r);
+	}
+
+	return 0;
 }
 
 static int wfd_session_do_handle_request(struct wfd_session *s,
@@ -83,42 +89,47 @@ static int wfd_session_do_handle_request(struct wfd_session *s,
 				struct rtsp_message *req,
 				struct rtsp_message **rep)
 {
+	int r;
+
 	assert_ret(s);
 	assert_ret(rtsp_message_id_is_valid(id));
 	assert_ret(req);
 	assert_ret(rep);
 
-	if(!rtsp_message_id_is_valid(id)) {
-		return -EINVAL;
-	}
-
 	if(!s->rtsp_disp_tbl[id].handle_request) {
-		log_warning("!!! request handler not implemented !!!");
-		return -ENOTSUP;
+		return log_ERR(-ENOTSUP);
 	}
 
-	return (*s->rtsp_disp_tbl[id].handle_request)(s,
+	r = (*s->rtsp_disp_tbl[id].handle_request)(s,
 					req,
 					rep);
+	if(0 > r) {
+		return log_ERR(r);
+	}
+
+	return 0;
 }
 
 static int wfd_session_do_handle_reply(struct wfd_session *s,
 				enum rtsp_message_id id,
 				struct rtsp_message *rep)
 {
+	int r;
+
 	assert_ret(s);
 	assert_ret(rtsp_message_id_is_valid(id));
 	assert_ret(rep);
 
-	if(!rtsp_message_id_is_valid(id)) {
-		return -EINVAL;
-	}
-	
 	if(!s->rtsp_disp_tbl[id].handle_reply) {
 		return 0;
 	}
 
-	return (*s->rtsp_disp_tbl[id].handle_reply)(s, rep);
+	r = (*s->rtsp_disp_tbl[id].handle_reply)(s, rep);
+	if(0 > r) {
+		return log_ERR(r);
+	}
+
+	return 0;
 }
 
 unsigned int wfd_session_get_id(struct wfd_session *s)
@@ -126,6 +137,13 @@ unsigned int wfd_session_get_id(struct wfd_session *s)
 	assert_retv(s, (unsigned int) -1);
 
 	return s->id;
+}
+
+bool wfd_session_is_state(struct wfd_session *s, enum wfd_session_state state)
+{
+	assert_retv(s, false);
+
+	return state == s->state;
 }
 
 enum wfd_session_state wfd_session_get_state(struct wfd_session *s)
@@ -432,7 +450,7 @@ static int wfd_session_post_handle_request_n_reply(struct wfd_session *s,
 	enum wfd_session_arg_id arg_id;
 	enum wfd_session_state new_state = WFD_SESSION_STATE_NULL;
 	const struct wfd_arg_list *req_args = NULL;
-	int i;
+	int i, r;
 
 	assert_ret(s);
 	assert_ret(RTSP_M_UNKNOWN != ror);
@@ -460,7 +478,10 @@ static int wfd_session_post_handle_request_n_reply(struct wfd_session *s,
 	}
 
 	if(RTSP_M_UNKNOWN != next_request) {
-		return wfd_session_request(s, next_request, req_args);
+		r = wfd_session_request(s, next_request, req_args);
+		if(0 > r) {
+			return log_ERR(r);
+		}
 	}
 
 	if(WFD_SESSION_STATE_TEARING_DOWN == new_state) {
@@ -555,12 +576,12 @@ static int wfd_session_handle_reply(struct rtsp *bus,
 	struct wfd_session *s = userdata;
 
 	if(!m) {
-		r = -EPIPE;
+		r = log_EPIPE();
 		goto error;
 	}
 
 	if(!rtsp_message_is_reply(m, RTSP_CODE_OK, NULL)) {
-		r = -EPROTO;
+		r = log_EPROTO();
 		goto error;
 	}
 
@@ -573,20 +594,24 @@ static int wfd_session_handle_reply(struct rtsp *bus,
 
 	r = wfd_session_do_handle_reply(s, id, m);
 	if(0 > r) {
+		log_vERR(r);
 		goto error;
 	}
 
 	r = wfd_session_post_handle_request_n_reply(s, id);
 	if(0 > r) {
+		log_vERR(r);
 		goto error;
 	}
 
-	return 0;
+	goto end;
 
 error:
 	wfd_session_terminate(s);
+end:
+	wfd_session_unref(s);
 
-	return log_ERR(r);
+	return r;
 }
 
 int wfd_session_init(struct wfd_session *s,
@@ -710,14 +735,11 @@ int wfd_session_start(struct wfd_session *s)
 	uint32_t mask;
 
 	assert_ret(wfd_is_session(s));
-
-	if(WFD_SESSION_STATE_NULL != s->state) {
-		return -EINPROGRESS;
-	}
+	assert_retv(wfd_session_is_state(s, WFD_SESSION_STATE_NULL), -EINPROGRESS);
 
 	r = (*session_vtbl[s->dir].initiate_io)(s, &fd, &mask);
 	if(0 > r) {
-		return log_ERRNO();
+		return log_ERR(r);
 	}
 
 	r = sd_event_add_io(ctl_wfd_get_loop(),
@@ -739,11 +761,14 @@ int wfd_session_start(struct wfd_session *s)
 
 enum wfd_display_server_type wfd_session_get_disp_type(struct wfd_session *s)
 {
+	assert_retv(s, WFD_DISPLAY_SERVER_TYPE_UNKNOWN);
 	return s->disp_type;
 }
 
 int wfd_session_set_disp_type(struct wfd_session *s, enum wfd_display_server_type disp_type)
 {
+	assert_ret(s);
+
 	s->disp_type = disp_type;
 
 	return 0;
@@ -751,12 +776,18 @@ int wfd_session_set_disp_type(struct wfd_session *s, enum wfd_display_server_typ
 
 const char * wfd_session_get_disp_name(struct wfd_session *s)
 {
+	assert_retv(s, "");
+
 	return s->disp_name;
 }
 
 int wfd_session_set_disp_name(struct wfd_session *s, const char *disp_name)
 {
-	char *name = disp_name ? strdup(disp_name) : NULL;
+	char *name;
+
+	assert_ret(s);
+
+	name = disp_name ? strdup(disp_name) : NULL;
 	if(!name) {
 		return -ENOMEM;
 	}
@@ -772,12 +803,18 @@ int wfd_session_set_disp_name(struct wfd_session *s, const char *disp_name)
 
 const char * wfd_session_get_disp_params(struct wfd_session *s)
 {
+	assert_retv(s, "");
+
 	return s->disp_params;
 }
 
 int wfd_session_set_disp_params(struct wfd_session *s, const char *disp_params)
 {
-	char *params = disp_params ? strdup(disp_params) : NULL;
+	char *params;
+
+	assert_ret(s);
+
+	params = disp_params ? strdup(disp_params) : NULL;
 	if(disp_params && !params) {
 		return -ENOMEM;
 	}
@@ -793,12 +830,18 @@ int wfd_session_set_disp_params(struct wfd_session *s, const char *disp_params)
 
 const char * wfd_session_get_disp_auth(struct wfd_session *s)
 {
+	assert_retv(s, "");
+
 	return s->disp_auth;
 }
 
 int wfd_session_set_disp_auth(struct wfd_session *s, const char *disp_auth)
 {
-	char *auth = disp_auth ? strdup(disp_auth) : NULL;
+	char *auth;
+
+	assert_ret(s);
+
+	auth = disp_auth ? strdup(disp_auth) : NULL;
 	if(!auth) {
 		return -ENOMEM;
 	}
@@ -814,27 +857,34 @@ int wfd_session_set_disp_auth(struct wfd_session *s, const char *disp_auth)
 
 const struct wfd_rectangle * wfd_session_get_disp_dimension(struct wfd_session *s)
 {
+	assert_retv(s, NULL);
+
 	return &s->disp_dimen;
 }
 
 int wfd_session_set_disp_dimension(struct wfd_session *s, const struct wfd_rectangle *rect)
 {
+	assert_ret(s);
 	assert_ret(rect);
+	assert_ret(rect->width);
+	assert_ret(rect->height);
 
-	if(rect) {
-		s->disp_dimen = *rect;
-	}
+	s->disp_dimen = *rect;
 
 	return 0;
 }
 
 enum wfd_audio_server_type wfd_session_get_audio_type(struct wfd_session *s)
 {
+	assert_retv(s, WFD_AUDIO_SERVER_TYPE_UNKNOWN);
+
 	return s->audio_type;
 }
 
 int wfd_session_set_audio_type(struct wfd_session *s, enum wfd_audio_server_type audio_type)
 {
+	assert_ret(s);
+
 	s->audio_type = audio_type;
 
 	return 0;
@@ -842,12 +892,18 @@ int wfd_session_set_audio_type(struct wfd_session *s, enum wfd_audio_server_type
 
 const char * wfd_session_get_audio_dev_name(struct wfd_session *s)
 {
+	assert_retv(s, "");
+
 	return s->audio_dev_name;
 }
 
 int wfd_session_set_audio_dev_name(struct wfd_session *s, char *audio_dev_name)
 {
-	char *name = audio_dev_name ? strdup(audio_dev_name) : NULL;
+	char *name;
+
+	assert_ret(s);
+
+	name = audio_dev_name ? strdup(audio_dev_name) : NULL;
 	if(!name) {
 		return -ENOMEM;
 	}
@@ -863,7 +919,7 @@ int wfd_session_set_audio_dev_name(struct wfd_session *s, char *audio_dev_name)
 
 void wfd_session_unrefp(struct wfd_session **s)
 {
-	if(s) {
+	if(s && *s) {
 		wfd_session_unref(*s);
 	}
 }

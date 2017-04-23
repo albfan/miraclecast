@@ -99,6 +99,7 @@ int wfd_session_terminate(struct wfd_session *s);
 bool wfd_session_is_established(struct wfd_session *s);
 unsigned int wfd_session_get_id(struct wfd_session *s);
 const char * wfd_session_get_stream_url(struct wfd_session *s);
+bool wfd_session_is_state(struct wfd_session *s, enum wfd_session_state state);
 enum wfd_session_state wfd_session_get_state(struct wfd_session *s);
 enum wfd_session_dir wfd_session_get_dir(struct wfd_session *s);
 struct wfd_sink * wfd_out_session_get_sink(struct wfd_session *s);
