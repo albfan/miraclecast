@@ -59,6 +59,7 @@ int wfd_out_session_new(struct wfd_session **out,
 	assert_ret(out);
 	assert_ret(id);
 	assert_ret(sink);
+
 	s = calloc(1, sizeof(struct wfd_out_session));
 	if(!s) {
 		return log_ENOMEM();
@@ -75,26 +76,6 @@ int wfd_out_session_new(struct wfd_session **out,
 	os = wfd_out_session(s);
 	os->fd = -1;
 	os->sink = sink;
-
-	//enum wfd_resolution_standard std;
-	//uint32_t mask;
-//	r = vfd_get_mask_from_resolution(width, height, &std, &mask);
-//	if(0 > r) {
-//		return -EINVAL;
-//	}
-
-//	os->mask = mask;
-//	os->std = std;
-//
-//	if(display_param) {
-//		os->display_param_name = display_param;
-//		display_param = strchr(display_param, '=');
-//		if(!display_param) {
-//			return -EINVAL;
-//		}
-//		*display_param ++ = '\0';
-//		os->display_param_value = display_param;
-//	}
 
 	*out = wfd_session_ref(s);
 
@@ -350,8 +331,7 @@ static int wfd_out_session_request_get_parameter(struct wfd_session *s,
 		return log_ERR(r);
 	}
 
-	*out = m;
-	m = NULL;
+	*out = (rtsp_message_ref(m), m);
 
 	return 0;
 }
@@ -408,8 +388,7 @@ static int wfd_out_session_handle_options_request(struct wfd_session *s,
 		return log_ERR(r);
 	}
 
-	*out_rep = rep;
-	rep = NULL;
+	*out_rep = (rtsp_message_ref(rep), rep);
 
 	return 0;
 }
@@ -464,8 +443,7 @@ static int wfd_out_session_request_options(struct wfd_session *s,
 		return log_ERR(r);
 	}
 
-	*out = m;
-	m = NULL;
+	*out = (rtsp_message_ref(m), m);
 
 	return 0;
 }
@@ -511,41 +489,20 @@ static int wfd_out_session_handle_pause_request(struct wfd_session *s,
 
 static int wfd_out_session_handle_teardown_request(struct wfd_session *s,
 						struct rtsp_message *req,
-						struct rtsp_message **out_rep)
+						struct rtsp_message **rep)
 {
-//	pid_t pid;
-	struct wfd_out_session *os = wfd_out_session(s);
-//	_rtsp_message_unref_ struct rtsp_message *m = NULL;
+	_rtsp_message_unref_ struct rtsp_message *m = NULL;
 	int r;
 
-//	if(!os->encoder_source) {
-//		return 0;
-//	}
-
-//	r = sd_event_source_get_child_pid(os->encoder_source, &pid);
-//	if(0 > r) {
-//		return log_ERRNO();
-//	}
-
-//	log_info("terminating encoder %d", pid);
-//	r = kill(pid, SIGTERM);
-
-	/*r = rtsp_message_new_reply_for(req,*/
-					/*&m,*/
-					/*RTSP_CODE_OK,*/
-					/*NULL);*/
-	/*if(0 > r) {*/
-		/*return log_ERRNO();*/
-	/*}*/
-
-	r = dispd_encoder_stop(os->encoder);
-
-	/**out_rep = m;*/
-	/*m = NULL;*/
-
+	r = rtsp_message_new_reply_for(req,
+					&m,
+					RTSP_CODE_OK,
+					NULL);
 	if(0 > r) {
 		return log_ERR(r);
 	}
+
+	*rep = (rtsp_message_ref(m), m);
 
 	return 0;
 }

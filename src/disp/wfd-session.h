@@ -101,6 +101,7 @@ struct wfd_session
 
 	unsigned int id;
 	struct rtsp *rtsp;
+	uint64_t req_cookie;
 	uint16_t rtp_ports[2];
 	struct wfd_video_formats *vformats;
 	struct wfd_audio_codecs *acodecs;

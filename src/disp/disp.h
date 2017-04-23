@@ -57,7 +57,7 @@ enum wfd_session_state
 	WFD_SESSION_STATE_PAUSED,
 	WFD_SESSION_STATE_PLAYING,
 	WFD_SESSION_STATE_TEARING_DOWN,
-	WFD_SESSION_STATE_TERMINATING,
+	WFD_SESSION_STATE_DESTROYED,
 };
 
 struct wfd_rectangle
@@ -94,7 +94,7 @@ int wfd_session_start(struct wfd_session *s);
 int wfd_session_resume(struct wfd_session *s);
 int wfd_session_pause(struct wfd_session *s);
 int wfd_session_teardown(struct wfd_session *s);
-int wfd_session_terminate(struct wfd_session *s);
+int wfd_session_destroy(struct wfd_session *s);
 
 bool wfd_session_is_established(struct wfd_session *s);
 unsigned int wfd_session_get_id(struct wfd_session *s);

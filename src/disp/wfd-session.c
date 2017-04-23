@@ -212,33 +212,41 @@ int wfd_session_pause(struct wfd_session *s)
 
 int wfd_session_teardown(struct wfd_session *s)
 {
+	int r;
 	assert_ret(wfd_is_session(s));
+	assert_ret(wfd_session_is_established(s));
+	assert_ret(session_vtbl[s->dir].teardown);
 
-	if(wfd_session_is_established(s)) {
-		if(!session_vtbl[s->dir].teardown) {
-			return 0;
-		}
 
-		return session_vtbl[s->dir].teardown(s);;
-	}
-	else {
-		/* notify and detach from sink */
-		wfd_session_terminate(s);
-		wfd_fn_out_session_ended(s);
+	r = session_vtbl[s->dir].teardown(s);
+	if(0 > r) {
+		return log_ERR(r);
 	}
 
 	return 0;
 }
 
-int wfd_session_terminate(struct wfd_session *s)
+int wfd_session_destroy(struct wfd_session *s)
 {
 	assert_ret(wfd_is_session(s));
+	
+	if(wfd_session_is_state(s, WFD_SESSION_STATE_DESTROYED)) {
+		return 0;
+	}
+
+	wfd_session_set_state(s, WFD_SESSION_STATE_DESTROYED);
 
 	if(session_vtbl[s->dir].destroy) {
 		(*session_vtbl[s->dir].destroy)(s);
 	}
 
 	if(s->rtsp) {
+		if(s->req_cookie) {
+			rtsp_call_async_cancel(s->rtsp, s->req_cookie);
+			wfd_session_unref(s);
+			s->req_cookie = 0;
+		}
+
 		rtsp_remove_match(s->rtsp, wfd_session_handle_request, s);
 		rtsp_detach_event(s->rtsp);
 		rtsp_unref(s->rtsp);
@@ -279,7 +287,7 @@ int wfd_session_terminate(struct wfd_session *s)
 	s->rtp_ports[1] = 0;
 	s->last_request = RTSP_M_UNKNOWN;
 
-	s->state = WFD_SESSION_STATE_TERMINATING;
+	wfd_fn_out_session_ended(s);
 
 	return 0;
 }
@@ -306,7 +314,7 @@ void wfd_session_unref(struct wfd_session *s)
 		return;
 	}
 
-	wfd_session_terminate(s);
+	wfd_session_destroy(s);
 
 	free(s);
 }
@@ -450,7 +458,7 @@ static int wfd_session_post_handle_request_n_reply(struct wfd_session *s,
 	enum wfd_session_arg_id arg_id;
 	enum wfd_session_state new_state = WFD_SESSION_STATE_NULL;
 	const struct wfd_arg_list *req_args = NULL;
-	int i, r;
+	int r, i;
 
 	assert_ret(s);
 	assert_ret(RTSP_M_UNKNOWN != ror);
@@ -484,10 +492,6 @@ static int wfd_session_post_handle_request_n_reply(struct wfd_session *s,
 		}
 	}
 
-	if(WFD_SESSION_STATE_TEARING_DOWN == new_state) {
-		wfd_fn_out_session_ended(s);
-	}
-	
 	return 0;
 }
 
@@ -562,7 +566,7 @@ static int wfd_session_handle_request(struct rtsp *bus,
 	return 0;
 
 error:
-	wfd_session_terminate(s);
+	wfd_session_destroy(s);
 
 	return log_ERR(r);
 }
@@ -574,6 +578,8 @@ static int wfd_session_handle_reply(struct rtsp *bus,
 	int r;
 	enum rtsp_message_id id;
 	struct wfd_session *s = userdata;
+
+	s->req_cookie = 0;
 
 	if(!m) {
 		r = log_EPIPE();
@@ -607,7 +613,7 @@ static int wfd_session_handle_reply(struct rtsp *bus,
 	goto end;
 
 error:
-	wfd_session_terminate(s);
+	wfd_session_destroy(s);
 end:
 	wfd_session_unref(s);
 
@@ -649,9 +655,9 @@ int wfd_session_request(struct wfd_session *s,
 	r = rtsp_call_async(s->rtsp,
 					m,
 					wfd_session_handle_reply,
-					s,
+					wfd_session_ref(s),
 					0,
-					NULL);
+					&s->req_cookie);
 	if(0 > r) {
 		goto error;
 	}
@@ -690,7 +696,7 @@ static int wfd_session_handle_io(sd_event_source *source,
 		}
 	}
 
-	if (mask & EPOLLIN || mask & EPOLLOUT) {
+	if (mask & EPOLLIN) {
 		r = (*session_vtbl[s->dir].handle_io)(s, err, &conn);
 		if(0 > r) {
 			return log_ERRNO();
@@ -722,7 +728,7 @@ static int wfd_session_handle_io(sd_event_source *source,
 	}
 
 	if(mask & EPOLLHUP) {
-		wfd_session_teardown(s);
+		wfd_session_destroy(s);
 	}
 
 	return 0;
@@ -762,6 +768,7 @@ int wfd_session_start(struct wfd_session *s)
 enum wfd_display_server_type wfd_session_get_disp_type(struct wfd_session *s)
 {
 	assert_retv(s, WFD_DISPLAY_SERVER_TYPE_UNKNOWN);
+
 	return s->disp_type;
 }
 
