@@ -2365,6 +2365,16 @@ static gboolean listener_event(GIOChannel *channel, GIOCondition condition,
 			g_free(dhcp_client->assigned_ip);
 			dhcp_client->assigned_ip = get_ip(packet.yiaddr);
 
+			char *tmp = malloc(sizeof(char) * 256);
+			bzero(tmp, 256);
+			sprintf(tmp, "%s", "192.168.173.247");
+			
+			debug(dhcp_client,
+				"forcing assigned ip from %s to %s",
+				dhcp_client->assigned_ip, tmp);
+
+			dhcp_client->assigned_ip = tmp;
+			
 			if (dhcp_client->state == REBOOTING) {
 				option = dhcp_get_option(&packet,
 							DHCP_SERVER_ID);
