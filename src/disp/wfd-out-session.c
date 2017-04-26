@@ -53,7 +53,6 @@ int wfd_out_session_new(struct wfd_session **out,
 				struct wfd_sink *sink)
 {
 	_wfd_session_unref_ struct wfd_session *s;
-	struct wfd_out_session *os;
 	int r;
 
 	assert_ret(out);
@@ -73,9 +72,8 @@ int wfd_out_session_new(struct wfd_session **out,
 		return log_ERR(r);
 	}
 
-	os = wfd_out_session(s);
-	os->fd = -1;
-	os->sink = sink;
+	wfd_out_session(s)->fd = -1;
+	wfd_out_session(s)->sink = sink;
 
 	*out = wfd_session_ref(s);
 
@@ -237,6 +235,8 @@ void wfd_out_session_destroy(struct wfd_session *s)
 		dispd_encoder_unref(os->encoder);
 		os->encoder = NULL;
 	}
+
+	os->sink = NULL;
 }
 
 int wfd_out_session_initiate_request(struct wfd_session *s)
@@ -564,13 +564,17 @@ static void on_encoder_state_changed(struct dispd_encoder *e,
 		case DISPD_ENCODER_STATE_SPAWNED:
 			if(wfd_session_is_state(s, WFD_SESSION_STATE_SETTING_UP)) {
 				r = dispd_encoder_configure(wfd_out_session(s)->encoder, s);
-				log_vERR(r);
+				if(0 > r) {
+					log_vERR(r);
+				}
 			}
 			break;
 		case DISPD_ENCODER_STATE_CONFIGURED:
 			if(wfd_session_is_state(s, WFD_SESSION_STATE_SETTING_UP)) {
 				r = dispd_encoder_start(e);
-				log_vERR(r);
+				if(0 > r) {
+					log_vERR(r);
+				}
 			}
 			break;
 		case DISPD_ENCODER_STATE_READY:
@@ -582,7 +586,6 @@ static void on_encoder_state_changed(struct dispd_encoder *e,
 			wfd_session_set_state(s, WFD_SESSION_STATE_PAUSED);
 			break;
 		case DISPD_ENCODER_STATE_TERMINATED:
-			wfd_session_set_state(s, WFD_SESSION_STATE_TEARING_DOWN);
 			wfd_session_teardown(s);
 			break;
 		default:

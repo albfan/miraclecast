@@ -476,6 +476,8 @@ private class WfdCtl : GLib.Application
 				return "playing";
 			case 7:
 				return "tearing down";
+			case 8:
+				return "destroyed";
 		}
 
 		return "unknown";

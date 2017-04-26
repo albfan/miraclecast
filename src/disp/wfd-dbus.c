@@ -410,17 +410,67 @@ static int wfd_dbus_find_session(sd_bus *bus,
 	return r;
 }
 
+static int get_user_runtime_path(char **out, sd_bus *bus, uid_t uid)
+{
+	_sd_bus_message_unref_ sd_bus_message *rep = NULL;
+	_sd_bus_error_free_ sd_bus_error error = SD_BUS_ERROR_NULL;
+	char p[256];
+	char *rp;
+	int r;
+
+	assert_ret(out);
+	assert_ret(bus);
+	assert_ret(0 < uid);
+
+	r = snprintf(p, sizeof(p), "/org/freedesktop/login1/user/_%d", uid);
+	if(0 > r) {
+		return log_ERRNO();
+	}
+
+	r = sd_bus_call_method(bus,
+					"org.freedesktop.login1",
+					p,
+					"org.freedesktop.DBus.Properties",
+					"Get",
+					&error,
+					&rep,
+					"ss",
+					"org.freedesktop.login1.User",
+					"RuntimePath");
+	if(0 > r) {
+		log_warning("%s: %s", error.name, error.message);
+		return r;
+	}
+
+	r = sd_bus_message_read(rep, "v", "s", &rp);
+	if(0 > r) {
+		return log_ERR(r);
+	}
+
+	*out = strdup(rp);
+	if(!*out) {
+		return log_ENOMEM();
+	}
+
+	return 0;
+}
+
 static int wfd_dbus_sink_start_session(sd_bus_message *m,
 				void *userdata,
 				sd_bus_error *ret_error)
 {
-	struct wfd_sink *sink = userdata;
 	_wfd_session_unref_ struct wfd_session *sess = NULL;
 	_shl_free_ char *path = NULL, *disp_type_name = NULL, *disp_name = NULL;
+	_sd_bus_creds_unref_ sd_bus_creds *creds = NULL;
+	_shl_free_ char *runtime_path = NULL;
+	struct wfd_sink *sink = userdata;
 	char *disp_params;
 	const char *disp, *disp_auth;
 	const char *audio_dev;
 	struct wfd_rectangle rect;
+	pid_t pid;
+	uid_t uid;
+	gid_t gid;
 	int r;
 
 	r = sd_bus_message_read(m,
@@ -433,7 +483,7 @@ static int wfd_dbus_sink_start_session(sd_bus_message *m,
 					&rect.height,
 					&audio_dev);
 	if(0 > r) {
-		return log_ERRNO();
+		return log_ERR(r);
 	}
 
 	r = sscanf(disp, "%m[^:]://%ms",
@@ -449,12 +499,12 @@ static int wfd_dbus_sink_start_session(sd_bus_message *m,
 
 	r = wfd_sink_create_session(sink, &sess);
 	if(0 > r) {
-		return log_ERRNO();
+		return log_ERR(r);
 	}
 
 	wfd_session_set_disp_type(sess, WFD_DISPLAY_SERVER_TYPE_X);
 	if(0 > r) {
-		return log_ERRNO();
+		return log_ERR(r);
 	}
 
 	disp_params = strchr(disp_name, '?');
@@ -464,47 +514,92 @@ static int wfd_dbus_sink_start_session(sd_bus_message *m,
 
 	r = wfd_session_set_disp_name(sess, disp_name);
 	if(0 > r) {
-		return log_ERRNO();
+		return log_ERR(r);
 	}
 
 	r = wfd_session_set_disp_params(sess, disp_params);
 	if(0 > r) {
-		return log_ERRNO();
+		return log_ERR(r);
 	}
 
 	r = wfd_session_set_disp_auth(sess, disp_auth);
 	if(0 > r) {
-		return log_ERRNO();
+		return log_ERR(r);
 	}
 
 	r = wfd_session_set_disp_dimension(sess, &rect);
 	if(0 > r) {
-		return log_ERRNO();
+		return log_ERR(r);
 	}
 
 	r = wfd_session_set_audio_type(sess, WFD_AUDIO_SERVER_TYPE_PULSE_AUDIO);
 	if(0 > r) {
-		return log_ERRNO();
+		return log_ERR(r);
 	}
 
-	r = wfd_session_set_audio_type(sess, WFD_AUDIO_SERVER_TYPE_PULSE_AUDIO);
+	r = wfd_session_set_audio_dev_name(sess, audio_dev);
 	if(0 > r) {
-		return log_ERRNO();
+		return log_ERR(r);
+	}
+
+	r = sd_bus_query_sender_creds(m, SD_BUS_CREDS_PID, &creds);
+	if(0 > r) {
+		return log_ERR(r);
+	}
+
+	r = sd_bus_creds_get_pid(creds, &pid);
+	if(0 > r) {
+		return log_ERR(r);
+	}
+
+	sd_bus_creds_unref(creds);
+	creds = NULL;
+
+	r = sd_bus_creds_new_from_pid(&creds,
+					pid,
+					SD_BUS_CREDS_UID | SD_BUS_CREDS_GID);
+	if(0 > r) {
+		return log_ERR(r);
+	}
+	wfd_session_set_client_pid(sess, gid);
+
+	r = sd_bus_creds_get_uid(creds, &uid);
+	if(0 > r) {
+		return log_ERR(r);
+	}
+	wfd_session_set_client_uid(sess, uid);
+
+	sd_bus_creds_get_gid(creds, &gid);
+	if(0 > r) {
+		return log_ERR(r);
+	}
+	wfd_session_set_client_gid(sess, gid);
+
+	r = get_user_runtime_path(&runtime_path,
+					sd_bus_message_get_bus(m),
+					uid);
+	if(0 > r) {
+		return log_ERR(r);
+	}
+
+	r = wfd_session_set_runtime_path(sess, runtime_path);
+	if(0 > r) {
+		return log_ERR(r);
 	}
 
 	r = wfd_session_start(sess);
 	if(0 > r) {
-		return log_ERRNO();
+		return log_ERR(r);
 	}
 
 	r = wfd_dbus_get_session_path(sess, &path);
 	if(0 > r) {
-		return log_ERRNO();
+		return log_ERR(r);
 	}
 
 	r = sd_bus_reply_method_return(m, "o", path);
 	if(0 > r) {
-		return log_ERRNO();
+		return log_ERR(r);
 	}
 
 	return 0;
@@ -748,7 +843,7 @@ static int wfd_dbus_shutdown(sd_bus_message *m,
 
 	r = sd_bus_reply_method_return(m, NULL);
 	if(0 > r) {
-		return log_ERRNO();
+		return log_ERR(r);
 	}
 
 	return 0;

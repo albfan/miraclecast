@@ -143,7 +143,6 @@ int wfd_sink_create_session(struct wfd_sink *sink, struct wfd_session **out)
 		return r;
 	}
 
-	sink->session = wfd_session_ref(sess);
 	*out = wfd_session_ref(sess);
 
 	wfd_fn_sink_properties_changed(sink, "Session");

@@ -37,6 +37,11 @@ static inline void cleanup_sd_bus_message(sd_bus_message **ptr)
 	sd_bus_message_unref(*ptr);
 }
 
+static inline void cleanup_sd_bus_creds(sd_bus_creds **ptr)
+{
+	sd_bus_creds_unref(*ptr);
+}
+
 static inline void cleanup_udev_device(struct udev_device **ptr)
 {
 	udev_device_unref(*ptr);
@@ -51,6 +56,7 @@ static inline void cleanup_udev_enumerate(struct udev_enumerate **ptr)
 #define _sd_bus_error_free_ _shl_cleanup_(sd_bus_error_free)
 #define _cleanup_sd_bus_message_ _shl_cleanup_(cleanup_sd_bus_message)
 #define _sd_bus_message_unref_ _shl_cleanup_(cleanup_sd_bus_message)
+#define _sd_bus_creds_unref_ _shl_cleanup_(cleanup_sd_bus_creds)
 #define _cleanup_udev_device_ _shl_cleanup_(cleanup_udev_device)
 #define _cleanup_udev_enumerate_ _shl_cleanup_(cleanup_udev_enumerate)
 
