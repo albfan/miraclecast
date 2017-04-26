@@ -73,7 +73,7 @@ int ctl_wfd_new(struct ctl_wfd **out, sd_event *loop, sd_bus *bus)
 
 error:
 	ctl_wfd_free(wfd);
-	return log_ERRNO();
+	return log_ERR(r);
 }
 
 static void ctl_wfd_free(struct ctl_wfd *wfd)
@@ -144,14 +144,14 @@ int ctl_wfd_add_sink(struct ctl_wfd *wfd,
 
 	r = wfd_sink_new(&s, p, sube);
 	if(0 > r) {
-		return log_ERRNO();
+		return log_ERR(r);
 	}
 
 	r = shl_htable_insert_str(&wfd->sinks,
 					wfd_sink_to_htable(s),
 					NULL);
 	if(0 > r) {
-		return log_ERRNO();
+		return log_ERR(r);
 	}
 
 	++wfd->n_sinks;
@@ -209,7 +209,7 @@ int ctl_wfd_add_session(struct ctl_wfd *wfd, struct wfd_session *s)
 
 	r = shl_htable_insert_uint(&wfd->sessions, wfd_session_to_htable(s));
 	if(0 > r) {
-		return log_ERRNO();
+		return log_ERR(r);
 	}
 
 	++wfd->n_sessions;
@@ -367,7 +367,7 @@ void ctl_fn_peer_new(struct ctl_peer *p)
 	r = wfd_sube_parse(sube_str, &sube);
 	if(0 > r) {
 		log_debug("peer %s has invalid subelement", p->label);
-		return log_vERRNO();
+		return log_vERR(r);
 	}
 
 	if(wfd_sube_device_is_sink(&sube)) {

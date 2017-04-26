@@ -83,8 +83,16 @@ enum wfd_audio_server_type
 int wfd_out_session_new(struct wfd_session **out,
 				unsigned int id,
 				struct wfd_sink *sink);
-struct wfd_session * wfd_session_ref(struct wfd_session *s);
-void wfd_session_unref(struct wfd_session *s);
+struct wfd_session * _wfd_session_ref(struct wfd_session *s);
+#define wfd_session_ref(s) ( \
+	log_debug("wfd_session_ref(%p): %d => %d", (s), *(int *) s, 1 + *(int *) s), \
+	_wfd_session_ref(s) \
+)
+void _wfd_session_unref(struct wfd_session *s);
+#define wfd_session_unref(s) { \
+	log_debug("wfd_session_unref(%p): %d => %d", (s), *(int *) s, *(int *) s - 1); \
+	_wfd_session_unref(s); \
+}
 
 void wfd_session_unrefp(struct wfd_session **s);
 unsigned int * wfd_session_to_htable(struct wfd_session *s);
@@ -117,7 +125,10 @@ int wfd_session_set_disp_dimension(struct wfd_session *s, const struct wfd_recta
 enum wfd_audio_server_type wfd_session_get_audio_type(struct wfd_session *s);
 int wfd_session_set_audio_type(struct wfd_session *s, enum wfd_audio_server_type audio_type);
 const char * wfd_session_get_audio_dev_name(struct wfd_session *s);
-int wfd_session_set_audio_dev_name(struct wfd_session *s, char *audio_dev_name);
+int wfd_session_set_audio_dev_name(struct wfd_session *s, const char *audio_dev_name);
+const char * wfd_session_get_runtime_path(struct wfd_session *s);
+int wfd_session_set_runtime_path(struct wfd_session *s,
+				const char *runtime_path);
 uid_t wfd_session_get_client_uid(struct wfd_session *s);
 int wfd_session_set_client_uid(struct wfd_session *s, uid_t uid);
 uid_t wfd_session_get_client_gid(struct wfd_session *s);

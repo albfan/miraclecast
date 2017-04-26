@@ -118,9 +118,13 @@ struct wfd_session
 	char *disp_params;
 	char *disp_auth;
 	struct wfd_rectangle disp_dimen;
-
 	enum wfd_audio_server_type audio_type;
 	char *audio_dev_name;
+
+	uid_t client_uid;
+	gid_t client_gid;
+	gid_t client_pid;
+	char *runtime_path;
 };
 
 int wfd_session_init(struct wfd_session *s,

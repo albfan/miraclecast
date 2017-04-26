@@ -71,10 +71,7 @@ static int wfd_session_do_request(struct wfd_session *s,
 	assert_ret(s);
 	assert_ret(rtsp_message_id_is_valid(id));
 	assert_ret(out);
-
-	if(!s->rtsp_disp_tbl[id].request) {
-		return log_ERR(-ENOTSUP);
-	}
+	assert_retv(s->rtsp_disp_tbl[id].request, -ENOTSUP);
 
 	r = (*s->rtsp_disp_tbl[id].request)(s, args, out);
 	if(0 > r) {
@@ -95,10 +92,7 @@ static int wfd_session_do_handle_request(struct wfd_session *s,
 	assert_ret(rtsp_message_id_is_valid(id));
 	assert_ret(req);
 	assert_ret(rep);
-
-	if(!s->rtsp_disp_tbl[id].handle_request) {
-		return log_ERR(-ENOTSUP);
-	}
+	assert_retv(s->rtsp_disp_tbl[id].handle_request, -ENOTSUP);
 
 	r = (*s->rtsp_disp_tbl[id].handle_request)(s,
 					req,
@@ -217,7 +211,6 @@ int wfd_session_teardown(struct wfd_session *s)
 	assert_ret(wfd_session_is_established(s));
 	assert_ret(session_vtbl[s->dir].teardown);
 
-
 	r = session_vtbl[s->dir].teardown(s);
 	if(0 > r) {
 		return log_ERR(r);
@@ -283,6 +276,11 @@ int wfd_session_destroy(struct wfd_session *s)
 		s->audio_dev_name = NULL;
 	}
 
+	if(s->runtime_path) {
+		free(s->runtime_path);
+		s->runtime_path = NULL;
+	}
+
 	s->rtp_ports[0] = 0;
 	s->rtp_ports[1] = 0;
 	s->last_request = RTSP_M_UNKNOWN;
@@ -292,7 +290,7 @@ int wfd_session_destroy(struct wfd_session *s)
 	return 0;
 }
 
-struct wfd_session * wfd_session_ref(struct wfd_session *s)
+struct wfd_session * _wfd_session_ref(struct wfd_session *s)
 {
 	if(s) {
 		++ s->ref;
@@ -301,7 +299,7 @@ struct wfd_session * wfd_session_ref(struct wfd_session *s)
 	return s;
 }
 
-void wfd_session_unref(struct wfd_session *s)
+void _wfd_session_unref(struct wfd_session *s)
 {
 	if(!s) {
 		return;
@@ -495,6 +493,30 @@ static int wfd_session_post_handle_request_n_reply(struct wfd_session *s,
 	return 0;
 }
 
+static int defered_destroy(struct sd_event_source *source,
+				void *userdata)
+{
+	struct wfd_session *s = userdata;
+
+	wfd_session_destroy(s);
+	wfd_session_unref(s);
+
+	return 0;
+}
+
+static inline int schedule_defered_destroy(struct wfd_session *s)
+{
+	int r = sd_event_add_defer(ctl_wfd_get_loop(),
+					NULL,
+					defered_destroy,
+					wfd_session_ref(s));
+	if(0 > r) {
+		return log_ERR(r);
+	}
+
+	return 0;
+}
+
 static int wfd_session_handle_request(struct rtsp *bus,
 				struct rtsp_message *m,
 				void *userdata)
@@ -507,13 +529,19 @@ static int wfd_session_handle_request(struct rtsp *bus,
 	time_t sec;
 	int r;
 
+	if(!m && rtsp_is_dead(bus)) {
+		if(WFD_SESSION_STATE_TEARING_DOWN != wfd_session_get_state(s)) {
+			log_info("rtsp disconnected");
+			r = log_EPIPE();
+		}
+		goto error;
+	}
+
 	id = wfd_session_message_to_id(s, m);
 	if(RTSP_M_UNKNOWN == id) {
-		if(m) {
-			log_debug("unable to map request to id: %s",
-							(char *) rtsp_message_get_raw(m));
-		}
-		r = -EPROTO;
+		log_debug("unable to map request to id: %s",
+						(char *) rtsp_message_get_raw(m));
+		r = log_ERR(-EPROTO);
 		goto error;
 	}
 
@@ -526,11 +554,13 @@ static int wfd_session_handle_request(struct rtsp *bus,
 					m,
 					&rep);
 	if(0 > r) {
+		log_vERR(r);
 		goto error;
 	}
 
 	r = sd_event_now(ctl_wfd_get_loop(), CLOCK_REALTIME, &usec);
 	if(0 > r) {
+		log_vERR(r);
 		goto error;
 	}
 
@@ -541,16 +571,19 @@ static int wfd_session_handle_request(struct rtsp *bus,
 
 	r = rtsp_message_append(rep, "<&>", "Date", date);
 	if(0 > r) {
+		log_vERR(r);
 		goto error;
 	}
 
 	r = rtsp_message_seal(rep);
 	if(0 > r) {
+		log_vERR(r);
 		goto error;
 	}
 
 	r = rtsp_send(bus, rep);
 	if(0 > r) {
+		log_vERR(r);
 		goto error;
 	}
 
@@ -560,15 +593,16 @@ static int wfd_session_handle_request(struct rtsp *bus,
 
 	r = wfd_session_post_handle_request_n_reply(s, id);
 	if(0 > r) {
+		log_vERR(r);
 		goto error;
 	}
 
 	return 0;
 
 error:
-	wfd_session_destroy(s);
+	schedule_defered_destroy(s);
 
-	return log_ERR(r);
+	return r;
 }
 
 static int wfd_session_handle_reply(struct rtsp *bus,
@@ -613,7 +647,7 @@ static int wfd_session_handle_reply(struct rtsp *bus,
 	goto end;
 
 error:
-	wfd_session_destroy(s);
+	schedule_defered_destroy(s);
 end:
 	wfd_session_unref(s);
 
@@ -628,6 +662,9 @@ int wfd_session_init(struct wfd_session *s,
 	s->ref = 1;
 	s->id = id;
 	s->dir = dir;
+	s->client_uid = -1;
+	s->client_gid = -1;
+	s->client_pid = -1;
 	s->rtsp_disp_tbl = disp_tbl;
 
 	return 0;
@@ -904,7 +941,8 @@ const char * wfd_session_get_audio_dev_name(struct wfd_session *s)
 	return s->audio_dev_name;
 }
 
-int wfd_session_set_audio_dev_name(struct wfd_session *s, char *audio_dev_name)
+int wfd_session_set_audio_dev_name(struct wfd_session *s,
+				const char *audio_dev_name)
 {
 	char *name;
 
@@ -920,6 +958,82 @@ int wfd_session_set_audio_dev_name(struct wfd_session *s, char *audio_dev_name)
 	}
 
 	s->audio_dev_name = name;
+
+	return 0;
+}
+
+const char * wfd_session_get_runtime_path(struct wfd_session *s)
+{
+	assert_retv(s, "");
+
+	return s->runtime_path;
+}
+
+int wfd_session_set_runtime_path(struct wfd_session *s,
+				const char *runtime_path)
+{
+	char *path;
+
+	assert_ret(s);
+
+	path = runtime_path ? strdup(runtime_path) : NULL;
+	if(!path) {
+		return -ENOMEM;
+	}
+
+	if(s->runtime_path) {
+		free(s->runtime_path);
+	}
+
+	s->runtime_path = path;
+
+	return 0;
+}
+
+uid_t wfd_session_get_client_uid(struct wfd_session *s)
+{
+	assert_retv(s, -1);
+
+	return s->client_uid;
+}
+
+int wfd_session_set_client_uid(struct wfd_session *s, uid_t uid)
+{
+	assert_ret(s);
+
+	s->client_uid = uid;
+
+	return 0;
+}
+
+gid_t wfd_session_get_client_gid(struct wfd_session *s)
+{
+	assert_retv(s, -1);
+
+	return s->client_gid;
+}
+
+int wfd_session_set_client_gid(struct wfd_session *s, gid_t gid)
+{
+	assert_ret(s);
+
+	s->client_gid = gid;
+
+	return 0;
+}
+
+pid_t wfd_session_get_client_pid(struct wfd_session *s)
+{
+	assert_retv(s, -1);
+
+	return s->client_pid;
+}
+
+int wfd_session_set_client_pid(struct wfd_session *s, pid_t pid)
+{
+	assert_ret(s);
+
+	s->client_pid = pid;
 
 	return 0;
 }

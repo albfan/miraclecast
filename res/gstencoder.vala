@@ -319,14 +319,13 @@ internal class GstEncoder : DispdEncoder, GLib.Object
 
 	public async void prepare() throws Error
 	{
-		conn = yield Bus.get(BusType.SYSTEM);
+		conn = yield Bus.get(BusType.SESSION);
 		conn.register_object(DispdEncoder.OBJECT_PATH, this as DispdEncoder);
 
+		string bus_info = "%s\n%s".printf(conn.unique_name,
+						BusType.get_address_sync(BusType.SESSION));
 		/* we are ready, tell parent how to communicate with us */
-		unowned string unique_name = conn.unique_name;
-		ssize_t r = Posix.write(3,
-						(void *) unique_name.data,
-						unique_name.length);
+		ssize_t r = Posix.write(3, (void *) bus_info.data, bus_info.length);
 		if(0 > r) {
 			throw new DispdEncoderError.CANT_RETURN_UNIQUE_NAME("%s",
 							Posix.strerror(Posix.errno));
