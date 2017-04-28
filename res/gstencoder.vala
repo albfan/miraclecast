@@ -171,7 +171,7 @@ internal class GstEncoder : DispdEncoder, GLib.Object
 							? configs.get(DispdEncoderConfig.RTP_PORT0).get_uint32()
 							: 16384);
 		if(configs.contains(DispdEncoderConfig.LOCAL_RTCP_PORT)) {
-			desc.append_printf("""udpsrc address="%s" "port=%u reuse=true
+			desc.append_printf("""udpsrc address="%s" port=%u reuse=true
 							! session.recv_rtcp_sink_0
 							session.send_rtcp_src_0
 							! udpsink host="%s" port=%u sync=false async=false """,
