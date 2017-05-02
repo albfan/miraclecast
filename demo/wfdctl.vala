@@ -80,6 +80,8 @@ private class WfdCtl : GLib.Application
 	static string opt_authority;
 	static int opt_monitor_num;
 	static string opt_audio_device;
+	static bool opt_dont_borrow_wnic = false;
+	static bool opt_dont_return_wnic = false;
 
 	protected signal void link_added(string index, Link link);
 	protected signal void link_removed(string index, Link link);
@@ -114,6 +116,8 @@ private class WfdCtl : GLib.Application
 		{ "display", 'd', 0, OptionArg.STRING, ref opt_display, "display name.	default: DISPLAY environment variable", "display name" },
 		{ "monitor-num", 'm', 0, OptionArg.INT, ref opt_monitor_num, "monitor number.  default: -1, primary monitor", "monitor number" },
 		{ "audio-device", 'a', 0, OptionArg.STRING, ref opt_audio_device, "pulseaudio device name", "audio device name" },
+		{ "dont-borrow", 'b', 0, OptionArg.NONE, ref opt_dont_borrow_wnic, "do not acquire the ownership of WNIC before using it", "don't borrow WNIC" },
+		{ "dont-return", 'r', 0, OptionArg.NONE, ref opt_dont_return_wnic, "do not release the ownership of WNIC after using it", "don't release WNIC" },
 		{ null },
 	};
 
@@ -552,6 +556,10 @@ private class WfdCtl : GLib.Application
 
 	private async void release_wnic_ownership() throws Error
 	{
+		if(opt_dont_return_wnic) {
+			return;
+		}
+
 		Link l = find_link_by_name(opt_iface);
 		if(null == l) {
 			throw new WfdCtlError.NO_SUCH_NIC("no such wireless adapter: %s",
@@ -575,7 +583,9 @@ private class WfdCtl : GLib.Application
 	private async void start_wireless_display() throws Error
 	{
 		fetch_info_from_dbus();
-		yield acquire_wnic_ownership();
+		if(!opt_dont_borrow_wnic) {
+			yield acquire_wnic_ownership();
+		}
 		yield start_p2p_scan();
 		yield wait_for_target_sink();
 		yield form_p2p_group();
