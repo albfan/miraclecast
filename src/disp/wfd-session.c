@@ -229,6 +229,8 @@ int wfd_session_destroy(struct wfd_session *s)
 
 	wfd_session_set_state(s, WFD_SESSION_STATE_DESTROYED);
 
+	wfd_fn_out_session_ended(s);
+
 	if(session_vtbl[s->dir].destroy) {
 		(*session_vtbl[s->dir].destroy)(s);
 	}
@@ -284,8 +286,6 @@ int wfd_session_destroy(struct wfd_session *s)
 	s->rtp_ports[0] = 0;
 	s->rtp_ports[1] = 0;
 	s->last_request = RTSP_M_UNKNOWN;
-
-	wfd_fn_out_session_ended(s);
 
 	return 0;
 }
