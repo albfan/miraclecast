@@ -8,7 +8,6 @@ After=miracle-wifid.service
 BusName=@dbus_name_prefix@.wfd
 Environment=LOG_LEVEL=trace
 ExecStart=@exec_path@/miracle-dispd
-KillSignal=SIGKILL
 
 [Install]
 WantedBy=multi-user.target
