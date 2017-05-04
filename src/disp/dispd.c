@@ -349,8 +349,8 @@ void ctl_fn_peer_new(struct ctl_peer *p)
 	int r;
 
 	log_debug("new peer %s (%s) shows up, wfd_subelems: '%s'",
-					p->friendly_name,
 					p->label,
+					p->friendly_name,
 					p->wfd_subelements);
 
 	if(!p->wfd_subelements || !*p->wfd_subelements) {
