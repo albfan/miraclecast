@@ -110,7 +110,7 @@ private class WfdCtl : GLib.Application
 
 	const GLib.OptionEntry[] option_entries = {
 		{ "interface", 'i', 0, OptionArg.STRING, ref opt_iface, "name of wireless network interface", "WNIC name" },
-		{ "wfd-subelems", 'w', 0, OptionArg.STRING, ref opt_wfd_subelems, "device infomation.  default: 000600111c4400c8", "device info subelems" },
+		{ "wfd-subelems", 'w', 0, OptionArg.STRING, ref opt_wfd_subelems, "device infomation.  default: 000600001c4400c8", "device info subelems" },
 		{ "peer-mac", 'p', 0, OptionArg.STRING, ref opt_peer_mac, "MAC address of target peer", "peer MAC" },
 		{ "authority", 'x', 0, OptionArg.STRING, ref opt_authority, "authority to capture from display. default: XAUTHORITY environment variable", "display authority" },
 		{ "display", 'd', 0, OptionArg.STRING, ref opt_display, "display name.	default: DISPLAY environment variable", "display name" },
@@ -638,7 +638,7 @@ private class WfdCtl : GLib.Application
 		print("interface=%s", opt_iface);
 
 		if(null == opt_wfd_subelems) {
-			opt_wfd_subelems = "000600111c4400c8";
+			opt_wfd_subelems = "000600001c4400c8";
 		}
 		print("wfd_subelemens=%s", opt_wfd_subelems);
 
