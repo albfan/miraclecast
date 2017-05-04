@@ -21,7 +21,7 @@ install(
     DESTINATION ${SYSTEMD_SYSTEM_UNIT_DIR}/
     )
 install(
-    CODE "execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink miracle-wifid.service ${SYSTEMD_SYSTEM_UNIT_DIR}/dbus-org.freedesktop.miracle.wifi.service)"
+	CODE "execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink miracle-wifid.service \$ENV{DESTDIR}/${SYSTEMD_SYSTEM_UNIT_DIR}/dbus-org.freedesktop.miracle.wifi.service)"
     )
 
 configure_file(
@@ -33,7 +33,7 @@ install(
     DESTINATION ${SYSTEMD_SYSTEM_UNIT_DIR}/
     )
 install(
-    CODE "execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink miracle-dispd.service ${SYSTEMD_SYSTEM_UNIT_DIR}/dbus-org.freedesktop.miracle.wfd.service)"
+	CODE "execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink miracle-dispd.service \$ENV{DESTDIR}/${SYSTEMD_SYSTEM_UNIT_DIR}/dbus-org.freedesktop.miracle.wfd.service)"
     )
 
 configure_file(
