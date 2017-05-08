@@ -18,9 +18,9 @@ endif()
 
 vala_precompile(WFDCTL_SRC wfdctl
 					wfdctl.vala
-					org-freedesktop-networkmanager.vala
-					org-freedesktop-miracle-wifi.vala
-					org-freedesktop-miracle-wfd.vala
+					networkmanager.vala
+					miracle-wifi.vala
+					miracle-wfd.vala
 				GENERATE_HEADER
 					wfdctl.h
 				CUSTOM_VAPIS
