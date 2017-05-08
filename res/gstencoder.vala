@@ -132,11 +132,19 @@ internal class GstEncoder : DispdEncoder, GLib.Object
 						"ximagesrc name=vsrc use-damage=false show-pointer=false " +
 							"startx=%u starty=%u endx=%u endy=%u " +
 						"! video/x-raw, framerate=%u/1 " +
-						"! videoscale method=0 " +
-						"! video/x-raw, width=1920, height=1080 " +
-						"! videoconvert dither=0 " +
-						"! video/x-raw, format=YV12 " +
-						"! x264enc pass=4 b-adapt=false key-int-max=%u speed-preset=4 tune=4 " +
+						"! vaapipostproc " +
+							"scale-method=2 " +		/* high quality scaling mode */
+							/* "format=3 " + */			/* yv12" */
+						"! video/x-raw, format=YV12, width=1920, height=1080 " +
+						"! vaapih264enc " +
+							"rate-control=1 " +
+							"num-slices=1 " +		/* in WFD spec, one slice per frame */
+							"max-bframes=0 " +		/* in H264 CHP, no bframe supporting */
+							"cabac=true " +			/* in H264 CHP, CABAC entropy codeing is supported, but need more processing to decode */
+							"dct8x8=true " +		/* in H264 CHP, DTC is supported */
+							"cpb-length=50 " +		/* shortent buffer in order to decrease latency */
+							"keyframe-period=30 " +
+							/* "bitrate=62500 " + *//* the max bitrate of H264 level 4.2, crashing my dongle, let codec decide */
 						"! h264parse " +
 						"! video/x-h264, alignment=nal, stream-format=byte-stream " +
 						"%s " +
@@ -159,7 +167,6 @@ internal class GstEncoder : DispdEncoder, GLib.Object
 						configs.contains(DispdEncoderConfig.HEIGHT)
 							? configs.get(DispdEncoderConfig.HEIGHT).get_uint32() - 1
 							: 1079,
-						framerate,
 						framerate,
 						configs.contains(DispdEncoderConfig.AUDIO_TYPE)
 							? "! queue max-size-buffers=0 max-size-bytes=0"
