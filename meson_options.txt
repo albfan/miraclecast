@@ -10,7 +10,3 @@ option('build-tests',
   type: 'boolean',
   value: true,
   description: 'Enable TEST')
-option('build-demo',
-  type: 'boolean',
-  value: false,
-  description: 'Enable DEMO')

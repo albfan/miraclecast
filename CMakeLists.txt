@@ -12,7 +12,6 @@ SET(BUILD_BINDIR "${CMAKE_INSTALL_PREFIX}/bin")
 OPTION(BUILD_ENABLE_DEBUG "Enable Debug" ON )
 OPTION(RELY_UDEV "Rely in udev tag to select device" OFF )
 OPTION(BUILD_TESTS "Enable TEST" ON )
-OPTION(BUILD_DEMO "Enable DEMO" OFF )
 
 if(BUILD_ENABLE_DEBUG)
     add_definitions(-DBUILD_ENABLE_DEBUG)
@@ -53,8 +52,4 @@ CONFIGURE_FILE(${CMAKE_SOURCE_DIR}/config.h.cmake ${CMAKE_BINARY_DIR}/config.h)
 add_subdirectory(src)
 add_subdirectory(res)
 add_subdirectory(test)
-
-if(BUILD_DEMO)
-	add_subdirectory(demo)
-endif()
 
