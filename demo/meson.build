@@ -12,9 +12,9 @@ endif
 miracle_wfdctl_src = ['wfdctl.vala',
   'sigint.vapi',
   'sigint.c',
-  'org-freedesktop-networkmanager.vala',
-  'org-freedesktop-miracle-wifi.vala',
-  'org-freedesktop-miracle-wfd.vala'
+  'networkmanager.vala',
+  'miracle-wifi.vala',
+  'miracle-wfd.vala'
 ]
 
 executable('miracle-wfdctl', miracle_wfdctl_src,
