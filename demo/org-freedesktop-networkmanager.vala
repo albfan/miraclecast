@@ -8,100 +8,100 @@ namespace Org {
 
 		namespace NetworkManager {
 
-			[DBus (name = "org.freedesktop.NetworkManager.Device", timeout = 120000)]
+			[DBus (name = "org.freedesktop.NetworkManager.Device")]
 			public interface Device : GLib.Object {
 
-				[DBus (name = "Reapply")]
+				[DBus (name = "Reapply", timeout = 120000)]
 				public abstract void reapply(GLib.HashTable<string, GLib.HashTable<string, GLib.Variant>> connection, uint64 version_id, uint flags) throws DBusError, IOError;
 
-				[DBus (name = "GetAppliedConnection")]
+				[DBus (name = "GetAppliedConnection", timeout = 120000)]
 				public abstract void get_applied_connection(uint flags, out GLib.HashTable<string, GLib.HashTable<string, GLib.Variant>> connection, out uint64 version_id) throws DBusError, IOError;
 
-				[DBus (name = "Disconnect")]
+				[DBus (name = "Disconnect", timeout = 120000)]
 				public abstract void disconnect() throws DBusError, IOError;
 
-				[DBus (name = "Delete")]
+				[DBus (name = "Delete", timeout = 120000)]
 				public abstract void delete() throws DBusError, IOError;
 
-				[DBus (name = "StateChanged")]
+				[DBus (name = "StateChanged", timeout = 120000)]
 				public signal void state_changed(uint new_state, uint old_state, uint reason);
 
-				[DBus (name = "Udi")]
+				[DBus (name = "Udi", timeout = 120000)]
 				public abstract string udi { owned get; }
 
-				[DBus (name = "Interface")]
+				[DBus (name = "Interface", timeout = 120000)]
 				public abstract string interface { owned get; }
 
-				[DBus (name = "IpInterface")]
+				[DBus (name = "IpInterface", timeout = 120000)]
 				public abstract string ip_interface { owned get; }
 
-				[DBus (name = "Driver")]
+				[DBus (name = "Driver", timeout = 120000)]
 				public abstract string driver { owned get; }
 
-				[DBus (name = "DriverVersion")]
+				[DBus (name = "DriverVersion", timeout = 120000)]
 				public abstract string driver_version { owned get; }
 
-				[DBus (name = "FirmwareVersion")]
+				[DBus (name = "FirmwareVersion", timeout = 120000)]
 				public abstract string firmware_version { owned get; }
 
-				[DBus (name = "Capabilities")]
+				[DBus (name = "Capabilities", timeout = 120000)]
 				public abstract uint capabilities {  get; }
 
-				[DBus (name = "Ip4Address")]
+				[DBus (name = "Ip4Address", timeout = 120000)]
 				public abstract uint ip4_address {	get; }
 
-				[DBus (name = "State")]
+				[DBus (name = "State", timeout = 120000)]
 				public abstract uint state {  get; }
 
-				[DBus (name = "StateReason")]
+				[DBus (name = "StateReason", timeout = 120000)]
 				public abstract DeviceStateReasonStruct state_reason { owned get; }
 
-				[DBus (name = "ActiveConnection")]
+				[DBus (name = "ActiveConnection", timeout = 120000)]
 				public abstract GLib.ObjectPath active_connection { owned get; }
 
-				[DBus (name = "Ip4Config")]
+				[DBus (name = "Ip4Config", timeout = 120000)]
 				public abstract GLib.ObjectPath ip4_config { owned get; }
 
-				[DBus (name = "Dhcp4Config")]
+				[DBus (name = "Dhcp4Config", timeout = 120000)]
 				public abstract GLib.ObjectPath dhcp4_config { owned get; }
 
-				[DBus (name = "Ip6Config")]
+				[DBus (name = "Ip6Config", timeout = 120000)]
 				public abstract GLib.ObjectPath ip6_config { owned get; }
 
-				[DBus (name = "Dhcp6Config")]
+				[DBus (name = "Dhcp6Config", timeout = 120000)]
 				public abstract GLib.ObjectPath dhcp6_config { owned get; }
 
-				[DBus (name = "Managed")]
+				[DBus (name = "Managed", timeout = 120000)]
 				public abstract bool managed {	get; set; }
 
-				[DBus (name = "Autoconnect")]
+				[DBus (name = "Autoconnect", timeout = 120000)]
 				public abstract bool autoconnect {	get; set; }
 
-				[DBus (name = "FirmwareMissing")]
+				[DBus (name = "FirmwareMissing", timeout = 120000)]
 				public abstract bool firmware_missing {  get; }
 
-				[DBus (name = "NmPluginMissing")]
+				[DBus (name = "NmPluginMissing", timeout = 120000)]
 				public abstract bool nm_plugin_missing {  get; }
 
-				[DBus (name = "DeviceType")]
+				[DBus (name = "DeviceType", timeout = 120000)]
 				public abstract uint device_type {	get; }
 
-				[DBus (name = "AvailableConnections")]
+				[DBus (name = "AvailableConnections", timeout = 120000)]
 				public abstract GLib.ObjectPath[] available_connections { owned get; }
 
-				[DBus (name = "PhysicalPortId")]
+				[DBus (name = "PhysicalPortId", timeout = 120000)]
 				public abstract string physical_port_id { owned get; }
 
-				[DBus (name = "Mtu")]
+				[DBus (name = "Mtu", timeout = 120000)]
 				public abstract uint mtu {	get; }
 
-				[DBus (name = "Metered")]
+				[DBus (name = "Metered", timeout = 120000)]
 				public abstract uint metered {	get; }
 
-				[DBus (name = "LldpNeighbors")]
+				[DBus (name = "LldpNeighbors", timeout = 120000)]
 				public abstract GLib.HashTable<string, GLib.Variant>[] lldp_neighbors { owned get; }
 
-				[DBus (name = "Real")]
+				[DBus (name = "Real", timeout = 120000)]
 				public abstract bool real {  get; }
 
 				public struct DeviceStateReasonStruct {

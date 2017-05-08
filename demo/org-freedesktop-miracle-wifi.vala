@@ -10,37 +10,37 @@ namespace Org {
 
 			namespace Wifi {
 
-				[DBus (name = "org.freedesktop.miracle.wifi.Peer", timeout = 120000)]
+				[DBus (name = "org.freedesktop.miracle.wifi.Peer")]
 				public interface Peer : GLib.Object {
 
-					[DBus (name = "Connect")]
+					[DBus (name = "Connect", timeout = 120000)]
 					public abstract void connect(string param0, string param1) throws DBusError, IOError;
 
-					[DBus (name = "Disconnect")]
+					[DBus (name = "Disconnect", timeout = 120000)]
 					public abstract void disconnect() throws DBusError, IOError;
 
-					[DBus (name = "Link")]
+					[DBus (name = "Link", timeout = 120000)]
 					public abstract GLib.ObjectPath link { owned get; }
 
-					[DBus (name = "P2PMac")]
+					[DBus (name = "P2PMac", timeout = 120000)]
 					public abstract string p2p_mac { owned get; }
 
-					[DBus (name = "FriendlyName")]
+					[DBus (name = "FriendlyName", timeout = 120000)]
 					public abstract string friendly_name { owned get; }
 
-					[DBus (name = "Connected")]
+					[DBus (name = "Connected", timeout = 120000)]
 					public abstract bool connected {  get; }
 
-					[DBus (name = "Interface")]
+					[DBus (name = "Interface", timeout = 120000)]
 					public abstract string interface { owned get; }
 
-					[DBus (name = "LocalAddress")]
+					[DBus (name = "LocalAddress", timeout = 120000)]
 					public abstract string local_address { owned get; }
 
-					[DBus (name = "RemoteAddress")]
+					[DBus (name = "RemoteAddress", timeout = 120000)]
 					public abstract string remote_address { owned get; }
 
-					[DBus (name = "WfdSubelements")]
+					[DBus (name = "WfdSubelements", timeout = 120000)]
 					public abstract string wfd_subelements { owned get; }
 
 					[DBus (name = "ProvisionDiscovery")]
@@ -53,37 +53,37 @@ namespace Org {
 					public signal void formation_failure(string param0);
 				}
 
-				[DBus (name = "org.freedesktop.miracle.wifi.Link", timeout = 120000)]
+				[DBus (name = "org.freedesktop.miracle.wifi.Link")]
 				public interface Link : GLib.Object {
 
-					[DBus (name = "Manage")]
+					[DBus (name = "Manage", timeout = 120000)]
 					public abstract void manage() throws DBusError, IOError;
 
-					[DBus (name = "Unmanage")]
+					[DBus (name = "Unmanage", timeout = 120000)]
 					public abstract void unmanage() throws DBusError, IOError;
 
-					[DBus (name = "InterfaceIndex")]
+					[DBus (name = "InterfaceIndex", timeout = 120000)]
 					public abstract uint interface_index {  get; }
 
-					[DBus (name = "MACAddress")]
+					[DBus (name = "MACAddress", timeout = 120000)]
 					public abstract string m_a_c_address { owned get; }
 
-					[DBus (name = "InterfaceName")]
+					[DBus (name = "InterfaceName", timeout = 120000)]
 					public abstract string interface_name { owned get; }
 
-					[DBus (name = "FriendlyName")]
+					[DBus (name = "FriendlyName", timeout = 120000)]
 					public abstract string friendly_name { owned get; set; }
 
-					[DBus (name = "Managed")]
+					[DBus (name = "Managed", timeout = 120000)]
 					public abstract bool managed {  get; }
 
-					[DBus (name = "P2PState")]
+					[DBus (name = "P2PState", timeout = 120000)]
 					public abstract int p2p_state {  get; }
 
-					[DBus (name = "P2PScanning")]
+					[DBus (name = "P2PScanning", timeout = 120000)]
 					public abstract bool p2p_scanning {  get; set; }
 
-					[DBus (name = "WfdSubelements")]
+					[DBus (name = "WfdSubelements", timeout = 120000)]
 					public abstract string wfd_subelements { owned get; set; }
 				}
 			}

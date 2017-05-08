@@ -64,31 +64,38 @@ install(
     DESTINATION /etc/dbus-1/system.d 
     )
 
-find_program(VALAC valac)
-if(NOT VALAC)
-	message(FATAL_ERROR "valac not found")
-endif()
-
-add_custom_command(OUTPUT gstencoder.c
-				COMMAND ${VALAC} --target-glib=2.50 -C
-								--pkg=gstreamer-1.0
-								--pkg=gio-2.0
-								--pkg=posix
-								${CMAKE_CURRENT_SOURCE_DIR}/gstencoder.vala
-				DEPENDS gstencoder.vala
-				WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
-
-include_directories(${GIO2_INCLUDE_DIRS}
-					${GDK3_INCLUDE_DIRS}
-					${CMAKE_CURRENT_SOURCE_DIR})
-
-pkg_check_modules(GST1 REQUIRED gstreamer-1.0)
+include(ValaPrecompile)
 pkg_check_modules(GIO2 REQUIRED gio-2.0)
+pkg_check_modules(GDK3 REQUIRED gdk-3.0)
+pkg_check_modules(GST1 REQUIRED gstreamer-1.0)
 
-include_directories(${GST1_INCLUDE_DIRS} ${GIO_INCLUDE_DIRS})
+include_directories(
+	${GST1_INCLUDE_DIRS}
+	${GDK3_INCLUDE_DIRS}
+	${GIO_INCLUDE_DIRS}
+	)
 
-add_executable(gstencoder gstencoder)
+set(CMAKE_C_FLAGS "-Wno-deprecated-declarations ${CMAKE_C_FLAGS}")
+set(CMAKE_C_FLAGS "-Wno-unused-but-set-variable ${CMAKE_C_FLAGS}")
+set(CMAKE_C_FLAGS "-Wno-missing-braces ${CMAKE_C_FLAGS}")
 
-target_link_libraries(gstencoder ${GST1_LIBRARIES} ${GIO2_LIBRARIES})
+vala_precompile(
+	GSTENCODER_SRC gstencoder
+		gstencoder.vala
+	OPTIONS
+		--target-glib=2.50
+	PACKAGES
+		gstreamer-1.0
+		gio-2.0
+		posix
+	)
+
+add_executable(gstencoder ${GSTENCODER_SRC})
+target_link_libraries(
+	gstencoder
+	${GST1_LIBRARIES}
+	${GDK3_LIBRARIES}
+	${GIO2_LIBRARIES}
+	)
 
 install(TARGETS gstencoder DESTINATION bin)
