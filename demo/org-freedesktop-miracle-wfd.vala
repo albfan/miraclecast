@@ -10,38 +10,38 @@ namespace Org {
 
 			namespace Wfd {
 
-				[DBus (name = "org.freedesktop.miracle.wfd.Sink", timeout = 120000)]
+				[DBus (name = "org.freedesktop.miracle.wfd.Sink")]
 				public interface Sink : GLib.Object {
 
-					[DBus (name = "StartSession")]
+					[DBus (name = "StartSession", timeout = 120000)]
 					public abstract GLib.ObjectPath start_session(string param0, string param1, uint param2, uint param3, uint param4, uint param5, string param6) throws DBusError, IOError;
 
-					[DBus (name = "Session")]
+					[DBus (name = "Session", timeout = 120000)]
 					public abstract GLib.ObjectPath session { owned get; }
 
-					[DBus (name = "Peer")]
+					[DBus (name = "Peer", timeout = 120000)]
 					public abstract GLib.ObjectPath peer { owned get; }
 				}
 
-				[DBus (name = "org.freedesktop.miracle.wfd.Session", timeout = 120000)]
+				[DBus (name = "org.freedesktop.miracle.wfd.Session")]
 				public interface Session : GLib.Object {
 
-					[DBus (name = "Resume")]
+					[DBus (name = "Resume", timeout = 120000)]
 					public abstract void resume() throws DBusError, IOError;
 
-					[DBus (name = "Pause")]
+					[DBus (name = "Pause", timeout = 120000)]
 					public abstract void pause() throws DBusError, IOError;
 
-					[DBus (name = "Teardown")]
+					[DBus (name = "Teardown", timeout = 120000)]
 					public abstract void teardown() throws DBusError, IOError;
 
-					[DBus (name = "Sink")]
+					[DBus (name = "Sink", timeout = 120000)]
 					public abstract GLib.ObjectPath sink { owned get; }
 
-					[DBus (name = "Url")]
+					[DBus (name = "Url", timeout = 120000)]
 					public abstract string url { owned get; }
 
-					[DBus (name = "State")]
+					[DBus (name = "State", timeout = 120000)]
 					public abstract int state {  get; }
 				}
 			}

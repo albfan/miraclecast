@@ -46,9 +46,8 @@ errordomain WfdCtlError
 
 private void print(string format, ...)
 {
-	var argv = va_list();
 	stderr.printf("%s: ", Environment.get_prgname());
-	stderr.vprintf(format, argv);
+	stderr.vprintf(format, va_list());
 	stderr.printf("\n");
 }
 
