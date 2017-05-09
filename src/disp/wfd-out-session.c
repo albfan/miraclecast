@@ -32,6 +32,7 @@
 
 #define LOCAL_RTP_PORT		16384
 #define LOCAL_RTCP_PORT		16385
+#define KEEP_ALIVE_INTERVAL	30
 
 struct wfd_out_session
 {
@@ -40,11 +41,14 @@ struct wfd_out_session
 	int fd;
 
 	struct dispd_encoder *encoder;
+
+	sd_event_source *keep_alive_timer;
 };
 
 static void on_encoder_state_changed(struct dispd_encoder *e,
 				enum dispd_encoder_state state,
 				void *userdata);
+static void wfd_out_session_cancel_sink_alive_checking(struct wfd_session *s);
 
 static const struct rtsp_dispatch_entry out_session_rtsp_disp_tbl[];
 
@@ -224,6 +228,9 @@ void wfd_out_session_destroy(struct wfd_session *s)
 	assert_vret(s);
 
 	os = wfd_out_session(s);
+
+	wfd_out_session_cancel_sink_alive_checking(s);
+
 	if(0 <= os->fd) {
 		close(os->fd);
 		os->fd = -1;
@@ -531,7 +538,6 @@ static int wfd_out_session_handle_play_request(struct wfd_session *s,
 	if(0 > r) {
 		return log_ERR(r);
 	}
-	
 	r = rtsp_message_append(m, "<&>", "Session", v);
 	if(0 > r) {
 		return log_ERR(r);
@@ -597,6 +603,103 @@ static void on_encoder_state_changed(struct dispd_encoder *e,
 	return;
 }
 
+static int wfd_out_session_request_keep_alive(struct wfd_session *s,
+				struct rtsp *bus,
+				const struct wfd_arg_list *args,
+				struct rtsp_message **out)
+{
+	_rtsp_message_unref_ struct rtsp_message *m = NULL;
+	_shl_free_ char *sess = NULL;
+	int r;
+
+	r = rtsp_message_new_request(bus,
+					&m,
+					"GET_PARAMETER",
+					"rtsp://localhost/wfd1.0");
+	if(0 > r) {
+		return log_ERR(r);
+	}
+
+	r = asprintf(&sess, "%X", wfd_session_get_id(s));
+	if(0 > r) {
+		return log_ERR(r);
+	}
+
+	r = rtsp_message_append(m, "<&>", "Session", sess);
+	if(0 > r) {
+		return log_ERR(r);
+	}
+
+	*out = (rtsp_message_ref(m), m);
+
+	return 0;
+}
+
+static int wfd_out_session_check_sink_alive(sd_event_source *source,
+				uint64_t usec,
+				void *userdata)
+{
+	struct wfd_session *s = userdata;
+
+	wfd_session_request(s, RTSP_M16_KEEPALIVE, NULL);
+
+	return 0;
+}
+
+static int wfd_out_session_init_sink_alive_checking(struct wfd_session *s)
+{
+	struct wfd_out_session *os = wfd_out_session(s);
+	uint64_t now;
+	int r;
+
+	assert_ret(s);
+
+	if(os->keep_alive_timer) {
+		return 0;
+	}
+
+	r = sd_event_now(ctl_wfd_get_loop(), CLOCK_MONOTONIC, &now);
+	if(0 > r) {
+		return log_ERR(r);
+	}
+
+	/* WFD Spec, Section 6.5.1
+	 * A WFD Source shall send RTSP M16 request messages and the time interval
+	 * of two successive
+	 * RTSP M16 request messages shall be smaller than the timeout value set by
+	 * the RTSP M6
+	 * response message minus 5 seconds. */
+	r = sd_event_add_time(ctl_wfd_get_loop(),
+					&os->keep_alive_timer,
+					CLOCK_MONOTONIC,
+					now + (KEEP_ALIVE_INTERVAL - 5) * 1000 * 1000,
+					0,
+					wfd_out_session_check_sink_alive,
+					wfd_session_ref(s));
+	if(0 > r) {
+		return log_ERR(r);
+	}
+
+	return 0;
+}
+
+static void wfd_out_session_cancel_sink_alive_checking(struct wfd_session *s)
+{
+	struct wfd_out_session *os = wfd_out_session(s);
+
+	assert_vret(s);
+
+	if(!os->keep_alive_timer) {
+		return;
+	}
+
+	sd_event_source_set_enabled(os->keep_alive_timer, false);
+	sd_event_source_unref(os->keep_alive_timer);
+	os->keep_alive_timer = NULL;
+
+	wfd_session_unref(s);
+}
+
 static int wfd_out_session_handle_setup_request(struct wfd_session *s,
 				struct rtsp_message *req,
 				struct rtsp_message **out_rep)
@@ -649,7 +752,9 @@ static int wfd_out_session_handle_setup_request(struct wfd_session *s,
 		return log_ERRNO();
 	}
 
-	r = asprintf(&sess, "%X;timeout=30", wfd_session_get_id(s));
+	r = asprintf(&sess, "%X;timeout=%d",
+					wfd_session_get_id(s),
+					KEEP_ALIVE_INTERVAL);
 	if(0 > r) {
 		return log_ERRNO();
 	}
@@ -676,6 +781,8 @@ static int wfd_out_session_handle_setup_request(struct wfd_session *s,
 	if(DISPD_ENCODER_STATE_SPAWNED == dispd_encoder_get_state(os->encoder)) {
 		dispd_encoder_configure(os->encoder, s);
 	}
+
+	wfd_out_session_init_sink_alive_checking(s);
 
 	*out_rep = (rtsp_message_ref(m), m);
 
@@ -883,5 +990,6 @@ static const struct rtsp_dispatch_entry out_session_rtsp_disp_tbl[] = {
 		.handle_request = wfd_out_session_request_not_implement
 	},
 	[RTSP_M16_KEEPALIVE]			= {
+		.request = wfd_out_session_request_keep_alive,
 	},
 };
