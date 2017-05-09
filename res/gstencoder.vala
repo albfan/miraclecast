@@ -118,56 +118,105 @@ internal class GstEncoder : DispdEncoder, GLib.Object
 		}
 	}
 
+	string gen_scaler_n_converter_desc(uint32 width, uint32 height)
+	{
+		if(null != Gst.ElementFactory.find("vaapih264enc")) {
+			return ("! vaapipostproc " +
+							"scale-method=2 " +
+							"format=3 " +
+							"force-aspect-ratio=true " +
+					"! video/x-raw, " +
+							"format=YV12, " +
+							"width=%u, " +
+							"height=%u ").printf(width, height);
+		}
+
+		info("since vaapih264enc is not available, vaapipostproc can't be " +
+						"trusted, use videoscale+videoconvert instead");
+
+		return ("! videoscale method=0 add-borders=true " +
+			"! video/x-raw, width=%u, height=%u " +
+			"! videoconvert " +
+			"! video/x-raw, format=YV12 ").printf(width, height);
+	}
+
+	string gen_encoder_desc(uint32 framerate)
+	{
+		if(null != Gst.ElementFactory.find("vaapih264enc")) {
+				return ("! vaapih264enc " +
+							"rate-control=1 " +
+							"num-slices=1 " +      /* in WFD spec, one slice per frame */
+							"max-bframes=0 " +     /* in H264 CHP, no bframe supporting */
+							"cabac=true " +        /* in H264 CHP, CABAC entropy codeing is supported, but need more processing to decode */
+							"dct8x8=true " +       /* in H264 CHP, DTC is supported */
+							"cpb-length=1000 " +   /* shortent buffer in order to decrease latency */
+							"keyframe-period=%u ").printf(framerate);
+		}
+
+		info("vaapih264enc not available, use x264enc instead");
+
+		return ("! x264enc pass=4 b-adapt=false key-int-max=%u " +
+						"speed-preset=4 tune=4 ").printf(framerate);
+	}
+
 	public void configure(HashTable<DispdEncoderConfig, Variant> configs) throws DispdEncoderError
 	{
-		//if(DispdEncoderState.NULL != state) {
-			//throw new DispdEncoderError.INVALID_STATE("already configured");
-		//}
-
 		uint32 framerate = configs.contains(DispdEncoderConfig.FRAMERATE)
 						? configs.get(DispdEncoderConfig.FRAMERATE).get_uint32()
 						: 30;
+		uint32 width = configs.contains(DispdEncoderConfig.WIDTH)
+			? configs.get(DispdEncoderConfig.WIDTH).get_uint32()
+			: 1920;
+		uint32 height = configs.contains(DispdEncoderConfig.HEIGHT)
+			? configs.get(DispdEncoderConfig.HEIGHT).get_uint32()
+			: 1080;
 		StringBuilder desc = new StringBuilder();
 		desc.append_printf(
-						"ximagesrc name=vsrc use-damage=false show-pointer=false " +
+						"ximagesrc " +
+							"name=vsrc " +
+							"use-damage=false " +
+							"show-pointer=false " +
 							"startx=%u starty=%u endx=%u endy=%u " +
-						"! video/x-raw, framerate=%u/1 " +
-						"! vaapipostproc " +
-							"scale-method=2 " +		/* high quality scaling mode */
-							/* "format=3 " + */			/* yv12" */
-						"! video/x-raw, format=YV12, width=1920, height=1080 " +
-						"! vaapih264enc " +
-							"rate-control=1 " +
-							"num-slices=1 " +		/* in WFD spec, one slice per frame */
-							"max-bframes=0 " +		/* in H264 CHP, no bframe supporting */
-							"cabac=true " +			/* in H264 CHP, CABAC entropy codeing is supported, but need more processing to decode */
-							"dct8x8=true " +		/* in H264 CHP, DTC is supported */
-							"cpb-length=50 " +		/* shortent buffer in order to decrease latency */
-							"keyframe-period=30 " +
-							/* "bitrate=62500 " + *//* the max bitrate of H264 level 4.2, crashing my dongle, let codec decide */
+						"! video/x-raw, " +
+							"framerate=%u/1 " +
+						"%s" +						/* scaling & color space convertion */
+						"%s" +						/* encoding */
 						"! h264parse " +
-						"! video/x-h264, alignment=nal, stream-format=byte-stream " +
-						"%s " +
-						"! mpegtsmux name=muxer " +
+						"! video/x-h264, " +
+							"alignment=nal, " +
+							"stream-format=byte-stream " +
+						"%s " +						/* add queue if audio enabled */
+						"! mpegtsmux " +
+							"name=muxer " +
 						"! rtpmp2tpay " +
-						"! .send_rtp_sink_0 rtpbin name=session do-retransmission=true " +
-							"do-sync-event=true do-lost=true ntp-time-source=3 " +
-							"buffer-mode=0 latency=20 max-misorder-time=30 " +
+						"! .send_rtp_sink_0 " +
+						"rtpbin " +
+							"name=session " +
+							"rtp-profile=1 " + 			/* avp */
+							"do-retransmission=true " +
+							"do-sync-event=true " +
+							"do-lost=true " +
+							"ntp-time-source=3 " + 		/* pipeline clock time */
+							"buffer-mode=0 " +
+							"latency=40 " +
+							"max-misorder-time=50 " +
 						"! application/x-rtp " +
-						"! udpsink sync=false async=false host=\"%s\" port=%u ",
+						"! udpsink " +
+							"sync=false " +
+							"async=false " +
+							"host=\"%s\" " +
+							"port=%u ",
 						configs.contains(DispdEncoderConfig.X)
 							? configs.get(DispdEncoderConfig.X).get_uint32()
 							: 0,
 						configs.contains(DispdEncoderConfig.Y)
 							? configs.get(DispdEncoderConfig.Y).get_uint32()
 							: 0,
-						configs.contains(DispdEncoderConfig.WIDTH)
-							? configs.get(DispdEncoderConfig.WIDTH).get_uint32() - 1
-							: 1919,
-						configs.contains(DispdEncoderConfig.HEIGHT)
-							? configs.get(DispdEncoderConfig.HEIGHT).get_uint32() - 1
-							: 1079,
+						width - 1,
+						height - 1,
 						framerate,
+						gen_scaler_n_converter_desc(width, height),
+						gen_encoder_desc(framerate),
 						configs.contains(DispdEncoderConfig.AUDIO_TYPE)
 							? "! queue max-size-buffers=0 max-size-bytes=0"
 							: "",
@@ -178,10 +227,17 @@ internal class GstEncoder : DispdEncoder, GLib.Object
 							? configs.get(DispdEncoderConfig.RTP_PORT0).get_uint32()
 							: 16384);
 		if(configs.contains(DispdEncoderConfig.LOCAL_RTCP_PORT)) {
-			desc.append_printf("""udpsrc address="%s" port=%u reuse=true
-							! session.recv_rtcp_sink_0
-							session.send_rtcp_src_0
-							! udpsink host="%s" port=%u sync=false async=false """,
+			desc.append_printf("udpsrc " +
+								"address=\"%s\" " +
+								"port=%u " +
+								"reuse=true " +
+							"! session.recv_rtcp_sink_0 " +
+							"session.send_rtcp_src_0 " +
+							"! udpsink " +
+								"host=\"%s\" " +
+								"port=%u " +
+								"sync=false " +
+								"async=false ",
 							configs.contains(DispdEncoderConfig.LOCAL_ADDRESS)
 								? configs.get(DispdEncoderConfig.LOCAL_ADDRESS).get_string()
 								: "",
@@ -196,7 +252,7 @@ internal class GstEncoder : DispdEncoder, GLib.Object
 								: 16385);
 		}
 
-		info("pipeline description: %s", desc.str);
+		info("final pipeline description: %s", desc.str);
 
 		this.configs = configs;
 
@@ -241,63 +297,6 @@ internal class GstEncoder : DispdEncoder, GLib.Object
 //		*tmp ++ = "muxer.";
 //		*tmp ++ = NULL;
 //	}
-//
-//	/* bad pratice, but since we are in the same process,
-//	   I think this is the only way to do it */
-//	if(WFD_DISPLAY_TYPE_X == os->display_type) {
-//		r = setenv("XAUTHORITY", os->authority, 1);
-//		if(0 > r) {
-//			return r;
-//		}
-//
-//		r = setenv("DISPLAY", os->display_name, 1);
-//		if(0 > r) {
-//			return r;
-//		}
-//
-//		if(!os->display_param_name) {
-//			snprintf(vsrc_param1, sizeof(vsrc_param1), "startx=%hu", os->x);
-//			snprintf(vsrc_param2, sizeof(vsrc_param2), "starty=%hu", os->y);
-//			snprintf(vsrc_param3, sizeof(vsrc_param3), "endx=%d", os->x + os->width - 1);
-//			snprintf(vsrc_param4, sizeof(vsrc_param4), "endy=%d", os->y + os->height - 1);
-//		}
-//		else if(!strcmp("xid", os->display_param_name) ||
-//						!strcmp("xname", os->display_param_name)) {
-//			snprintf(vsrc_param1, sizeof(vsrc_param1),
-//					"%s=\"%s\"",
-//					os->display_param_name,
-//					os->display_param_value);
-//		}
-//	}
-//
-//	pipeline = gst_parse_launchv(pipeline_desc, &error);
-//	if(!pipeline) {
-//		if(error) {
-//			log_error("failed to create pipeline: %s", error->message);
-//			g_error_free(error);
-//		}
-//		return -1;
-//	}
-//
-//	vsrc = gst_bin_get_by_name(GST_BIN(pipeline), "vsrc");
-//	gst_base_src_set_live(GST_BASE_SRC(vsrc), true);
-//	g_object_unref(vsrc);
-//	vsrc = NULL;
-//
-//	r = gst_element_set_state(pipeline, GST_STATE_PAUSED);
-//	if(GST_STATE_CHANGE_FAILURE == r) {
-//		g_object_unref(pipeline);
-//		return -1;
-//	}
-//
-//	bus = gst_element_get_bus(pipeline);
-//	gst_bus_add_watch(bus, wfd_out_session_handle_gst_message, s);
-//
-//	os->pipeline = pipeline;
-//	os->bus = bus;
-//
-//	return 0;
-//}
 
 	public void start() throws DispdEncoderError
 	{
