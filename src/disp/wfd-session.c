@@ -73,7 +73,7 @@ static int wfd_session_do_request(struct wfd_session *s,
 	assert_ret(out);
 	assert_retv(s->rtsp_disp_tbl[id].request, -ENOTSUP);
 
-	r = (*s->rtsp_disp_tbl[id].request)(s, args, out);
+	r = (*s->rtsp_disp_tbl[id].request)(s, s->rtsp, args, out);
 	if(0 > r) {
 		return log_ERR(r);
 	}

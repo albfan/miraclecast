@@ -309,11 +309,12 @@ static int wfd_out_session_handle_get_parameter_reply(struct wfd_session *s,
 }
 
 static int wfd_out_session_request_get_parameter(struct wfd_session *s,
+				struct rtsp *bus,
 				const struct wfd_arg_list *args,
 				struct rtsp_message **out)
 {
 	_rtsp_message_unref_ struct rtsp_message *m = NULL;
-	int r = rtsp_message_new_request(s->rtsp,
+	int r = rtsp_message_new_request(bus,
 					&m,
 					"GET_PARAMETER",
 					"rtsp://localhost/wfd1.0");
@@ -425,11 +426,12 @@ static int wfd_out_session_handle_options_reply(struct wfd_session *s,
 }
 
 static int wfd_out_session_request_options(struct wfd_session *s,
+				struct rtsp *bus,
 				const struct wfd_arg_list *args,
 				struct rtsp_message **out)
 {
 	_rtsp_message_unref_ struct rtsp_message *m = NULL;
-	int r = rtsp_message_new_request(s->rtsp,
+	int r = rtsp_message_new_request(bus,
 					&m,
 					"OPTIONS", "*");
 	if (0 > r) {
@@ -696,6 +698,7 @@ static int wfd_out_session_handle_idr_request(struct wfd_session *s,
 }
 
 static int wfd_out_session_request_trigger(struct wfd_session *s,
+				struct rtsp *bus,
 				const struct wfd_arg_list *args,
 				struct rtsp_message **out)
 {
@@ -709,7 +712,7 @@ static int wfd_out_session_request_trigger(struct wfd_session *s,
 
 	assert(method);
 
-	r = rtsp_message_new_request(s->rtsp,
+	r = rtsp_message_new_request(bus,
 					 &m,
 					 "SET_PARAMETER",
 					 wfd_session_get_stream_url(s));
@@ -741,6 +744,7 @@ static int wfd_out_session_request_not_implement(struct wfd_session *s,
 }
 
 static int wfd_out_session_request_set_parameter(struct wfd_session *s,
+				struct rtsp *bus,
 				const struct wfd_arg_list *args,
 				struct rtsp_message **out)
 {
@@ -774,7 +778,7 @@ static int wfd_out_session_request_set_parameter(struct wfd_session *s,
 		return log_ERRNO();
 	}
 
-	r = rtsp_message_new_request(s->rtsp,
+	r = rtsp_message_new_request(bus,
 					&m,
 					"SET_PARAMETER",
 					"rtsp://localhost/wfd1.0");

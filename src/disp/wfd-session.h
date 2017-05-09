@@ -69,6 +69,7 @@ struct rtsp_dispatch_entry
 {
 	union {
 		int (*request)(struct wfd_session *s,
+						struct rtsp *bus,
 						const struct wfd_arg_list *args,
 						struct rtsp_message **out);
 		int (*handle_request)(struct wfd_session *s,
