@@ -91,7 +91,6 @@ static void dispd_encoder_exec(const char *cmd, int fd, struct wfd_session *s)
 	}
 
 	// TODO drop caps and don't let user raises thier caps
-	log_debug("uid=%d, euid=%d", getuid(), geteuid());
 	r = setgid(wfd_session_get_client_gid(s));
 	if(0 > r) {
 		log_vERRNO();
@@ -104,7 +103,6 @@ static void dispd_encoder_exec(const char *cmd, int fd, struct wfd_session *s)
 		goto error;
 	}
 
-	log_debug("uid=%d, euid=%d", getuid(), geteuid());
 	r = execvpe(cmd,
 					(char *[]){ (char *) cmd, NULL },
 					(char *[]){ disp,
@@ -292,7 +290,6 @@ static int dispd_encoder_new(struct dispd_encoder **out,
 	_dispd_encoder_unref_ struct dispd_encoder *e = NULL;
 
 	assert_ret(out);
-//	assert_ret(bus_addr);
    
 	e = calloc(1, sizeof(struct dispd_encoder));
 	if(!e) {
@@ -302,10 +299,6 @@ static int dispd_encoder_new(struct dispd_encoder **out,
 	e->ref = 1;
 	e->bus_owner = bus_owner;
 	e->bus_group = bus_group;
-//	e->bus_addr = strdup(bus_addr);
-//	if(!e->bus_addr) {
-//		return log_ENOMEM();
-//	}
 
 	*out = dispd_encoder_ref(e);
 
@@ -574,7 +567,6 @@ static int on_bus_info_readable(sd_event_source *source,
 
 	log_info("got bus address from encoder: %s", buf);
 
-	log_debug(">>> uid=%d, euid=%d", getuid(), geteuid());
 	r = seteuid(e->bus_owner);
 	if(0 > r) {
 		log_vERRNO();
@@ -616,7 +608,6 @@ static int on_bus_info_readable(sd_event_source *source,
 		log_vERRNO();
 		goto error;
 	}
-	log_debug("<<< uid=%d, euid=%d", getuid(), geteuid());
 
 	snprintf(buf, sizeof(buf), 
 					"type='signal',"
@@ -670,7 +661,6 @@ static int on_bus_info_readable(sd_event_source *source,
 
 error:
 	seteuid(0);
-	log_debug("<<< uid=%d, euid=%d", getuid(), geteuid());
 	dispd_encoder_kill_child(e);
 end:
 	dispd_encoder_close_pipe(e);
@@ -848,8 +838,6 @@ int dispd_encoder_configure(struct dispd_encoder *e, struct wfd_session *s)
 		return log_ERR(r);
 	}
 
-//	log_debug(">>> uid=%d, euid=%d", getuid(), geteuid());
-//	r = seteuid(e->bus_owner);
 	if(0 > r) {
 		log_vERR(r);
 		goto end;
@@ -862,8 +850,6 @@ int dispd_encoder_configure(struct dispd_encoder *e, struct wfd_session *s)
 	}
 
 end:
-//	seteuid(0);
-//	log_debug("<<< uid=%d, euid=%d", getuid(), geteuid());
 	return r;
 }
 
@@ -889,8 +875,6 @@ static int dispd_encoder_call(struct dispd_encoder *e, const char *method)
 		goto error;
 	}
 
-//	log_debug(">>> uid=%d, euid=%d", getuid(), geteuid());
-//	r = seteuid(e->bus_owner);
 	if(0 > r) {
 		log_vERR(r);
 		goto error;
@@ -905,8 +889,6 @@ static int dispd_encoder_call(struct dispd_encoder *e, const char *method)
 	return 0;
 
 error:
-//	seteuid(0);
-//	log_debug("<<< uid=%d, euid=%d", getuid(), geteuid());
 	dispd_encoder_kill_child(e);
 
 	return r;
