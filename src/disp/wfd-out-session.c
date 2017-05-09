@@ -834,8 +834,7 @@ static int wfd_out_session_request_trigger(struct wfd_session *s,
 		return log_ERRNO();
 	}
 
-	*out = m;
-	m = NULL;
+	*out = (rtsp_message_ref(m), m);
 
 	return 0;
 }
@@ -898,8 +897,7 @@ static int wfd_out_session_request_set_parameter(struct wfd_session *s,
 		return log_ERRNO();
 	}
 
-	*out = m;
-	m = NULL;
+	*out = (rtsp_message_ref(m), m);
 
 	return 0;
 }
