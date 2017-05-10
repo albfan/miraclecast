@@ -10,6 +10,9 @@ ExecStart=@exec_path@/miracle-wifid \
         --use-dev \
         --log-level trace \
         --lazy-managed
+CapabilityBoundingSet=CAP_NET_ADMIN \
+	CAP_NET_BIND_SERVICE \
+	CAP_NET_RAW
 
 [Install]
 WantedBy=multi-user.target
