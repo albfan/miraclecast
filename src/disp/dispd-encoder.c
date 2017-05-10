@@ -18,6 +18,7 @@
  */
 #include <systemd/sd-event.h>
 #include <systemd/sd-bus.h>
+#include <sys/prctl.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <errno.h>
@@ -98,6 +99,12 @@ static void dispd_encoder_exec(const char *cmd, int fd, struct wfd_session *s)
 	}
 
 	r = setuid(wfd_session_get_client_uid(s));
+	if(0 > r) {
+		log_vERRNO();
+		goto error;
+	}
+
+	r = prctl(PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0);
 	if(0 > r) {
 		log_vERRNO();
 		goto error;
