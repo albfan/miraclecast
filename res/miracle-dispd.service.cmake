@@ -8,6 +8,10 @@ After=miracle-wifid.service
 BusName=org.freedesktop.miracle.wfd
 Environment=LOG_LEVEL=trace
 ExecStart=@CMAKE_INSTALL_PREFIX@/bin/miracle-dispd
+CapabilityBoundingSet=CAP_NET_BIND_SERVICE \
+	CAP_SETGID \
+	CAP_SETUID \
+	CAP_SETPCAP
 
 [Install]
 WantedBy=multi-user.target
