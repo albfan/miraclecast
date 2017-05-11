@@ -19,11 +19,11 @@
 #include <time.h>
 #include <systemd/sd-event.h>
 #include "ctl.h"
-#include "disp.h"
-#include "wfd-dbus.h"
+#include "dispd.h"
+#include "dispd-dbus.h"
 
-static int wfd_sink_set_session(struct wfd_sink *sink,
-				struct wfd_session *session)
+static int dispd_sink_set_session(struct dispd_sink *sink,
+				struct dispd_session *session)
 {
 	int r;
 
@@ -34,44 +34,44 @@ static int wfd_sink_set_session(struct wfd_sink *sink,
 	}
 
 	if(session) {
-		r = ctl_wfd_add_session(ctl_wfd_get(), session);
+		r = dispd_add_session(dispd_get(), session);
 		if(0 > r) {
 			return r;
 		}
 	}
 	
 	if(sink->session) {
-		ctl_wfd_remove_session_by_id(ctl_wfd_get(),
-						wfd_session_get_id(sink->session),
+		dispd_remove_session_by_id(dispd_get(),
+						dispd_session_get_id(sink->session),
 						NULL);
-		wfd_session_unref(sink->session);
+		dispd_session_unref(sink->session);
 	}
 
-	sink->session = session ? wfd_session_ref(session) : NULL;
-	wfd_fn_sink_properties_changed(sink, "Session");
+	sink->session = session ? dispd_session_ref(session) : NULL;
+	dispd_fn_sink_properties_changed(sink, "Session");
 
 	return 0;
 }
 
-int wfd_sink_new(struct wfd_sink **out,
+int dispd_sink_new(struct dispd_sink **out,
 				struct ctl_peer *peer,
 				union wfd_sube *sube)
 {
-	struct wfd_sink *sink;
+	struct dispd_sink *sink;
 
 	assert_ret(out);
 	assert_ret(peer);
 	assert_ret(sube);
 	assert_ret(wfd_sube_device_is_sink(sube));
 	
-	sink = calloc(1, sizeof(struct wfd_sink));
+	sink = calloc(1, sizeof(struct dispd_sink));
 	if(!sink) {
 		return -ENOMEM;
 	}
 
 	sink->label = strdup(peer->label);
 	if(!sink->label) {
-		wfd_sink_free(sink);
+		dispd_sink_free(sink);
 		return -ENOMEM;
 	}
 
@@ -83,13 +83,13 @@ int wfd_sink_new(struct wfd_sink **out,
 	return 0;
 }
 
-void wfd_sink_free(struct wfd_sink *sink)
+void dispd_sink_free(struct dispd_sink *sink)
 {
 	if(!sink) {
 		return;
 	}
 
-	wfd_sink_set_session(sink, NULL);
+	dispd_sink_set_session(sink, NULL);
 
 	if(sink->label) {
 		free(sink->label);
@@ -98,68 +98,68 @@ void wfd_sink_free(struct wfd_sink *sink)
 	free(sink);
 }
 
-const char * wfd_sink_get_label(struct wfd_sink *sink)
+const char * dispd_sink_get_label(struct dispd_sink *sink)
 {
 	assert_retv(sink, NULL);
 
 	return sink->label;
 }
 
-const union wfd_sube * wfd_sink_get_dev_info(struct wfd_sink *sink)
+const union wfd_sube * dispd_sink_get_dev_info(struct dispd_sink *sink)
 {
 	assert_retv(sink, NULL);
 
 	return &sink->dev_info;
 }
 
-struct ctl_peer * wfd_sink_get_peer(struct wfd_sink *sink)
+struct ctl_peer * dispd_sink_get_peer(struct dispd_sink *sink)
 {
 	assert_retv(sink, NULL);
 
 	return sink->peer;
 }
 
-int wfd_sink_create_session(struct wfd_sink *sink, struct wfd_session **out)
+int dispd_sink_create_session(struct dispd_sink *sink, struct dispd_session **out)
 {
 	int r;
-	_wfd_session_unref_ struct wfd_session *sess = NULL;
+	_dispd_session_unref_ struct dispd_session *sess = NULL;
 
 	assert_ret(sink);
 	assert_ret(out);
 
-	if(wfd_sink_is_session_started(sink)) {
+	if(dispd_sink_is_session_started(sink)) {
 		return -EALREADY;
 	}
 
-	r = wfd_out_session_new(&sess,
-					ctl_wfd_alloc_session_id(ctl_wfd_get()),
+	r = dispd_out_session_new(&sess,
+					dispd_alloc_session_id(dispd_get()),
 					sink);
 	if(0 > r) {
 		return r;
 	}
 
-	r = wfd_sink_set_session(sink, sess);
+	r = dispd_sink_set_session(sink, sess);
 	if(0 > r) {
 		return r;
 	}
 
-	*out = wfd_session_ref(sess);
+	*out = dispd_session_ref(sess);
 
-	wfd_fn_sink_properties_changed(sink, "Session");
+	dispd_fn_sink_properties_changed(sink, "Session");
 
 	return 0;
 }
 
-int wfd_fn_out_session_ended(struct wfd_session *s)
+int dispd_fn_out_session_ended(struct dispd_session *s)
 {
-	assert_ret(wfd_is_out_session(s));
+	assert_ret(dispd_is_out_session(s));
 
-	wfd_sink_set_session(wfd_out_session_get_sink(s), NULL);
+	dispd_sink_set_session(dispd_out_session_get_sink(s), NULL);
 
 	return 0;
 }
 
-bool wfd_sink_is_session_started(struct wfd_sink *sink)
+bool dispd_sink_is_session_started(struct dispd_sink *sink)
 {
 	assert_retv(sink, false);
 

@@ -16,32 +16,46 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with MiracleCast; If not, see <http://www.gnu.org/licenses/>.
  */
+#include <errno.h>
+#include <assert.h>
+#include <string.h>
+#include "dispd-arg.h"
 
-#include <systemd/sd-bus.h>
+int dispd_arg_list_new(struct dispd_arg_list **out)
+{
+	assert(out);
 
-#ifndef CTL_WFD_DBUS_H
-#define CTL_WFD_DBUS_H
+	struct dispd_arg_list *l = calloc(1, sizeof(struct dispd_arg_list));
+	if(!l) {
+		return -ENOMEM;
+	}
 
-#define wfd_fn_sink_properties_changed(s, namev...)	({				\
-				char *names[] = { namev, NULL };					\
-				_wfd_fn_sink_properties_changed((s), names);		\
-})
+	l->dynamic = true;
 
-#define wfd_fn_session_properties_changed(s, namev...)	({			\
-				char *names[] = { namev, NULL };					\
-				_wfd_fn_session_properties_changed((s), names);		\
-})
+	*out = l;
 
-struct wfd_dbus;
-struct wfd_session;
-struct wfd_sink;
+	return 0;
+}
 
-struct wfd_dbus * wfd_dbus_get();
-int wfd_dbus_new(struct wfd_dbus **out, sd_event *loop, sd_bus *bus);
-void wfd_dbus_free(struct wfd_dbus *wfd_dbus);
-int wfd_dbus_expose(struct wfd_dbus *wfd_dbus);
-int _wfd_fn_sink_properties_changed(struct wfd_sink *s, char **names);
-int _wfd_fn_session_properties_changed(struct wfd_session *s, char **names);
+void dispd_arg_list_clear(struct dispd_arg_list *l)
+{
+	int i;
+	struct dispd_arg *arg;
 
-#endif
+	if(!l || !l->dynamic) {
+		return;
+	}
+
+	arg = l->discrete ? l->argv : l->args;
+	for(i = 0; i < l->len; i ++) {
+		if((DISPD_ARG_STR == arg->type || DISPD_ARG_PTR == arg->type)
+						&& arg->ptr && arg->free) {
+			(*arg->free)(arg->ptr);
+		}
+	}
+
+	if(l->discrete) {
+		free(l->argv);
+	}
+}
 

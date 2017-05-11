@@ -35,7 +35,7 @@ const string IFACE_PEER = "org.freedesktop.miracle.wifi.Peer";
 const string IFACE_SINK = "org.freedesktop.miracle.wfd.Sink";
 const string IFACE_SESSION = "org.freedesktop.miracle.wfd.Session";
 
-errordomain WfdCtlError
+errordomain DispCtlError
 {
 	NO_SUCH_NIC,
 	TIMEOUT,
@@ -70,7 +70,7 @@ private string decode_path(string s)
 	return d.str;
 }
 
-private class WfdCtl : GLib.Application
+private class DispCtl : GLib.Application
 {
 	static string opt_iface;
 	static string opt_wfd_subelems;
@@ -120,9 +120,9 @@ private class WfdCtl : GLib.Application
 		{ null },
 	};
 
-	public WfdCtl()
+	public DispCtl()
 	{
-		Object(application_id: "org.freedesktop.miracle.WfdCtl",
+		Object(application_id: "org.freedesktop.miracle.DispCtl",
 						flags: ApplicationFlags.FLAGS_NONE);
 
 		devices = new HashTable<string, Device>(str_hash, str_equal);
@@ -341,7 +341,7 @@ private class WfdCtl : GLib.Application
 
 		Link l = find_link_by_name(opt_iface);
 		if(null == l) {
-			throw new WfdCtlError.NO_SUCH_NIC("no such wireless adapter: %s",
+			throw new DispCtlError.NO_SUCH_NIC("no such wireless adapter: %s",
 							opt_iface);
 		}
 
@@ -367,7 +367,7 @@ private class WfdCtl : GLib.Application
 		}
 
 		if(-1 == l.p2p_state) {
-			throw new WfdCtlError.NO_P2P_SUPPORT("link %s has no P2P supporting", l.interface_name);
+			throw new DispCtlError.NO_P2P_SUPPORT("link %s has no P2P supporting", l.interface_name);
 		}
 		else if(0 == l.p2p_state) {
 			info("wait for P2P supporting status...");
@@ -441,7 +441,7 @@ private class WfdCtl : GLib.Application
 		}
 
 		if(null == m) {
-			throw new WfdCtlError.MONITOR_GONE("specified monitor disappeared");
+			throw new DispCtlError.MONITOR_GONE("specified monitor disappeared");
 		}
 
 		g = m.geometry;
@@ -455,7 +455,7 @@ private class WfdCtl : GLib.Application
 						: opt_monitor_num;
 
 		if(s.get_n_monitors() <= m) {
-			throw new WfdCtlError.MONITOR_GONE("specified monitor disappeared");
+			throw new DispCtlError.MONITOR_GONE("specified monitor disappeared");
 		}
 
 		s.get_monitor_geometry(m, out g);
@@ -523,7 +523,7 @@ private class WfdCtl : GLib.Application
 		Error error = null;
 		var timeout_src = new TimeoutSource(10);
 		timeout_src.set_callback(() => {
-			error = new WfdCtlError.TIMEOUT("failed to establish session");
+			error = new DispCtlError.TIMEOUT("failed to establish session");
 			Idle.add(establish_session.callback);
 			return false;
 		});
@@ -561,7 +561,7 @@ private class WfdCtl : GLib.Application
 
 		Link l = find_link_by_name(opt_iface);
 		if(null == l) {
-			throw new WfdCtlError.NO_SUCH_NIC("no such wireless adapter: %s",
+			throw new DispCtlError.NO_SUCH_NIC("no such wireless adapter: %s",
 							opt_iface);
 		}
 
@@ -731,7 +731,7 @@ private class WfdCtl : GLib.Application
 
 	private async void wait_prop_changed<T>(T o,
 					string name,
-					uint timeout = 1) throws WfdCtlError
+					uint timeout = 1) throws DispCtlError
 	{
 		ulong prop_changed_id = (o as DBusProxy).g_properties_changed.connect((props) => {
 			string k;
@@ -764,7 +764,7 @@ private class WfdCtl : GLib.Application
 		(o as DBusProxy).disconnect(prop_changed_id);
 
 		if(timed_out) {
-			throw new WfdCtlError.TIMEOUT("timeout to wait for property %s change",
+			throw new DispCtlError.TIMEOUT("timeout to wait for property %s change",
 							name);
 		}
 	}
@@ -777,10 +777,10 @@ int main(string[]? argv)
 	Environment.set_prgname(Path.get_basename(argv[0]));
 
 
-	Application app = new WfdCtl();
+	Application app = new DispCtl();
 	app.set_default();
 
-	Sigint.add_watch((app as WfdCtl).stop_wireless_display);
+	Sigint.add_watch((app as DispCtl).stop_wireless_display);
 
 	try {
 		app.register();

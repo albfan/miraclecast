@@ -60,14 +60,14 @@ executable('gstencoder', 'gstencoder.vala',
   install: true,
   vala_args: ['--pkg=posix'])
 
-miracle_wfdctl_src = ['wfdctl.vala',
+miracle_dispctl_src = ['dispctl.vala',
   'sigint.vapi',
   'sigint.c',
   'networkmanager.vala',
   'miracle-wifi.vala',
   'miracle-wfd.vala'
 ]
-executable('miracle-wfdctl', miracle_wfdctl_src,
+executable('miracle-dispctl', miracle_dispctl_src,
   dependencies: [gio2, gdk3],
   vala_args: valac_extra_args,
   install: true

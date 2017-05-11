@@ -61,19 +61,19 @@ enum dispd_encoder_state
 	DISPD_ENCODER_STATE_TERMINATED,
 };
 
-struct wfd_session;
+struct dispd_session;
 struct dispd_encoder;
 
 typedef void (*dispd_encoder_state_change_handler)(struct dispd_encoder *e,
 				enum dispd_encoder_state state,
 				void *userdata);
 
-int dispd_encoder_spawn(struct dispd_encoder **out, struct wfd_session *s);
+int dispd_encoder_spawn(struct dispd_encoder **out, struct dispd_session *s);
 struct dispd_encoder * dispd_encoder_ref(struct dispd_encoder *e);
 void dispd_encoder_unref(struct dispd_encoder *e);
 void dispd_encoder_unrefp(struct dispd_encoder **e);
 
-int dispd_encoder_configure(struct dispd_encoder *e, struct wfd_session *s);
+int dispd_encoder_configure(struct dispd_encoder *e, struct dispd_session *s);
 int dispd_encoder_start(struct dispd_encoder *e);
 int dispd_encoder_pause(struct dispd_encoder *e);
 int dispd_encoder_stop(struct dispd_encoder *e);

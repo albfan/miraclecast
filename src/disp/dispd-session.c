@@ -19,8 +19,8 @@
 #include <time.h>
 #include "ctl.h"
 #include "rtsp.h"
-#include "wfd-dbus.h"
-#include "wfd-session.h"
+#include "dispd-dbus.h"
+#include "dispd-session.h"
 #include "shl_macro.h"
 #include "shl_log.h"
 
@@ -28,42 +28,42 @@
 		(_id) >= RTSP_M1_REQUEST_SINK_OPTIONS &&	\
 		(_id) <= RTSP_M16_KEEPALIVE					\
 )
-#define wfd_stream_id_is_valid(_id) (		\
-		(_id) >= WFD_STREAM_ID_PRIMARY &&	\
-		(_id) <= WFD_STREAM_ID_SECONDARY	\
+#define dispd_stream_id_is_valid(_id) (		\
+		(_id) >= DISPD_STREAM_ID_PRIMARY &&	\
+		(_id) <= DISPD_STREAM_ID_SECONDARY	\
 )
 
 static const char *rtsp_message_names[];
 extern const struct rtsp_dispatch_entry out_session_rtsp_disp_tbl[];
 
-extern int wfd_out_session_initiate_io(struct wfd_session *s, int *out_fd, uint32_t *out_mask);
-extern int wfd_out_session_handle_io(struct wfd_session *s, int error, int *out_fd);
-extern int wfd_out_session_initiate_request(struct wfd_session *);
-extern int wfd_out_session_resume(struct wfd_session *);
-extern int wfd_out_session_pause(struct wfd_session *);
-extern int wfd_out_session_teardown(struct wfd_session *);
-extern void wfd_out_session_end(struct wfd_session *);
-extern void wfd_out_session_destroy(struct wfd_session *);
+extern int dispd_out_session_initiate_io(struct dispd_session *s, int *out_fd, uint32_t *out_mask);
+extern int dispd_out_session_handle_io(struct dispd_session *s, int error, int *out_fd);
+extern int dispd_out_session_initiate_request(struct dispd_session *);
+extern int dispd_out_session_resume(struct dispd_session *);
+extern int dispd_out_session_pause(struct dispd_session *);
+extern int dispd_out_session_teardown(struct dispd_session *);
+extern void dispd_out_session_end(struct dispd_session *);
+extern void dispd_out_session_destroy(struct dispd_session *);
 static const char * rtsp_message_id_to_string(enum rtsp_message_id id);
-static int wfd_session_handle_request(struct rtsp *bus,
+static int dispd_session_handle_request(struct rtsp *bus,
 				struct rtsp_message *m,
 				void *userdata);
 
-const struct wfd_session_vtable session_vtbl[] = {
-	[WFD_SESSION_DIR_OUT] = {
-		.initiate_io		= wfd_out_session_initiate_io,
-		.handle_io			= wfd_out_session_handle_io,
-		.initiate_request	= wfd_out_session_initiate_request,
-		.resume				= wfd_out_session_resume,
-		.pause				= wfd_out_session_pause,
-		.teardown			= wfd_out_session_teardown,
-		.destroy			= wfd_out_session_destroy,
+const struct dispd_session_vtable session_vtbl[] = {
+	[DISPD_SESSION_DIR_OUT] = {
+		.initiate_io		= dispd_out_session_initiate_io,
+		.handle_io			= dispd_out_session_handle_io,
+		.initiate_request	= dispd_out_session_initiate_request,
+		.resume				= dispd_out_session_resume,
+		.pause				= dispd_out_session_pause,
+		.teardown			= dispd_out_session_teardown,
+		.destroy			= dispd_out_session_destroy,
 	}
 };
 
-static int wfd_session_do_request(struct wfd_session *s,
+static int dispd_session_do_request(struct dispd_session *s,
 				enum rtsp_message_id id,
-				const struct wfd_arg_list *args,
+				const struct dispd_arg_list *args,
 				struct rtsp_message **out)
 {
 	int r;
@@ -81,7 +81,7 @@ static int wfd_session_do_request(struct wfd_session *s,
 	return 0;
 }
 
-static int wfd_session_do_handle_request(struct wfd_session *s,
+static int dispd_session_do_handle_request(struct dispd_session *s,
 				enum rtsp_message_id id,
 				struct rtsp_message *req,
 				struct rtsp_message **rep)
@@ -104,7 +104,7 @@ static int wfd_session_do_handle_request(struct wfd_session *s,
 	return 0;
 }
 
-static int wfd_session_do_handle_reply(struct wfd_session *s,
+static int dispd_session_do_handle_reply(struct dispd_session *s,
 				enum rtsp_message_id id,
 				struct rtsp_message *rep)
 {
@@ -126,31 +126,31 @@ static int wfd_session_do_handle_reply(struct wfd_session *s,
 	return 0;
 }
 
-unsigned int wfd_session_get_id(struct wfd_session *s)
+unsigned int dispd_session_get_id(struct dispd_session *s)
 {
 	assert_retv(s, (unsigned int) -1);
 
 	return s->id;
 }
 
-bool wfd_session_is_state(struct wfd_session *s, enum wfd_session_state state)
+bool dispd_session_is_state(struct dispd_session *s, enum dispd_session_state state)
 {
 	assert_retv(s, false);
 
 	return state == s->state;
 }
 
-enum wfd_session_state wfd_session_get_state(struct wfd_session *s)
+enum dispd_session_state dispd_session_get_state(struct dispd_session *s)
 {
-	assert_retv(s, WFD_SESSION_STATE_NULL);
+	assert_retv(s, DISPD_SESSION_STATE_NULL);
 
 	return s->state;
 }
 
-void wfd_session_set_state(struct wfd_session *s,
-				enum wfd_session_state state)
+void dispd_session_set_state(struct dispd_session *s,
+				enum dispd_session_state state)
 {
-	assert_vret(wfd_is_session(s));
+	assert_vret(dispd_is_session(s));
 
 	if(state == s->state) {
 		return;
@@ -158,24 +158,24 @@ void wfd_session_set_state(struct wfd_session *s,
 
 	s->state = state;
 
-	wfd_fn_session_properties_changed(s, "State");
+	dispd_fn_session_properties_changed(s, "State");
 }
 
-bool wfd_session_is_established(struct wfd_session *s)
+bool dispd_session_is_established(struct dispd_session *s)
 {
-	assert_retv(wfd_is_session(s), false);
+	assert_retv(dispd_is_session(s), false);
 
-	return WFD_SESSION_STATE_ESTABLISHED <= s->state;
+	return DISPD_SESSION_STATE_ESTABLISHED <= s->state;
 }
 
-int wfd_session_resume(struct wfd_session *s)
+int dispd_session_resume(struct dispd_session *s)
 {
-	assert_ret(wfd_is_session(s));
+	assert_ret(dispd_is_session(s));
 
-	if(WFD_SESSION_STATE_PLAYING == s->state) {
+	if(DISPD_SESSION_STATE_PLAYING == s->state) {
 		return 0;
 	}
-	else if(WFD_SESSION_STATE_PAUSED != s->state) {
+	else if(DISPD_SESSION_STATE_PAUSED != s->state) {
 		return -EINVAL;
 	}
 
@@ -186,14 +186,14 @@ int wfd_session_resume(struct wfd_session *s)
 	return session_vtbl[s->dir].resume(s);;
 }
 
-int wfd_session_pause(struct wfd_session *s)
+int dispd_session_pause(struct dispd_session *s)
 {
-	assert_ret(wfd_is_session(s));
+	assert_ret(dispd_is_session(s));
 
-	if(WFD_SESSION_STATE_PAUSED == s->state) {
+	if(DISPD_SESSION_STATE_PAUSED == s->state) {
 		return 0;
 	}
-	else if(WFD_SESSION_STATE_PLAYING != s->state) {
+	else if(DISPD_SESSION_STATE_PLAYING != s->state) {
 		return -EINVAL;
 	}
 
@@ -204,11 +204,11 @@ int wfd_session_pause(struct wfd_session *s)
 	return session_vtbl[s->dir].pause(s);;
 }
 
-int wfd_session_teardown(struct wfd_session *s)
+int dispd_session_teardown(struct dispd_session *s)
 {
 	int r;
-	assert_ret(wfd_is_session(s));
-	assert_ret(wfd_session_is_established(s));
+	assert_ret(dispd_is_session(s));
+	assert_ret(dispd_session_is_established(s));
 	assert_ret(session_vtbl[s->dir].teardown);
 
 	r = session_vtbl[s->dir].teardown(s);
@@ -219,17 +219,17 @@ int wfd_session_teardown(struct wfd_session *s)
 	return 0;
 }
 
-int wfd_session_destroy(struct wfd_session *s)
+int dispd_session_destroy(struct dispd_session *s)
 {
-	assert_ret(wfd_is_session(s));
+	assert_ret(dispd_is_session(s));
 	
-	if(wfd_session_is_state(s, WFD_SESSION_STATE_DESTROYED)) {
+	if(dispd_session_is_state(s, DISPD_SESSION_STATE_DESTROYED)) {
 		return 0;
 	}
 
-	wfd_session_set_state(s, WFD_SESSION_STATE_DESTROYED);
+	dispd_session_set_state(s, DISPD_SESSION_STATE_DESTROYED);
 
-	wfd_fn_out_session_ended(s);
+	dispd_fn_out_session_ended(s);
 
 	if(session_vtbl[s->dir].destroy) {
 		(*session_vtbl[s->dir].destroy)(s);
@@ -238,11 +238,11 @@ int wfd_session_destroy(struct wfd_session *s)
 	if(s->rtsp) {
 		if(s->req_cookie) {
 			rtsp_call_async_cancel(s->rtsp, s->req_cookie);
-			wfd_session_unref(s);
+			dispd_session_unref(s);
 			s->req_cookie = 0;
 		}
 
-		rtsp_remove_match(s->rtsp, wfd_session_handle_request, s);
+		rtsp_remove_match(s->rtsp, dispd_session_handle_request, s);
 		rtsp_detach_event(s->rtsp);
 		rtsp_unref(s->rtsp);
 		s->rtsp = NULL;
@@ -290,7 +290,7 @@ int wfd_session_destroy(struct wfd_session *s)
 	return 0;
 }
 
-struct wfd_session * _wfd_session_ref(struct wfd_session *s)
+struct dispd_session * _dispd_session_ref(struct dispd_session *s)
 {
 	if(s) {
 		++ s->ref;
@@ -299,7 +299,7 @@ struct wfd_session * _wfd_session_ref(struct wfd_session *s)
 	return s;
 }
 
-void _wfd_session_unref(struct wfd_session *s)
+void _dispd_session_unref(struct dispd_session *s)
 {
 	if(!s) {
 		return;
@@ -312,49 +312,49 @@ void _wfd_session_unref(struct wfd_session *s)
 		return;
 	}
 
-	wfd_session_destroy(s);
+	dispd_session_destroy(s);
 
 	free(s);
 }
 
-enum wfd_session_dir wfd_session_get_dir(struct wfd_session *s)
+enum dispd_session_dir dispd_session_get_dir(struct dispd_session *s)
 {
-	assert_retv(s, WFD_SESSION_DIR_OUT);
+	assert_retv(s, DISPD_SESSION_DIR_OUT);
 
 	return s->dir;
 }
 
-unsigned int * wfd_session_to_htable(struct wfd_session *s)
+unsigned int * dispd_session_to_htable(struct dispd_session *s)
 {
 	assert_retv(s, NULL);
 
 	return &s->id;
 }
 
-struct wfd_session * wfd_session_from_htable(unsigned int *e)
+struct dispd_session * dispd_session_from_htable(unsigned int *e)
 {
 	assert_retv(e, NULL);
 
-	return shl_htable_entry(e, struct wfd_session, id);
+	return shl_htable_entry(e, struct dispd_session, id);
 }
 
-const char * wfd_session_get_stream_url(struct wfd_session *s)
+const char * dispd_session_get_stream_url(struct dispd_session *s)
 {
-	assert_retv(wfd_is_session(s), NULL);
+	assert_retv(dispd_is_session(s), NULL);
 
 	return s->stream.url;
 }
 
-int wfd_session_gen_stream_url(struct wfd_session *s,
+int dispd_session_gen_stream_url(struct dispd_session *s,
 				const char *local_addr,
-				enum wfd_stream_id id)
+				enum dispd_stream_id id)
 {
 	char *url;
 	int r;
 
-	assert_ret(wfd_is_session(s));
+	assert_ret(dispd_is_session(s));
 	assert_ret(local_addr);
-	assert_ret(wfd_stream_id_is_valid(id));
+	assert_ret(dispd_stream_id_is_valid(id));
 
 	r = asprintf(&url, "rtsp://%s/wfd1.0/streamid=%d", local_addr, id);
 	if(0 > r) {
@@ -367,13 +367,13 @@ int wfd_session_gen_stream_url(struct wfd_session *s,
 	return 0;
 }
 
-static enum rtsp_message_id wfd_session_message_to_id(struct wfd_session *s,
+static enum rtsp_message_id dispd_session_message_to_id(struct dispd_session *s,
 				struct rtsp_message *m)
 {
 
 	const char *method;
 
-	assert_retv(wfd_is_session(s), RTSP_M_UNKNOWN);
+	assert_retv(dispd_is_session(s), RTSP_M_UNKNOWN);
    
 	method = m ? rtsp_message_get_method(m) : NULL;
 	if(!method) {
@@ -405,7 +405,7 @@ static enum rtsp_message_id wfd_session_message_to_id(struct wfd_session *s,
 			return RTSP_M13_REQUEST_IDR;
 		}
 
-		if(WFD_SESSION_STATE_CAPS_EXCHANGING == s->state) {
+		if(DISPD_SESSION_STATE_CAPS_EXCHANGING == s->state) {
 			return RTSP_M4_SET_PARAMETER;
 		}
 
@@ -417,7 +417,7 @@ static enum rtsp_message_id wfd_session_message_to_id(struct wfd_session *s,
 	}
 
 	if(!strcmp(method, "OPTIONS")) {
-		return wfd_is_out_session(s)
+		return dispd_is_out_session(s)
 						? (RTSP_MESSAGE_REPLY == rtsp_message_get_type(m))
 							? RTSP_M1_REQUEST_SINK_OPTIONS
 							: RTSP_M2_REQUEST_SRC_OPTIONS
@@ -448,14 +448,14 @@ static enum rtsp_message_id wfd_session_message_to_id(struct wfd_session *s,
 	return RTSP_M_UNKNOWN;
 }
 
-static int wfd_session_post_handle_request_n_reply(struct wfd_session *s,
+static int dispd_session_post_handle_request_n_reply(struct dispd_session *s,
                 enum rtsp_message_id ror)
 {
-    const struct wfd_arg_list *args;
+    const struct dispd_arg_list *args;
 	enum rtsp_message_id next_request = RTSP_M_UNKNOWN;
-	enum wfd_session_arg_id arg_id;
-	enum wfd_session_state new_state = WFD_SESSION_STATE_NULL;
-	const struct wfd_arg_list *req_args = NULL;
+	enum dispd_session_arg_id arg_id;
+	enum dispd_session_state new_state = DISPD_SESSION_STATE_NULL;
+	const struct dispd_arg_list *req_args = NULL;
 	int r, i;
 
 	assert_ret(s);
@@ -467,24 +467,24 @@ static int wfd_session_post_handle_request_n_reply(struct wfd_session *s,
 	}
 
 	for(i = 0; i < args->len; i ++) {
-		wfd_arg_list_get_dictk(args, i, &arg_id);
+		dispd_arg_list_get_dictk(args, i, &arg_id);
 		switch(arg_id) {
-			case WFD_SESSION_ARG_NEXT_REQUEST:
-				wfd_arg_list_get_dictv(args, i, &next_request);
+			case DISPD_SESSION_ARG_NEXT_REQUEST:
+				dispd_arg_list_get_dictv(args, i, &next_request);
 				break;
-			case WFD_SESSION_ARG_NEW_STATE:
-				wfd_arg_list_get_dictv(args, i, &new_state);
-				wfd_session_set_state(s, new_state);
+			case DISPD_SESSION_ARG_NEW_STATE:
+				dispd_arg_list_get_dictv(args, i, &new_state);
+				dispd_session_set_state(s, new_state);
 				break;
-			case WFD_SESSION_ARG_REQUEST_ARGS:
-				wfd_arg_list_get_dictv(args, i, &req_args);
+			case DISPD_SESSION_ARG_REQUEST_ARGS:
+				dispd_arg_list_get_dictv(args, i, &req_args);
 			default:
 				break;
 		}
 	}
 
 	if(RTSP_M_UNKNOWN != next_request) {
-		r = wfd_session_request(s, next_request, req_args);
+		r = dispd_session_request(s, next_request, req_args);
 		if(0 > r) {
 			return log_ERR(r);
 		}
@@ -496,20 +496,20 @@ static int wfd_session_post_handle_request_n_reply(struct wfd_session *s,
 static int defered_destroy(struct sd_event_source *source,
 				void *userdata)
 {
-	struct wfd_session *s = userdata;
+	struct dispd_session *s = userdata;
 
-	wfd_session_destroy(s);
-	wfd_session_unref(s);
+	dispd_session_destroy(s);
+	dispd_session_unref(s);
 
 	return 0;
 }
 
-static inline int schedule_defered_destroy(struct wfd_session *s)
+static inline int schedule_defered_destroy(struct dispd_session *s)
 {
-	int r = sd_event_add_defer(ctl_wfd_get_loop(),
+	int r = sd_event_add_defer(dispd_get_loop(),
 					NULL,
 					defered_destroy,
-					wfd_session_ref(s));
+					dispd_session_ref(s));
 	if(0 > r) {
 		return log_ERR(r);
 	}
@@ -517,12 +517,12 @@ static inline int schedule_defered_destroy(struct wfd_session *s)
 	return 0;
 }
 
-static int wfd_session_handle_request(struct rtsp *bus,
+static int dispd_session_handle_request(struct rtsp *bus,
 				struct rtsp_message *m,
 				void *userdata)
 {
 	_rtsp_message_unref_ struct rtsp_message *rep = NULL;
-	struct wfd_session *s = userdata;
+	struct dispd_session *s = userdata;
 	enum rtsp_message_id id;
 	char date[64];
 	uint64_t usec;
@@ -530,14 +530,14 @@ static int wfd_session_handle_request(struct rtsp *bus,
 	int r;
 
 	if(!m && rtsp_is_dead(bus)) {
-		if(WFD_SESSION_STATE_TEARING_DOWN != wfd_session_get_state(s)) {
+		if(DISPD_SESSION_STATE_TEARING_DOWN != dispd_session_get_state(s)) {
 			log_info("rtsp disconnected");
 			r = log_EPIPE();
 		}
 		goto error;
 	}
 
-	id = wfd_session_message_to_id(s, m);
+	id = dispd_session_message_to_id(s, m);
 	if(RTSP_M_UNKNOWN == id) {
 		log_debug("unable to map request to id: %s",
 						(char *) rtsp_message_get_raw(m));
@@ -549,7 +549,7 @@ static int wfd_session_handle_request(struct rtsp *bus,
 					id,
 					(char *) rtsp_message_get_raw(m));
 
-	r = wfd_session_do_handle_request(s,
+	r = dispd_session_do_handle_request(s,
 					id,
 					m,
 					&rep);
@@ -558,7 +558,7 @@ static int wfd_session_handle_request(struct rtsp *bus,
 		goto error;
 	}
 
-	r = sd_event_now(ctl_wfd_get_loop(), CLOCK_REALTIME, &usec);
+	r = sd_event_now(dispd_get_loop(), CLOCK_REALTIME, &usec);
 	if(0 > r) {
 		log_vERR(r);
 		goto error;
@@ -591,7 +591,7 @@ static int wfd_session_handle_request(struct rtsp *bus,
 					id,
 					(char *) rtsp_message_get_raw(rep));
 
-	r = wfd_session_post_handle_request_n_reply(s, id);
+	r = dispd_session_post_handle_request_n_reply(s, id);
 	if(0 > r) {
 		log_vERR(r);
 		goto error;
@@ -605,13 +605,13 @@ error:
 	return r;
 }
 
-static int wfd_session_handle_reply(struct rtsp *bus,
+static int dispd_session_handle_reply(struct rtsp *bus,
 				struct rtsp_message *m,
 				void *userdata)
 {
 	int r;
 	enum rtsp_message_id id;
-	struct wfd_session *s = userdata;
+	struct dispd_session *s = userdata;
 
 	s->req_cookie = 0;
 
@@ -632,13 +632,13 @@ static int wfd_session_handle_reply(struct rtsp *bus,
 					id,
 					(char *) rtsp_message_get_raw(m));
 
-	r = wfd_session_do_handle_reply(s, id, m);
+	r = dispd_session_do_handle_reply(s, id, m);
 	if(0 > r) {
 		log_vERR(r);
 		goto error;
 	}
 
-	r = wfd_session_post_handle_request_n_reply(s, id);
+	r = dispd_session_post_handle_request_n_reply(s, id);
 	if(0 > r) {
 		log_vERR(r);
 		goto error;
@@ -649,14 +649,14 @@ static int wfd_session_handle_reply(struct rtsp *bus,
 error:
 	schedule_defered_destroy(s);
 end:
-	wfd_session_unref(s);
+	dispd_session_unref(s);
 
 	return r;
 }
 
-int wfd_session_init(struct wfd_session *s,
+int dispd_session_init(struct dispd_session *s,
 				unsigned int id,
-				enum wfd_session_dir dir,
+				enum dispd_session_dir dir,
 				const struct rtsp_dispatch_entry *disp_tbl)
 {
 	s->ref = 1;
@@ -670,16 +670,16 @@ int wfd_session_init(struct wfd_session *s,
 	return 0;
 }
 
-int wfd_session_request(struct wfd_session *s,
+int dispd_session_request(struct dispd_session *s,
 				enum rtsp_message_id id,
-				const struct wfd_arg_list *args)
+				const struct dispd_arg_list *args)
 {
 	int r;
 	_rtsp_message_unref_ struct rtsp_message *m = NULL;
 
 	assert_ret(s);
 
-	r = wfd_session_do_request(s, id, args, &m);
+	r = dispd_session_do_request(s, id, args, &m);
 	if(0 > r) {
 		goto error;
 	}
@@ -691,8 +691,8 @@ int wfd_session_request(struct wfd_session *s,
 
 	r = rtsp_call_async(s->rtsp,
 					m,
-					wfd_session_handle_reply,
-					wfd_session_ref(s),
+					dispd_session_handle_reply,
+					dispd_session_ref(s),
 					0,
 					&s->req_cookie);
 	if(0 > r) {
@@ -713,14 +713,14 @@ error:
 	return r;
 }
 
-static int wfd_session_handle_io(sd_event_source *source,
+static int dispd_session_handle_io(sd_event_source *source,
 				int fd,
 				uint32_t mask,
 				void *userdata)
 {
 	int r = 0, err = 0, conn;
 	socklen_t len;
-	struct wfd_session *s = userdata;
+	struct dispd_session *s = userdata;
 	_rtsp_unref_ struct rtsp *rtsp = NULL;
 
 	sd_event_source_set_enabled(source, SD_EVENT_OFF);
@@ -746,12 +746,12 @@ static int wfd_session_handle_io(sd_event_source *source,
 
 		conn = -1;
 
-		r = rtsp_attach_event(rtsp, ctl_wfd_get_loop(), 0);
+		r = rtsp_attach_event(rtsp, dispd_get_loop(), 0);
 		if (0 > r) {
 			return log_ERRNO();
 		}
 
-		r = rtsp_add_match(rtsp, wfd_session_handle_request, s);
+		r = rtsp_add_match(rtsp, dispd_session_handle_request, s);
 		if (0 > r) {
 			return log_ERRNO();
 		}
@@ -759,37 +759,37 @@ static int wfd_session_handle_io(sd_event_source *source,
 		s->rtsp = rtsp;
 		rtsp = NULL;
 
-		wfd_session_set_state(s, WFD_SESSION_STATE_CAPS_EXCHANGING);
+		dispd_session_set_state(s, DISPD_SESSION_STATE_CAPS_EXCHANGING);
 
 		r = (*session_vtbl[s->dir].initiate_request)(s);
 	}
 
 	if(mask & EPOLLHUP) {
-		wfd_session_destroy(s);
+		dispd_session_destroy(s);
 	}
 
 	return 0;
 }
 
-int wfd_session_start(struct wfd_session *s)
+int dispd_session_start(struct dispd_session *s)
 {
 	int r;
 	_shl_close_ int fd = -1;
 	uint32_t mask;
 
-	assert_ret(wfd_is_session(s));
-	assert_retv(wfd_session_is_state(s, WFD_SESSION_STATE_NULL), -EINPROGRESS);
+	assert_ret(dispd_is_session(s));
+	assert_retv(dispd_session_is_state(s, DISPD_SESSION_STATE_NULL), -EINPROGRESS);
 
 	r = (*session_vtbl[s->dir].initiate_io)(s, &fd, &mask);
 	if(0 > r) {
 		return log_ERR(r);
 	}
 
-	r = sd_event_add_io(ctl_wfd_get_loop(),
+	r = sd_event_add_io(dispd_get_loop(),
 				NULL,
 				fd,
 				mask,
-				wfd_session_handle_io,
+				dispd_session_handle_io,
 				s);
 	if (r < 0) {
 		return log_ERRNO();
@@ -797,19 +797,19 @@ int wfd_session_start(struct wfd_session *s)
 
 	fd = -1;
 
-	wfd_session_set_state(s, WFD_SESSION_STATE_CONNECTING);
+	dispd_session_set_state(s, DISPD_SESSION_STATE_CONNECTING);
 
 	return 0;
 }
 
-enum wfd_display_server_type wfd_session_get_disp_type(struct wfd_session *s)
+enum dispd_display_server_type dispd_session_get_disp_type(struct dispd_session *s)
 {
-	assert_retv(s, WFD_DISPLAY_SERVER_TYPE_UNKNOWN);
+	assert_retv(s, DISPD_DISPLAY_SERVER_TYPE_UNKNOWN);
 
 	return s->disp_type;
 }
 
-int wfd_session_set_disp_type(struct wfd_session *s, enum wfd_display_server_type disp_type)
+int dispd_session_set_disp_type(struct dispd_session *s, enum dispd_display_server_type disp_type)
 {
 	assert_ret(s);
 
@@ -818,14 +818,14 @@ int wfd_session_set_disp_type(struct wfd_session *s, enum wfd_display_server_typ
 	return 0;
 }
 
-const char * wfd_session_get_disp_name(struct wfd_session *s)
+const char * dispd_session_get_disp_name(struct dispd_session *s)
 {
 	assert_retv(s, "");
 
 	return s->disp_name;
 }
 
-int wfd_session_set_disp_name(struct wfd_session *s, const char *disp_name)
+int dispd_session_set_disp_name(struct dispd_session *s, const char *disp_name)
 {
 	char *name;
 
@@ -845,14 +845,14 @@ int wfd_session_set_disp_name(struct wfd_session *s, const char *disp_name)
 	return 0;
 }
 
-const char * wfd_session_get_disp_params(struct wfd_session *s)
+const char * dispd_session_get_disp_params(struct dispd_session *s)
 {
 	assert_retv(s, "");
 
 	return s->disp_params;
 }
 
-int wfd_session_set_disp_params(struct wfd_session *s, const char *disp_params)
+int dispd_session_set_disp_params(struct dispd_session *s, const char *disp_params)
 {
 	char *params;
 
@@ -872,14 +872,14 @@ int wfd_session_set_disp_params(struct wfd_session *s, const char *disp_params)
 	return 0;
 }
 
-const char * wfd_session_get_disp_auth(struct wfd_session *s)
+const char * dispd_session_get_disp_auth(struct dispd_session *s)
 {
 	assert_retv(s, "");
 
 	return s->disp_auth;
 }
 
-int wfd_session_set_disp_auth(struct wfd_session *s, const char *disp_auth)
+int dispd_session_set_disp_auth(struct dispd_session *s, const char *disp_auth)
 {
 	char *auth;
 
@@ -899,14 +899,14 @@ int wfd_session_set_disp_auth(struct wfd_session *s, const char *disp_auth)
 	return 0;
 }
 
-const struct wfd_rectangle * wfd_session_get_disp_dimension(struct wfd_session *s)
+const struct dispd_rectangle * dispd_session_get_disp_dimension(struct dispd_session *s)
 {
 	assert_retv(s, NULL);
 
 	return &s->disp_dimen;
 }
 
-int wfd_session_set_disp_dimension(struct wfd_session *s, const struct wfd_rectangle *rect)
+int dispd_session_set_disp_dimension(struct dispd_session *s, const struct dispd_rectangle *rect)
 {
 	assert_ret(s);
 	assert_ret(rect);
@@ -918,14 +918,14 @@ int wfd_session_set_disp_dimension(struct wfd_session *s, const struct wfd_recta
 	return 0;
 }
 
-enum wfd_audio_server_type wfd_session_get_audio_type(struct wfd_session *s)
+enum dispd_audio_server_type dispd_session_get_audio_type(struct dispd_session *s)
 {
-	assert_retv(s, WFD_AUDIO_SERVER_TYPE_UNKNOWN);
+	assert_retv(s, DISPD_AUDIO_SERVER_TYPE_UNKNOWN);
 
 	return s->audio_type;
 }
 
-int wfd_session_set_audio_type(struct wfd_session *s, enum wfd_audio_server_type audio_type)
+int dispd_session_set_audio_type(struct dispd_session *s, enum dispd_audio_server_type audio_type)
 {
 	assert_ret(s);
 
@@ -934,14 +934,14 @@ int wfd_session_set_audio_type(struct wfd_session *s, enum wfd_audio_server_type
 	return 0;
 }
 
-const char * wfd_session_get_audio_dev_name(struct wfd_session *s)
+const char * dispd_session_get_audio_dev_name(struct dispd_session *s)
 {
 	assert_retv(s, "");
 
 	return s->audio_dev_name;
 }
 
-int wfd_session_set_audio_dev_name(struct wfd_session *s,
+int dispd_session_set_audio_dev_name(struct dispd_session *s,
 				const char *audio_dev_name)
 {
 	char *name;
@@ -962,14 +962,14 @@ int wfd_session_set_audio_dev_name(struct wfd_session *s,
 	return 0;
 }
 
-const char * wfd_session_get_runtime_path(struct wfd_session *s)
+const char * dispd_session_get_runtime_path(struct dispd_session *s)
 {
 	assert_retv(s, "");
 
 	return s->runtime_path;
 }
 
-int wfd_session_set_runtime_path(struct wfd_session *s,
+int dispd_session_set_runtime_path(struct dispd_session *s,
 				const char *runtime_path)
 {
 	char *path;
@@ -990,14 +990,14 @@ int wfd_session_set_runtime_path(struct wfd_session *s,
 	return 0;
 }
 
-uid_t wfd_session_get_client_uid(struct wfd_session *s)
+uid_t dispd_session_get_client_uid(struct dispd_session *s)
 {
 	assert_retv(s, -1);
 
 	return s->client_uid;
 }
 
-int wfd_session_set_client_uid(struct wfd_session *s, uid_t uid)
+int dispd_session_set_client_uid(struct dispd_session *s, uid_t uid)
 {
 	assert_ret(s);
 
@@ -1006,14 +1006,14 @@ int wfd_session_set_client_uid(struct wfd_session *s, uid_t uid)
 	return 0;
 }
 
-gid_t wfd_session_get_client_gid(struct wfd_session *s)
+gid_t dispd_session_get_client_gid(struct dispd_session *s)
 {
 	assert_retv(s, -1);
 
 	return s->client_gid;
 }
 
-int wfd_session_set_client_gid(struct wfd_session *s, gid_t gid)
+int dispd_session_set_client_gid(struct dispd_session *s, gid_t gid)
 {
 	assert_ret(s);
 
@@ -1022,14 +1022,14 @@ int wfd_session_set_client_gid(struct wfd_session *s, gid_t gid)
 	return 0;
 }
 
-pid_t wfd_session_get_client_pid(struct wfd_session *s)
+pid_t dispd_session_get_client_pid(struct dispd_session *s)
 {
 	assert_retv(s, -1);
 
 	return s->client_pid;
 }
 
-int wfd_session_set_client_pid(struct wfd_session *s, pid_t pid)
+int dispd_session_set_client_pid(struct dispd_session *s, pid_t pid)
 {
 	assert_ret(s);
 
@@ -1038,10 +1038,10 @@ int wfd_session_set_client_pid(struct wfd_session *s, pid_t pid)
 	return 0;
 }
 
-void wfd_session_unrefp(struct wfd_session **s)
+void dispd_session_unrefp(struct dispd_session **s)
 {
 	if(s && *s) {
-		wfd_session_unref(*s);
+		dispd_session_unref(*s);
 	}
 }
 
