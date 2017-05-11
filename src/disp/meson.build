@@ -8,13 +8,13 @@ endif
 
 miracle_dispd_src = ['../ctl/ctl-cli.c',
   '../ctl/ctl-wifi.c',
-  'wfd-sink.c',
-  'wfd-dbus.c',
-  'wfd-session.c',
-  'wfd-out-session.c',
-  'dispd.c',
   '../ctl/wfd.c',
-  'wfd-arg.c',
+  'dispd.c',
+  'dispd-sink.c',
+  'dispd-dbus.c',
+  'dispd-session.c',
+  'dispd-out-session.c',
+  'dispd-arg.c',
   'dispd-encoder.c'
 ]
 executable('miracle-dispd',

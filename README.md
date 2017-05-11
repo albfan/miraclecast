@@ -27,7 +27,7 @@ The MiracleCast projects requires the following software to be installed:
 
  - **gstreamer**: MiracleCast rely on gstreamer to show cast its output. You can test if all needed is installed launching [res/test-viewer.sh](https://github.com/albfan/miraclecast/blob/master/res/test-viewer.sh).
 
- - gstreamer plugins: here are the gstreamer plugins you need in order to run sinkctl or wfdctl
+ - gstreamer plugins: here are the gstreamer plugins you need in order to run sinkctl or dispctl
      - gstreamer-plugins-base
      - gstreamer-plugins-good
      - gstreamer-plugins-bad

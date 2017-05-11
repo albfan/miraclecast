@@ -17,17 +17,17 @@
  * along with MiracleCast; If not, see <http://www.gnu.org/licenses/>.
  */
 #include <unistd.h>
-#include "disp.h"
-#include "wfd-arg.h"
+#include "dispd.h"
+#include "dispd-arg.h"
 
-#ifndef CTL_WFD_SESSION_H
-#define CTL_WFD_SESSION_H
+#ifndef DISPD_SESSION_H
+#define DISPD_SESSION_H
 
-#define wfd_out_session(s)		(assert(wfd_is_out_session(s)), (struct wfd_out_session *) (s))
-#define wfd_in_session(s)		(assert(wfd_is_in_session(s)), (struct wfd_in_session *) (s))
+#define dispd_out_session(s)		(assert(dispd_is_out_session(s)), (struct dispd_out_session *) (s))
+#define dispd_in_session(s)		(assert(dispd_is_in_session(s)), (struct dispd_in_session *) (s))
 
-struct wfd_session;
-struct wfd_sink;
+struct dispd_session;
+struct dispd_sink;
 struct rtsp;
 struct rtsp_message;
 
@@ -52,51 +52,51 @@ enum rtsp_message_id
 	RTSP_M16_KEEPALIVE,
 };
 
-enum wfd_stream_id
+enum dispd_stream_id
 {
-	WFD_STREAM_ID_PRIMARY,
-	WFD_STREAM_ID_SECONDARY,
+	DISPD_STREAM_ID_PRIMARY,
+	DISPD_STREAM_ID_SECONDARY,
 };
 
-enum wfd_session_arg_id
+enum dispd_session_arg_id
 {
-	WFD_SESSION_ARG_NEXT_REQUEST,
-	WFD_SESSION_ARG_NEW_STATE,
-	WFD_SESSION_ARG_REQUEST_ARGS,
+	DISPD_SESSION_ARG_NEXT_REQUEST,
+	DISPD_SESSION_ARG_NEW_STATE,
+	DISPD_SESSION_ARG_REQUEST_ARGS,
 };
 
 struct rtsp_dispatch_entry
 {
 	union {
-		int (*request)(struct wfd_session *s,
+		int (*request)(struct dispd_session *s,
 						struct rtsp *bus,
-						const struct wfd_arg_list *args,
+						const struct dispd_arg_list *args,
 						struct rtsp_message **out);
-		int (*handle_request)(struct wfd_session *s,
+		int (*handle_request)(struct dispd_session *s,
 						struct rtsp_message *req,
 						struct rtsp_message **out_rep);
 	};
-	int (*handle_reply)(struct wfd_session *s,
+	int (*handle_reply)(struct dispd_session *s,
 					struct rtsp_message *m);
-	struct wfd_arg_list rule;
+	struct dispd_arg_list rule;
 };
 
-struct wfd_session_vtable
+struct dispd_session_vtable
 {
-	int (*initiate_io)(struct wfd_session *s, int *out_fd, uint32_t *out_mask);
-	int (*handle_io)(struct wfd_session *s, int error, int *out_fd);
-	int (*initiate_request)(struct wfd_session *s);
-	int (*resume)(struct wfd_session *);
-	int (*pause)(struct wfd_session *);
-	int (*teardown)(struct wfd_session *);
-	void (*destroy)(struct wfd_session *s);
+	int (*initiate_io)(struct dispd_session *s, int *out_fd, uint32_t *out_mask);
+	int (*handle_io)(struct dispd_session *s, int error, int *out_fd);
+	int (*initiate_request)(struct dispd_session *s);
+	int (*resume)(struct dispd_session *);
+	int (*pause)(struct dispd_session *);
+	int (*teardown)(struct dispd_session *);
+	void (*destroy)(struct dispd_session *s);
 };
 
-struct wfd_session
+struct dispd_session
 {
 	int ref;
-	enum wfd_session_dir dir;
-	enum wfd_session_state state;
+	enum dispd_session_dir dir;
+	enum dispd_session_state state;
 	enum rtsp_message_id last_request;
 	const struct rtsp_dispatch_entry *rtsp_disp_tbl;
 
@@ -108,18 +108,18 @@ struct wfd_session
 	struct wfd_audio_codecs *acodecs;
 
 	struct {
-		enum wfd_stream_id id;
+		enum dispd_stream_id id;
 		char *url;
 		uint16_t rtp_port;
 		uint16_t rtcp_port;
 	} stream;
 
-	enum wfd_display_server_type disp_type;
+	enum dispd_display_server_type disp_type;
 	char *disp_name;
 	char *disp_params;
 	char *disp_auth;
-	struct wfd_rectangle disp_dimen;
-	enum wfd_audio_server_type audio_type;
+	struct dispd_rectangle disp_dimen;
+	enum dispd_audio_server_type audio_type;
 	char *audio_dev_name;
 
 	uid_t client_uid;
@@ -128,19 +128,19 @@ struct wfd_session
 	char *runtime_path;
 };
 
-int wfd_session_init(struct wfd_session *s,
+int dispd_session_init(struct dispd_session *s,
 				unsigned int id,
-				enum wfd_session_dir dir,
+				enum dispd_session_dir dir,
 				const struct rtsp_dispatch_entry *disp_tbl);
-int wfd_session_gen_stream_url(struct wfd_session *s,
+int dispd_session_gen_stream_url(struct dispd_session *s,
 				const char *local_addr,
-				enum wfd_stream_id id);
-int wfd_session_request(struct wfd_session *s,
+				enum dispd_stream_id id);
+int dispd_session_request(struct dispd_session *s,
 				enum rtsp_message_id id,
-				const struct wfd_arg_list *args);
-void wfd_session_end(struct wfd_session *s);
-struct wfd_sink * wfd_out_session_get_sink(struct wfd_session *s);
-void wfd_session_set_state(struct wfd_session *s,
-				enum wfd_session_state state);
+				const struct dispd_arg_list *args);
+void dispd_session_end(struct dispd_session *s);
+struct dispd_sink * dispd_out_session_get_sink(struct dispd_session *s);
+void dispd_session_set_state(struct dispd_session *s,
+				enum dispd_session_state state);
 
-#endif /* CTL_WFD_SESSION_H */
+#endif /* DISPD_SESSION_H */

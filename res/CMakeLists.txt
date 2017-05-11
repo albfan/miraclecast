@@ -36,13 +36,13 @@ target_link_libraries(
 	)
 
 vala_precompile(
-	WFDCTL_SRC wfdctl
-		wfdctl.vala
+    DISPCTL_SRC dispctl
+		dispctl.vala
 		networkmanager.vala
 		miracle-wifi.vala
 		miracle-wfd.vala
 	GENERATE_HEADER
-		wfdctl.h
+		dispctl.h
 	CUSTOM_VAPIS
 		sigint.vapi
 	OPTIONS
@@ -52,14 +52,14 @@ vala_precompile(
 		gio-2.0
 		gdk-3.0
 	)
-add_executable(miracle-wfdctl ${WFDCTL_SRC} sigint.c)
-target_link_libraries(miracle-wfdctl ${GIO2_LIBRARIES} ${GDK3_LIBRARIES})
+add_executable(miracle-dispctl ${DISPCTL_SRC} sigint.c)
+target_link_libraries(miracle-dispctl ${GIO2_LIBRARIES} ${GDK3_LIBRARIES})
 
 ########### install files ###############
 
 install(TARGETS gstencoder DESTINATION bin)
 
-install(TARGETS miracle-wfdctl DESTINATION bin)
+install(TARGETS miracle-dispctl DESTINATION bin)
 
 execute_process(
 	COMMAND ${PKG_CONFIG_EXECUTABLE} --variable=system_bus_services_dir dbus-1
