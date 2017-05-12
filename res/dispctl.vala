@@ -107,6 +107,8 @@ private class DispCtl : GLib.Application
 	Sink curr_sink;
 	Session curr_session;
 
+	Cancellable cancellable;
+
 	const GLib.OptionEntry[] option_entries = {
 		{ "interface", 'i', 0, OptionArg.STRING, ref opt_iface, "name of wireless network interface", "WNIC name" },
 		{ "wfd-subelems", 'w', 0, OptionArg.STRING, ref opt_wfd_subelems, "device infomation.  default: 000600001c4400c8", "device info subelems" },
@@ -130,6 +132,8 @@ private class DispCtl : GLib.Application
 		peers = new HashTable<string, Peer>(str_hash, str_equal);
 		sinks = new HashTable<string, Sink>(str_hash, str_equal);
 		sessions = new HashTable<string, Session>(str_hash, str_equal);
+
+		cancellable = new Cancellable();
 
 		add_main_option_entries(option_entries);
 	}
@@ -383,7 +387,7 @@ private class DispCtl : GLib.Application
 		print("wait for peer '%s'...", opt_peer_mac);
 	}
 
-	private async void wait_for_target_sink()
+	private async void wait_for_target_sink() throws IOError
 	{
 		if(null != find_sink_by_mac(opt_peer_mac)) {
 			return;
@@ -395,9 +399,16 @@ private class DispCtl : GLib.Application
 			}
 		});
 
+		var cancel_id = cancellable.cancelled.connect(() => {
+			Idle.add(wait_for_target_sink.callback);
+		});
+
 		yield;
 
+		cancellable.disconnect(cancel_id);
 		disconnect(id);
+
+		cancellable.set_error_if_cancelled();
 	}
 
 	private async void form_p2p_group() throws Error
@@ -582,13 +593,19 @@ private class DispCtl : GLib.Application
 	private async void start_wireless_display() throws Error
 	{
 		fetch_info_from_dbus();
+		cancellable.set_error_if_cancelled();
 		if(!opt_dont_borrow_wnic) {
 			yield acquire_wnic_ownership();
 		}
+		cancellable.set_error_if_cancelled();
 		yield start_p2p_scan();
+		cancellable.set_error_if_cancelled();
 		yield wait_for_target_sink();
+		cancellable.set_error_if_cancelled();
 		yield form_p2p_group();
+		cancellable.set_error_if_cancelled();
 		yield establish_session();
+		cancellable.set_error_if_cancelled();
 		yield wait_for_session_ending();
 	}
 
@@ -599,17 +616,16 @@ private class DispCtl : GLib.Application
 
 			try {
 				curr_session.teardown();
+				wait_prop_changed.begin(curr_sink, "Session", 3, () => {
+					cancellable.cancel();
+				});
 			}
 			catch(Error e) {
 				warning("failed to tearing down normally: %s", e.message);
 			}
-
-			wait_prop_changed.begin(curr_sink, "Session", 3, () => {
-				release_wnic_ownership.begin(quit);
-			});
 		}
 		else {
-			release_wnic_ownership.begin(quit);
+			cancellable.cancel();
 		}
 	}
 
@@ -674,7 +690,6 @@ private class DispCtl : GLib.Application
 			}
 			catch(Error e) {
 				print("failed to cast to wireless display: %s", e.message);
-				release();
 			}
 
 			release_wnic_ownership.begin((o, r) => {
@@ -682,6 +697,7 @@ private class DispCtl : GLib.Application
 					release_wnic_ownership.end(r);
 				}
 				catch(Error e) {
+					print("failed to release ownershipt of wnic: %s", e.message);
 				}
 
 				quit();
@@ -731,7 +747,7 @@ private class DispCtl : GLib.Application
 
 	private async void wait_prop_changed<T>(T o,
 					string name,
-					uint timeout = 1) throws DispCtlError
+					uint timeout = 1) throws DispCtlError, IOError
 	{
 		ulong prop_changed_id = (o as DBusProxy).g_properties_changed.connect((props) => {
 			string k;
@@ -756,8 +772,13 @@ private class DispCtl : GLib.Application
 							});
 		}
 
+		var cancel_id = cancellable.cancelled.connect(() => {
+			Idle.add(wait_prop_changed.callback);
+		});
+
 		yield;
 
+		cancellable.disconnect(cancel_id);
 		if(0 < timeout) {
 			Source.remove(timeout_id);
 		}
@@ -767,6 +788,8 @@ private class DispCtl : GLib.Application
 			throw new DispCtlError.TIMEOUT("timeout to wait for property %s change",
 							name);
 		}
+
+		cancellable.set_error_if_cancelled();
 	}
 }
 
