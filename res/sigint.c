@@ -53,12 +53,12 @@ void sigint_add_watch(SigintHandler handler, gpointer user_data)
 
 	int fd = signalfd(-1, &mask, SFD_CLOEXEC);
 	GIOChannel *c = g_io_channel_unix_new(fd);
+	g_io_channel_set_encoding(c, NULL, NULL);
 	g_io_add_watch_full(c,
 					G_PRIORITY_DEFAULT,
 					G_IO_IN | G_IO_ERR | G_IO_HUP,
 					sigint_on_signal,
 					d,
 					g_free);
-	g_io_channel_set_encoding(c, NULL, NULL);
-	/*g_io_channel_unref(c);*/
+	g_io_channel_unref(c);
 }
