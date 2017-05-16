@@ -728,9 +728,14 @@ static int dispd_dbus_session_teardown(sd_bus_message *m,
 				sd_bus_error *ret_error)
 {
 	struct dispd_session *s = userdata;
-	int r = dispd_session_teardown(s);
+	int r = 0;
+
+	if(dispd_session_is_established(s)) {
+		r = dispd_session_teardown(s);
+	}
+
 	if(0 > r) {
-		return log_ERRNO();
+		dispd_session_destroy(s);
 	}
 
 	r = sd_bus_reply_method_return(m, NULL);
