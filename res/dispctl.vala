@@ -257,11 +257,8 @@ private class DispCtl : GLib.Application
 					info("removing stray session: %s", key);
 					break;
 				}
-				if(s == curr_session) {
-					curr_session = null;
-				}
-				sessions.remove(key);
 				session_removed(key, s);
+				sessions.remove(key);
 				break;
 		}
 	}
@@ -387,7 +384,7 @@ private class DispCtl : GLib.Application
 		print("wait for peer '%s'...", opt_peer_mac);
 	}
 
-	private async void wait_for_target_sink() throws IOError
+	private async void wait_for_target_sink() throws Error
 	{
 		if(null != find_sink_by_mac(opt_peer_mac)) {
 			return;
@@ -398,7 +395,6 @@ private class DispCtl : GLib.Application
 				wait_for_target_sink.callback();
 			}
 		});
-
 		var cancel_id = cancellable.cancelled.connect(() => {
 			Idle.add(wait_for_target_sink.callback);
 		});
@@ -407,8 +403,6 @@ private class DispCtl : GLib.Application
 
 		cancellable.disconnect(cancel_id);
 		disconnect(id);
-
-		cancellable.set_error_if_cancelled();
 	}
 
 	private async void form_p2p_group() throws Error
@@ -504,8 +498,8 @@ private class DispCtl : GLib.Application
 
 		info("establishing display session...");
 
-		Sink sink = find_sink_by_mac(opt_peer_mac);
-		string path = sink.start_session(opt_authority,
+		curr_sink = find_sink_by_mac(opt_peer_mac);
+		string path = curr_sink.start_session(opt_authority,
 						@"x://$(opt_display)",
 						g.x,
 						g.y,
@@ -513,7 +507,8 @@ private class DispCtl : GLib.Application
 						g.height,
 						null == opt_audio_device ? "" : opt_audio_device);
 		curr_session = add_object(path) as Session;
-		(curr_session as DBusProxy).g_properties_changed.connect((props) => {
+
+		var prop_change_id = (curr_session as DBusProxy).g_properties_changed.connect((props) => {
 			string k;
 			Variant v;
 			foreach(var prop in props) {
@@ -531,10 +526,14 @@ private class DispCtl : GLib.Application
 				break;
 			}
 		});
-		Error error = null;
+		cancellable.set_error_if_cancelled();
+		var cancel_id = cancellable.cancelled.connect(() => {
+			Idle.add(establish_session.callback);
+		});
+		bool timed_out = false;
 		var timeout_src = new TimeoutSource(10);
 		timeout_src.set_callback(() => {
-			error = new DispCtlError.TIMEOUT("failed to establish session");
+			timed_out = true;
 			Idle.add(establish_session.callback);
 			return false;
 		});
@@ -542,14 +541,15 @@ private class DispCtl : GLib.Application
 		yield;
 
 		timeout_src.destroy();
-		if(null != error) {
-			throw error;
-		}
+		cancellable.disconnect(cancel_id);
+		(curr_session as DBusProxy).disconnect(prop_change_id);
 
-		curr_sink = sink;
+		if(timed_out) {
+			throw new DispCtlError.TIMEOUT("failed to establish session");
+		}
 	}
 
-	private async void wait_for_session_ending()
+	private async void wait_for_session_ending() throws Error
 	{
 		info("wait for session ending");
 		ulong id = session_removed.connect((id, s) => {
@@ -561,7 +561,6 @@ private class DispCtl : GLib.Application
 		disconnect(id);
 
 		info("session ended");
-		curr_session = null;
 	}
 
 	private async void release_wnic_ownership() throws Error
@@ -569,6 +568,8 @@ private class DispCtl : GLib.Application
 		if(opt_dont_return_wnic) {
 			return;
 		}
+
+		cancellable.reset();
 
 		Link l = find_link_by_name(opt_iface);
 		if(null == l) {
@@ -607,10 +608,13 @@ private class DispCtl : GLib.Application
 		yield establish_session();
 		cancellable.set_error_if_cancelled();
 		yield wait_for_session_ending();
+		cancellable.set_error_if_cancelled();
 	}
 
 	public void stop_wireless_display()
 	{
+		info("received termination request");
+
 		if(null != curr_session) {
 			info("tearing down wireless display...");
 
@@ -697,10 +701,10 @@ private class DispCtl : GLib.Application
 					release_wnic_ownership.end(r);
 				}
 				catch(Error e) {
-					print("failed to release ownershipt of wnic: %s", e.message);
+					print("failed to release ownership of wnic: %s", e.message);
 				}
 
-				quit();
+				release();
 			});
 		});
 
@@ -747,7 +751,7 @@ private class DispCtl : GLib.Application
 
 	private async void wait_prop_changed<T>(T o,
 					string name,
-					uint timeout = 1) throws DispCtlError, IOError
+					uint timeout = 1) throws Error
 	{
 		ulong prop_changed_id = (o as DBusProxy).g_properties_changed.connect((props) => {
 			string k;
@@ -760,27 +764,26 @@ private class DispCtl : GLib.Application
 				}
 			}
 		});
-
-		bool timed_out = false;
-		uint timeout_id = 0;
-		if(0 < timeout) {
-			timeout_id = Timeout.add_seconds(timeout,
-							() => {
-								timed_out = true;
-								wait_prop_changed.callback();
-								return false;
-							});
-		}
-
 		var cancel_id = cancellable.cancelled.connect(() => {
 			Idle.add(wait_prop_changed.callback);
 		});
+		bool timed_out = false;
+		Source timeout_src = null;
+		if(0 < timeout) {
+			timeout_src = new TimeoutSource.seconds(timeout);
+			timeout_src.set_callback(() => {
+							timed_out = true;
+							wait_prop_changed.callback();
+							return false;
+			});
+			timeout_src.attach(null);
+		}
 
 		yield;
 
 		cancellable.disconnect(cancel_id);
-		if(0 < timeout) {
-			Source.remove(timeout_id);
+		if(null != timeout_src) {
+			timeout_src.destroy();
 		}
 		(o as DBusProxy).disconnect(prop_changed_id);
 
