@@ -216,5 +216,6 @@ int dispd_fn_out_session_ended(struct dispd_session *s);
 
 int dispd_fn_sink_new(struct dispd_sink *s);
 int dispd_fn_sink_free(struct dispd_sink *s);
+int dispd_fn_sink_detach(struct dispd_sink *s);
 
 #endif /* DISP_DISP_H */

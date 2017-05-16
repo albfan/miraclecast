@@ -36,11 +36,12 @@ static int dispd_sink_set_session(struct dispd_sink *sink,
 	if(session) {
 		r = dispd_add_session(dispd_get(), session);
 		if(0 > r) {
-			return r;
+			return log_ERR(r);
 		}
 	}
 	
 	if(sink->session) {
+		dispd_fn_sink_detach(sink);
 		dispd_remove_session_by_id(dispd_get(),
 						dispd_session_get_id(sink->session),
 						NULL);
@@ -152,9 +153,14 @@ int dispd_sink_create_session(struct dispd_sink *sink, struct dispd_session **ou
 
 int dispd_fn_out_session_ended(struct dispd_session *s)
 {
+	struct dispd_sink *sink;
+
 	assert_ret(dispd_is_out_session(s));
 
-	dispd_sink_set_session(dispd_out_session_get_sink(s), NULL);
+	sink = dispd_out_session_get_sink(s);
+	if(sink) {
+		dispd_sink_set_session(sink, NULL);
+	}
 
 	return 0;
 }

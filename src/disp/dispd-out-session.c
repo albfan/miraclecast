@@ -902,6 +902,17 @@ static int dispd_out_session_request_set_parameter(struct dispd_session *s,
 	return 0;
 }
 
+
+int dispd_fn_sink_detach(struct dispd_sink *sink)
+{
+	assert_ret(sink);
+	assert_ret(dispd_is_out_session(sink->session));
+
+	dispd_out_session(sink->session)->sink = NULL;
+
+	return 0;
+}
+
 static const struct rtsp_dispatch_entry out_session_rtsp_disp_tbl[] = {
 	[RTSP_M1_REQUEST_SINK_OPTIONS] = {
 		.request = dispd_out_session_request_options,

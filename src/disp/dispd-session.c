@@ -165,7 +165,8 @@ bool dispd_session_is_established(struct dispd_session *s)
 {
 	assert_retv(dispd_is_session(s), false);
 
-	return DISPD_SESSION_STATE_ESTABLISHED <= s->state;
+	return DISPD_SESSION_STATE_ESTABLISHED <= s->state &&
+					DISPD_SESSION_STATE_TEARING_DOWN > s->state;
 }
 
 int dispd_session_resume(struct dispd_session *s)
