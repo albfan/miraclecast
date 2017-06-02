@@ -113,6 +113,7 @@ enum dispd_session_dir dispd_session_get_dir(struct dispd_session *s);
 struct dispd_sink * dispd_out_session_get_sink(struct dispd_session *s);
 
 enum dispd_display_server_type dispd_session_get_disp_type(struct dispd_session *s);
+bool dispd_session_has_disp(struct dispd_session *s);
 int dispd_session_set_disp_type(struct dispd_session *s, enum dispd_display_server_type);
 const char * dispd_session_get_disp_name(struct dispd_session *s);
 int dispd_session_set_disp_name(struct dispd_session *s, const char *disp_name);
@@ -123,6 +124,7 @@ int dispd_session_set_disp_auth(struct dispd_session *s, const char *disp_auth);
 const struct dispd_rectangle * dispd_session_get_disp_dimension(struct dispd_session *s);
 int dispd_session_set_disp_dimension(struct dispd_session *s, const struct dispd_rectangle *rect);
 enum dispd_audio_server_type dispd_session_get_audio_type(struct dispd_session *s);
+bool dispd_session_has_audio(struct dispd_session *s);
 int dispd_session_set_audio_type(struct dispd_session *s, enum dispd_audio_server_type audio_type);
 const char * dispd_session_get_audio_dev_name(struct dispd_session *s);
 int dispd_session_set_audio_dev_name(struct dispd_session *s, const char *audio_dev_name);
