@@ -532,14 +532,16 @@ static int dispd_dbus_sink_start_session(sd_bus_message *m,
 		return log_ERR(r);
 	}
 
-	r = dispd_session_set_audio_type(sess, DISPD_AUDIO_SERVER_TYPE_PULSE_AUDIO);
-	if(0 > r) {
-		return log_ERR(r);
-	}
+	if(*audio_dev) {
+		r = dispd_session_set_audio_type(sess, DISPD_AUDIO_SERVER_TYPE_PULSE_AUDIO);
+		if(0 > r) {
+			return log_ERR(r);
+		}
 
-	r = dispd_session_set_audio_dev_name(sess, audio_dev);
-	if(0 > r) {
-		return log_ERR(r);
+		r = dispd_session_set_audio_dev_name(sess, audio_dev);
+		if(0 > r) {
+			return log_ERR(r);
+		}
 	}
 
 	r = sd_bus_query_sender_creds(m, SD_BUS_CREDS_PID, &creds);

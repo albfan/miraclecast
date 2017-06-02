@@ -840,6 +840,24 @@ int dispd_encoder_configure(struct dispd_encoder *e, struct dispd_session *s)
 		}
 	}
 
+	if(dispd_session_has_audio(s) && dispd_session_get_audio_dev_name(s)) {
+		r = config_append(call,
+						WFD_ENCODER_CONFIG_AUDIO_TYPE,
+						"u",
+						dispd_session_get_audio_type(s));
+		if(0 > r) {
+			return log_ERR(r);
+		}
+
+		r = config_append(call,
+						WFD_ENCODER_CONFIG_AUDIO_DEV,
+						"s",
+						dispd_session_get_audio_dev_name(s));
+		if(0 > r) {
+			return log_ERR(r);
+		}
+	}
+
 	r = sd_bus_message_close_container(call);
 	if(0 > r) {
 		return log_ERR(r);

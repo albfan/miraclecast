@@ -212,8 +212,8 @@ internal class GstEncoder : DispdEncoder, GLib.Object
 						configs.contains(DispdEncoderConfig.Y)
 							? configs.get(DispdEncoderConfig.Y).get_uint32()
 							: 0,
-						width - 1,
-						height - 1,
+						configs.get(DispdEncoderConfig.X).get_uint32() + width - 1,
+						configs.get(DispdEncoderConfig.Y).get_uint32() + height - 1,
 						framerate,
 						gen_scaler_n_converter_desc(width, height),
 						gen_encoder_desc(framerate),
@@ -252,6 +252,26 @@ internal class GstEncoder : DispdEncoder, GLib.Object
 								: 16385);
 		}
 
+		if(configs.contains(DispdEncoderConfig.AUDIO_TYPE)) {
+			desc.append_printf("pulsesrc " +
+								"do-timestamp=true " +
+								"client-name=miraclecast " +
+								"device=\"%s\" " +
+							"! avenc_aac " +
+							"! audio/mpeg, " +
+								"channels=2, " +
+								"rate=48000 " +
+//								"base-profile=lc " +
+							"! queue " +
+								"max-size-buffers=0 " +
+								"max-size-bytes=0 " +
+								"max-size-time=0 " +
+							"! muxer. ",
+							configs.contains(DispdEncoderConfig.AUDIO_DEV)
+								? configs.get(DispdEncoderConfig.AUDIO_DEV).get_string()
+								: "");
+		}
+
 		info("final pipeline description: %s", desc.str);
 
 		this.configs = configs;
@@ -269,34 +289,6 @@ internal class GstEncoder : DispdEncoder, GLib.Object
 
 		pipeline.set_state(Gst.State.READY);
 	}
-
-//	if(*os->audio_dev) {
-//		for(tmp = pipeline_desc; *tmp; ++tmp);
-//		*tmp ++ = "pulsesrc";
-//		*tmp ++ = "do-timestamp=true";
-//		*tmp ++ = "client-name=miraclecast";
-//		*tmp ++ = "device=";
-//		*tmp ++ = quote_str(os->audio_dev, audio_dev, sizeof(audio_dev));
-//		*tmp ++ = "!";
-//		*tmp ++ = "voaacenc";
-//		*tmp ++ = "mark-granule=true";
-//		*tmp ++ = "hard-resync=true";
-//		*tmp ++ = "tolerance=40";
-//		*tmp ++ = "!";
-//		*tmp ++ = "audio/mpeg,";
-//		*tmp ++ = "rate=48000,";
-//		*tmp ++ = "channels=2,";
-//		*tmp ++ = "stream-format=adts,";
-//		*tmp ++ = "base-profile=lc";
-//		*tmp ++ = "!";
-//		*tmp ++ = "queue";
-//		*tmp ++ = "max-size-buffers=0";
-//		*tmp ++ = "max-size-bytes=0";
-//		*tmp ++ = "max-size-time=0";
-//		*tmp ++ = "!";
-//		*tmp ++ = "muxer.";
-//		*tmp ++ = NULL;
-//	}
 
 	public void start() throws DispdEncoderError
 	{

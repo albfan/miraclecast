@@ -810,6 +810,13 @@ enum dispd_display_server_type dispd_session_get_disp_type(struct dispd_session 
 	return s->disp_type;
 }
 
+bool dispd_session_has_disp(struct dispd_session *s)
+{
+	assert_retv(s, false);
+
+	return DISPD_DISPLAY_SERVER_TYPE_UNKNOWN != s->disp_type;
+}
+
 int dispd_session_set_disp_type(struct dispd_session *s, enum dispd_display_server_type disp_type)
 {
 	assert_ret(s);
@@ -924,6 +931,13 @@ enum dispd_audio_server_type dispd_session_get_audio_type(struct dispd_session *
 	assert_retv(s, DISPD_AUDIO_SERVER_TYPE_UNKNOWN);
 
 	return s->audio_type;
+}
+
+bool dispd_session_has_audio(struct dispd_session *s)
+{
+	assert_retv(s, false);
+
+	return DISPD_AUDIO_SERVER_TYPE_UNKNOWN != s->audio_type;
 }
 
 int dispd_session_set_audio_type(struct dispd_session *s, enum dispd_audio_server_type audio_type)
