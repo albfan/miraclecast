@@ -1,3 +1,9 @@
+find_package(PkgConfig)
+pkg_check_modules (GLIB2 REQUIRED glib-2.0)
+link_directories( ${GLIB2_LIBRARY_DIRS})
+include_directories( ${GLIB2_INCLUDE_DIRS})
+find_package(Readline REQUIRED)
+
 set(miracle-dispd_SRCS
 				../ctl/ctl-cli.c
 				../ctl/ctl-wifi.c
@@ -18,6 +24,7 @@ include_directories(${CMAKE_SOURCE_DIR}/src/ctl
 )
 
 add_executable(miracle-dispd ${miracle-dispd_SRCS})
+target_link_libraries(miracle-dispd ${GLIB2_LIBRARIES})
 
 install(TARGETS miracle-dispd DESTINATION bin)
 
