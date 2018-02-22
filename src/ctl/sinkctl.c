@@ -67,9 +67,9 @@ int rstp_port;
 int uibc_port;
 char* player;
 
-unsigned int wfd_supported_res_cea  = 0x0000001f;	/* up to 720x576 */
-unsigned int wfd_supported_res_vesa = 0x00000003;	/* up to 800x600 */
-unsigned int wfd_supported_res_hh   = 0x00000000;	/* not supported */
+unsigned int wfd_supported_res_cea  = 0x0001ffff;
+unsigned int wfd_supported_res_vesa = 0x1fffffff;
+unsigned int wfd_supported_res_hh   = 0x00001fff;
 
 /*
  * cmd list
