@@ -83,7 +83,7 @@ If you feel confidence enough (since systemd is the entrypoint for an OS) extrac
 
 ## Documentation
 
-- Steps to use it as sink:
+### Steps to use it as sink
 
  1. shutdown wpa_supplicant and NetworkManager
 
@@ -107,7 +107,7 @@ If you feel confidence enough (since systemd is the entrypoint for an OS) extrac
 
  6. See your screen device on this machine
 
-- Steps to use it as peer:
+### Steps to use it as peer
 
  1. Repeat steps 1 and 2 from "use as sink"
 
