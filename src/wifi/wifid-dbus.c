@@ -571,6 +571,42 @@ static int link_dbus_set_friendly_name(sd_bus *bus,
 	return link_set_friendly_name(l, name);
 }
 
+static int link_dbus_get_managed(sd_bus *bus,
+				      const char *path,
+				      const char *interface,
+				      const char *property,
+				      sd_bus_message *reply,
+				      void *data,
+				      sd_bus_error *err)
+{
+	struct link *l = data;
+	int r;
+
+	r = sd_bus_message_append(reply, "b", link_get_managed(l));
+	if (r < 0)
+		return r;
+
+	return 1;
+}
+
+static int link_dbus_set_managed(sd_bus *bus,
+				      const char *path,
+				      const char *interface,
+				      const char *property,
+				      sd_bus_message *value,
+				      void *data,
+				      sd_bus_error *err)
+{
+	struct link *l = data;
+	int val, r;
+
+	r = sd_bus_message_read(value, "b", &val);
+	if (r < 0)
+		return r;
+
+	return link_set_managed(l, val);
+}
+
 static int link_dbus_get_p2p_scanning(sd_bus *bus,
 				      const char *path,
 				      const char *interface,
@@ -660,6 +696,12 @@ static const sd_bus_vtable link_dbus_vtable[] = {
 				 "s",
 				 link_dbus_get_friendly_name,
 				 link_dbus_set_friendly_name,
+				 0,
+				 SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
+	SD_BUS_WRITABLE_PROPERTY("Managed",
+				 "b",
+				 link_dbus_get_managed,
+				 link_dbus_set_managed,
 				 0,
 				 SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
 	SD_BUS_WRITABLE_PROPERTY("P2PScanning",
