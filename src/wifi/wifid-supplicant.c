@@ -2597,10 +2597,9 @@ static int supplicant_write_config(struct supplicant *s)
 		    "driver_param=%s\n"
 		    "ap_scan=%s\n"
 		    "# End of configuration\n",
-		    s->l->friendly_name ? : "unknown",
+		    s->l->friendly_name ?: "unknown",
 		    "1-0050F204-1",
-		    "pbc",
-		    //"pbc keypad pin display",
+		    s->l->config_methods ?: "pbc",
 		    "p2p_device=1",
 		    "1");
 	if (r < 0) {

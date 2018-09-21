@@ -41,6 +41,7 @@
 #include "config.h"
 
 const char *interface_name = NULL;
+const char *config_methods = NULL;
 unsigned int arg_wpa_loglevel = LOG_NOTICE;
 bool use_dev = false;
 
@@ -102,6 +103,7 @@ static void manager_add_udev_link(struct manager *m,
 		return;
 
 	link_set_friendly_name(l, m->friendly_name);
+	link_set_config_methods(l, m->config_methods);
 
     if(use_dev)
         link_use_dev(l);
@@ -215,6 +217,7 @@ static void manager_free(struct manager *m)
 	sd_event_unref(m->event);
 
 	free(m->friendly_name);
+	free(m->config_methods);
 	free(m);
 }
 
@@ -227,12 +230,23 @@ static int manager_new(struct manager **out)
 	unsigned int i;
 	sigset_t mask;
 	int r;
+   char *cm;
 
 	m = calloc(1, sizeof(*m));
 	if (!m)
 		return log_ENOMEM();
 
 	shl_htable_init_uint(&m->links);
+
+
+	if (config_methods) {
+		cm = strdup(config_methods);
+		if (!cm)
+			return log_ENOMEM();
+
+		free(m->config_methods);
+		m->config_methods = cm;
+	}
 
 	r = sd_event_default(&m->event);
 	if (r < 0) {
@@ -459,6 +473,7 @@ static int help(void)
 	       "     --log-time            Prefix log-messages with timestamp\n"
 	       "\n"
 	       "  -i --interface           Choose the interface to use\n"
+	       "     --config-methods      Define config methods for pairing, default 'pbc'\n"
 	       "\n"
 	       "     --wpa-loglevel <lvl   wpa_supplicant log-level\n"
 	       "     --use-dev             enable workaround for 'no ifname' issue\n"
@@ -477,10 +492,9 @@ static int parse_argv(int argc, char *argv[])
 		ARG_VERSION = 0x100,
 		ARG_LOG_LEVEL,
 		ARG_LOG_TIME,
-
 		ARG_WPA_LOGLEVEL,
-
 		ARG_USE_DEV,
+		ARG_CONFIG_METHODS,
 	};
 	static const struct option options[] = {
 		{ "help",	no_argument,		NULL,	'h' },
@@ -491,6 +505,7 @@ static int parse_argv(int argc, char *argv[])
 		{ "wpa-loglevel",	required_argument,	NULL,	ARG_WPA_LOGLEVEL },
 		{ "interface",	required_argument,	NULL,	'i' },
 		{ "use-dev",	no_argument,	NULL,	ARG_USE_DEV },
+		{ "config-methods",	required_argument,	NULL,	ARG_CONFIG_METHODS },
 		{}
 	};
 	int c;
@@ -513,6 +528,9 @@ static int parse_argv(int argc, char *argv[])
 			break;
 		case ARG_USE_DEV:
 			use_dev = true;
+			break;
+		case ARG_CONFIG_METHODS:
+			config_methods = optarg;
 			break;
 
 		case ARG_WPA_LOGLEVEL:

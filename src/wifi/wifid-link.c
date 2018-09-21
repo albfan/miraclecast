@@ -129,6 +129,7 @@ void link_free(struct link *l)
 	free(l->wfd_subelements);
 	free(l->friendly_name);
 	free(l->ifname);
+	free(l->config_methods);
 	free(l);
 }
 
@@ -140,6 +141,22 @@ void link_use_dev(struct link *l)
 bool link_is_using_dev(struct link *l)
 {
     return l->use_dev;
+}
+
+int link_set_config_methods(struct link *l, char *config_methods)
+{
+   char *cm;
+
+	if (!config_methods)
+		return log_EINVAL();
+
+	cm = strdup(config_methods);
+	if (!cm)
+		return log_ENOMEM();
+
+	free(l->config_methods);
+	l->config_methods = config_methods;
+   return 0;
 }
 
 void link_set_managed(struct link *l, bool set)
