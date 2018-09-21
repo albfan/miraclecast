@@ -21,6 +21,7 @@ if(BUILD_ENABLE_DEBUG)
 endif()
 
 set(SYSCONFDIR "/etc" CACHE STRING "system config dir")
+set(DATADIR "${CMAKE_INSTALL_PREFIX}/share" CACHE STRING "shared data dir")
 
 find_package(PkgConfig)
 pkg_check_modules (GLIB2 REQUIRED glib-2.0)

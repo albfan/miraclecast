@@ -1,0 +1,95 @@
+#
+# Autocompletion for miracle-wifid
+#
+# Maintainer: Alberto Fanjul <albertofanjul@gmail.com>
+#
+
+function _miracle-wifid() {
+  local cur prev
+
+  _get_comp_words_by_ref cur
+  prev=${COMP_WORDS[COMP_CWORD-1]}
+
+  case "$prev" in
+    --config-methods)
+      COMPREPLY=($(compgen -W 'pbc pin usba ethernet label display ext_nfc_token int_nfc_token nfc_interface push_button keypad virtual_display physical_display virtual_push_button physical_push_button' -- "$cur"))
+      return 0
+      ;;
+    --log-level)
+      COMPREPLY=($(compgen -W 'fatal alert critical error warning notice info debug trace 1 2 3 4 5 6 7 8' -- "$cur"))
+      return 0
+      ;;
+    --wpa-loglevel)
+      COMPREPLY=($(compgen -W 'fatal alert critical error warning notice info debug trace 1 2 3 4 5 6 7 8' -- "$cur"))
+      return 0
+      ;;
+  esac
+
+  COMPREPLY=($(compgen -W "$(_parse_help miracle-wifid) $(_parse_short_help miracle-wifid)" -- "$cur"))
+}
+
+
+_parse_short_help () 
+{ 
+    eval local cmd=$( quote "$1" );
+    local line;
+    { 
+        case $cmd in 
+            -)
+                cat
+            ;;
+            *)
+                LC_ALL=C "$( dequote "$cmd" )" ${2:---help} 2>&1
+            ;;
+        esac
+    } | while read -r line; do
+        [[ $line == *([[:blank:]])-* ]] || continue;
+        while [[ $line =~ ((^|[^-])-[A-Za-z0-9?][[:space:]]+)\[?[A-Z0-9]+\]? ]]; do
+            line=${line/"${BASH_REMATCH[0]}"/"${BASH_REMATCH[1]}"};
+        done;
+        __parse_short_options "${line// or /, }";
+    done
+}
+
+__parse_short_options () 
+{ 
+    local option option2 i IFS=' 	
+,/|';
+    option=;
+    local -a array;
+    read -a array <<< "$1";
+    for i in "${array[@]}";
+    do
+        case "$i" in 
+            ---*)
+                break
+            ;;
+            --?*)
+                break
+            ;;
+            -?*)
+                option=$i;
+                break
+            ;;
+            *)
+                break
+            ;;
+        esac;
+    done;
+    [[ -n $option ]] || return;
+    IFS=' 	
+';
+    if [[ $option =~ (\[((no|dont)-?)\]). ]]; then
+        option2=${option/"${BASH_REMATCH[1]}"/};
+        option2=${option2%%[<{().[]*};
+        printf '%s\n' "${option2/=*/=}";
+        option=${option/"${BASH_REMATCH[1]}"/"${BASH_REMATCH[2]}"};
+    fi;
+    option=${option%%[<{().[]*};
+    printf '%s\n' "${option/=*/=}"
+}
+
+complete -F _miracle-wifid miracle-wifid
+
+
+# ex: filetype=sh
