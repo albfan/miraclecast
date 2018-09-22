@@ -103,8 +103,10 @@ static void manager_add_udev_link(struct manager *m,
 	if (r < 0)
 		return;
 
-	link_set_friendly_name(l, m->friendly_name);
-	link_set_config_methods(l, m->config_methods);
+   if (m->friendly_name && l->managed)
+	   link_set_friendly_name(l, m->friendly_name);
+   if (m->config_methods)
+	   link_set_config_methods(l, m->config_methods);
 
     if(use_dev)
         link_use_dev(l);

@@ -330,7 +330,8 @@ void link_supplicant_started(struct link *l)
 	if (!l || l->public)
 		return;
 
-	link_set_friendly_name(l, l->m->friendly_name);
+   if (l->m->friendly_name && l->managed)
+	   link_set_friendly_name(l, l->m->friendly_name);
 	log_info("link %s managed", l->ifname);
 }
 
