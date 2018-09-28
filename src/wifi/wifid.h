@@ -129,6 +129,7 @@ struct link {
 	char *ifname;
 	char *friendly_name;
 	char *wfd_subelements;
+	char *config_methods;
 
 	size_t peer_cnt;
 	struct shl_htable peers;
@@ -161,6 +162,7 @@ bool link_is_using_dev(struct link *l);
 void link_set_managed(struct link *l, bool set);
 int link_renamed(struct link *l, const char *ifname);
 
+int link_set_config_methods(struct link *l, char *config_methods);
 int link_set_friendly_name(struct link *l, const char *name);
 const char *link_get_friendly_name(struct link *l);
 int link_set_wfd_subelements(struct link *l, const char *val);
@@ -188,6 +190,7 @@ struct manager {
 	sd_event_source *udev_mon_source;
 
 	char *friendly_name;
+	char *config_methods;
 
 	size_t link_cnt;
 	struct shl_htable links;
