@@ -108,14 +108,15 @@ static void manager_add_udev_link(struct manager *m,
    if (m->config_methods)
 	   link_set_config_methods(l, m->config_methods);
 
-    if(use_dev)
+	if(use_dev)
         link_use_dev(l);
 
 #ifdef RELY_UDEV
-	if (udev_device_has_tag(d, "miracle") && !lazy_managed) {
+	bool managed = udev_device_has_tag(d, "miracle") && !lazy_managed;
 #else
-	if ((!interface_name || !strcmp(interface_name, ifname)) && !lazy_managed) {
+	bool managed = (!interface_name || !strcmp(interface_name, ifname)) && !lazy_managed;
 #endif
+	if (managed) {
 		link_set_managed(l, true);
 	} else {
 		log_debug("ignored device: %s", ifname);
