@@ -56,5 +56,5 @@ cd build
 
 
 %changelog
-* Wed Nov 21 2018 Graham White <gwhite@uk.ibm.com>
+* Wed Nov 21 2018 Graham White
 - first build
