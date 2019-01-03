@@ -17,6 +17,8 @@
  * along with MiracleCast; If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include "config.h"
+
 #include <errno.h>
 #include <getopt.h>
 #include <locale.h>
@@ -30,7 +32,11 @@
 #include <sys/time.h>
 #include <systemd/sd-bus.h>
 #include <systemd/sd-event.h>
+
+#ifdef ENABLE_SYSTEMD
 #include <systemd/sd-journal.h>
+#endif
+
 #include <time.h>
 #include <unistd.h>
 #include "ctl.h"
@@ -399,6 +405,7 @@ static void spawn_gst(struct ctl_sink *s)
 		sigemptyset(&mask);
 		sigprocmask(SIG_SETMASK, &mask, NULL);
 
+#ifdef ENABLE_SYSTEMD
 		/* redirect stdout/stderr to journal */
 		fd_journal = sd_journal_stream_fd("miracle-sinkctl-gst",
 						  LOG_DEBUG,
@@ -408,9 +415,12 @@ static void spawn_gst(struct ctl_sink *s)
 			dup2(fd_journal, 1);
 			dup2(fd_journal, 2);
 		} else {
+#endif
 			/* no journal? redirect stdout to parent's stderr */
 			dup2(2, 1);
+#ifdef ENABLE_SYSTEMD
 		}
+#endif
 
 		launch_player(s);
 		_exit(1);
