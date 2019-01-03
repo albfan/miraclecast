@@ -11,6 +11,15 @@ set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake
 set(CMAKE_C_FLAGS "-std=gnu11 ${CMAKE_C_FLAGS}")
 add_definitions(-D_GNU_SOURCE)
 
+OPTION(ENABLE_SYSTEMD "Enable Systemd support" ON)
+
+find_package(PkgConfig)
+
+if(ENABLE_SYSTEMD)
+	pkg_check_modules (SYSTEMD REQUIRED systemd>=213)
+else(ENABLE_SYSTEMD)
+endif(ENABLE_SYSTEMD)
+
 SET(BUILD_BINDIR "${CMAKE_INSTALL_PREFIX}/bin")
 OPTION(BUILD_ENABLE_DEBUG "Enable Debug" ON )
 OPTION(RELY_UDEV "Rely in udev tag to select device" OFF )
@@ -23,7 +32,6 @@ endif()
 set(SYSCONFDIR "/etc" CACHE STRING "system config dir")
 set(DATADIR "${CMAKE_INSTALL_PREFIX}/share" CACHE STRING "shared data dir")
 
-find_package(PkgConfig)
 pkg_check_modules (GLIB2 REQUIRED glib-2.0)
 pkg_check_modules (UDEV REQUIRED libudev)
 pkg_check_modules (SYSTEMD REQUIRED libsystemd)
