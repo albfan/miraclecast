@@ -17,9 +17,11 @@ find_package(PkgConfig)
 
 if(ENABLE_SYSTEMD)
 	pkg_check_modules (SYSTEMD REQUIRED systemd>=213)
+	SET(SESSION_LIBRARIES "${SYSTEMD_LIBRARIES}")
 else(ENABLE_SYSTEMD)
 	pkg_check_modules (ELOGIND REQUIRED libelogind>=213)
 	include_directories ("${ELOGIND_INCLUDEDIR}")
+	SET(SESSION_LIBRARIES "${ELOGIND_LIBRARIES}")
 endif(ENABLE_SYSTEMD)
 
 SET(BUILD_BINDIR "${CMAKE_INSTALL_PREFIX}/bin")

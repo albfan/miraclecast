@@ -16,7 +16,7 @@ set(miracle-shared_SOURCES rtsp.h
                              wpas.h 
                              wpas.c)
 add_library(miracle-shared STATIC ${miracle-shared_SOURCES})
-target_link_libraries (miracle-shared systemd)
+target_link_libraries (miracle-shared ${SESSION_LIBRARIES})
 
 
 ########### install files ###############
