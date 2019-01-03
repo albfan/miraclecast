@@ -19,6 +19,8 @@
 
 #define LOG_SUBSYSTEM "supplicant"
 
+#include "config.h"
+
 #include <errno.h>
 #include <fcntl.h>
 #include <stdbool.h>
@@ -27,7 +29,11 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <systemd/sd-event.h>
+
+#ifdef ENABLE_SYSTEMD
 #include <systemd/sd-journal.h>
+#endif
+
 #include <unistd.h>
 #include "shl_dlist.h"
 #include "shl_log.h"
@@ -35,7 +41,6 @@
 #include "util.h"
 #include "wifid.h"
 #include "wpas.h"
-#include "config.h"
 
 struct supplicant_group {
 	unsigned long users;
@@ -374,6 +379,7 @@ static int supplicant_group_spawn_dhcp_server(struct supplicant_group *g,
 		sigemptyset(&mask);
 		sigprocmask(SIG_SETMASK, &mask, NULL);
 
+#ifdef ENABLE_SYSTEMD
 		/* redirect stdout/stderr to journal */
 		sprintf(journal_id, "miracle-dhcp-%s", g->ifname);
 		fd_journal = sd_journal_stream_fd(journal_id, LOG_INFO, false);
@@ -382,9 +388,12 @@ static int supplicant_group_spawn_dhcp_server(struct supplicant_group *g,
 			dup2(fd_journal, 1);
 			dup2(fd_journal, 2);
 		} else {
+#endif
 			/* no journal? redirect stdout to parent's stderr */
 			dup2(2, 1);
+#ifdef ENABLE_SYSTEMD
 		}
+#endif
 
 		i = 0;
 		argv[i++] = (char*) "miracle-dhcp";
@@ -442,6 +451,7 @@ static int supplicant_group_spawn_dhcp_client(struct supplicant_group *g)
 		sigemptyset(&mask);
 		sigprocmask(SIG_SETMASK, &mask, NULL);
 
+#ifdef ENABLE_SYSTEMD
 		/* redirect stdout/stderr to journal */
 		sprintf(journal_id, "miracle-dhcp-%s", g->ifname);
 		fd_journal = sd_journal_stream_fd(journal_id, LOG_INFO, false);
@@ -450,9 +460,12 @@ static int supplicant_group_spawn_dhcp_client(struct supplicant_group *g)
 			dup2(fd_journal, 1);
 			dup2(fd_journal, 2);
 		} else {
+#endif
 			/* no journal? redirect stdout to parent's stderr */
 			dup2(2, 1);
+#ifdef ENABLE_SYSTEMD
 		}
+#endif
 
 		i = 0;
 		argv[i++] = (char*) "miracle-dhcp";
@@ -2387,6 +2400,7 @@ static void supplicant_run(struct supplicant *s, const char *binary)
 	sigemptyset(&mask);
 	sigprocmask(SIG_SETMASK, &mask, NULL);
 
+#ifdef ENABLE_SYSTEMD
 	/* redirect stdout/stderr to journal */
 	sprintf(journal_id, "miracle-wifid-%s-%u",
 		s->l->ifname, s->l->ifindex);
@@ -2396,9 +2410,12 @@ static void supplicant_run(struct supplicant *s, const char *binary)
 		dup2(fd_journal, 1);
 		dup2(fd_journal, 2);
 	} else {
+#endif
 		/* no journal? redirect stdout to parent's stderr */
 		dup2(2, 1);
+#ifdef ENABLE_SYSTEMD
 	}
+#endif
 
 	/* initialize wpa_supplicant args */
 	i = 0;
