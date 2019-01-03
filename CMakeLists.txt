@@ -18,6 +18,7 @@ find_package(PkgConfig)
 if(ENABLE_SYSTEMD)
 	pkg_check_modules (SYSTEMD REQUIRED systemd>=213)
 else(ENABLE_SYSTEMD)
+	pkg_check_modules (ELOGIND REQUIRED libelogind>=213)
 endif(ENABLE_SYSTEMD)
 
 SET(BUILD_BINDIR "${CMAKE_INSTALL_PREFIX}/bin")
