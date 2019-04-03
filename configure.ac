@@ -45,8 +45,10 @@ AC_ARG_ENABLE([log-debug],
 # Mandatory dependencies
 #
 
-PKG_CHECK_MODULES([DEPS], [libudev libsystemd > 219])
-PKG_CHECK_MODULES([GLIB], [glib-2.0])
+m4_ifdef([PKG_CHECK_MODULES], [
+	PKG_CHECK_MODULES([DEPS], [libudev libsystemd > 219])
+	PKG_CHECK_MODULES([GLIB], [glib-2.0])
+])
 
 AC_CHECK_HEADERS(readline/readline.h,, AC_MSG_ERROR(GNU readline not found))
 
@@ -55,8 +57,10 @@ AC_CHECK_HEADERS(readline/readline.h,, AC_MSG_ERROR(GNU readline not found))
 # all tests.
 #
 
-PKG_CHECK_MODULES([CHECK], [check],
-                  [have_check=yes], [have_check=no])
+m4_ifdef([PKG_CHECK_MODULES], [
+	PKG_CHECK_MODULES([CHECK], [check],
+        	          [have_check=yes], [have_check=no])
+])
 AM_CONDITIONAL([BUILD_HAVE_CHECK], [test "x$have_check" = "xyes"])
 
 if test "x$have_check" = "xyes"
