@@ -51,6 +51,14 @@ You can also choose the interface with  `--interface` option for miracle-wifid.
 ## Linux Flavours and general compilation instructions
 
 ### Ubuntu
+Installation:
+
+    $ sudo apt-get install libsystemd-dev libudev-dev check libreadline-dev libgstreamer1.0-dev 
+    $ mkdir build
+    $ cd build
+    $ cmake ..
+    $ make 
+    $ make install
 
 Check your systemd version with:
 
