@@ -43,6 +43,7 @@
 const char *interface_name = NULL;
 const char *config_methods = NULL;
 unsigned int arg_wpa_loglevel = LOG_NOTICE;
+bool arg_wpa_syslog = false;
 bool use_dev = false;
 bool lazy_managed = false;
 
@@ -479,7 +480,8 @@ static int help(void)
 	       "  -i --interface           Choose the interface to use\n"
 	       "     --config-methods      Define config methods for pairing, default 'pbc'\n"
 	       "\n"
-	       "     --wpa-loglevel <lvl   wpa_supplicant log-level\n"
+	       "     --wpa-loglevel <lvl>  wpa_supplicant log-level\n"
+	       "     --wpa-syslog          wpa_supplicant use syslog\n"
 	       "     --use-dev             enable workaround for 'no ifname' issue\n"
 	       "     --lazy-managed        manage interface only when user decide to do\n"
 	       , program_invocation_short_name);
@@ -498,6 +500,7 @@ static int parse_argv(int argc, char *argv[])
 		ARG_LOG_LEVEL,
 		ARG_LOG_TIME,
 		ARG_WPA_LOGLEVEL,
+		ARG_WPA_SYSLOG,
 		ARG_USE_DEV,
 		ARG_CONFIG_METHODS,
 		ARG_LAZY_MANAGED,
@@ -509,6 +512,7 @@ static int parse_argv(int argc, char *argv[])
 		{ "log-time",	no_argument,		NULL,	ARG_LOG_TIME },
 
 		{ "wpa-loglevel",	required_argument,	NULL,	ARG_WPA_LOGLEVEL },
+		{ "wpa-syslog",	no_argument,	NULL,	ARG_WPA_SYSLOG },
 		{ "interface",	required_argument,	NULL,	'i' },
 		{ "use-dev",	no_argument,	NULL,	ARG_USE_DEV },
 		{ "config-methods",	required_argument,	NULL,	ARG_CONFIG_METHODS },
@@ -541,9 +545,11 @@ static int parse_argv(int argc, char *argv[])
 		case ARG_LAZY_MANAGED:
 			lazy_managed = true;
 			break;
-
 		case ARG_WPA_LOGLEVEL:
 			arg_wpa_loglevel = log_parse_arg(optarg);
+			break;
+		case ARG_WPA_SYSLOG:
+			arg_wpa_syslog = true;
 			break;
 		case '?':
 			return -EINVAL;

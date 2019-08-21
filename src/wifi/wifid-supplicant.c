@@ -2415,6 +2415,11 @@ static void supplicant_run(struct supplicant *s, const char *binary)
 	argv[i++] = s->l->ifname;
 	argv[i++] = "-g";
 	argv[i++] = s->global_ctrl;
+
+	if (arg_wpa_syslog) {
+		argv[i++] = "-s";
+	}
+
 	argv[i] = NULL;
 
 	/* execute wpa_supplicant; if it fails, the caller issues exit(1) */
