@@ -213,5 +213,6 @@ void manager_dbus_disconnect(struct manager *m);
 /* cli arguments */
 
 extern unsigned int arg_wpa_loglevel;
+extern bool arg_wpa_syslog;
 
 #endif /* WIFID_H */
