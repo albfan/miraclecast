@@ -19,7 +19,7 @@ configure_file(output: 'config.h',
 )
 
 c_compiler = meson.get_compiler('c')
-readline = c_compiler.find_library('readline', required: false)
+readline = c_compiler.find_library('readline', required: true)
 if readline.found()
   add_project_arguments('-DHAVE_READLINE', language: 'c')
 endif

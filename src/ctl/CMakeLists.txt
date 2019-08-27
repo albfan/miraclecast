@@ -2,7 +2,7 @@ find_package(PkgConfig)
 pkg_check_modules (GLIB2 REQUIRED glib-2.0)
 link_directories( ${GLIB2_LIBRARY_DIRS})
 include_directories( ${GLIB2_INCLUDE_DIRS})
-find_package(Readline)
+find_package(Readline REQUIRED)
 pkg_check_modules (GLIB2 REQUIRED glib-2.0)
 ########### next target ###############
 
