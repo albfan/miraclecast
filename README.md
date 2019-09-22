@@ -183,7 +183,7 @@ Steps to use MiracleCast as a peer:
 
  4. Set a friendly name for other peers to see
 
-        [miraclectl] # set-friendly-name SomeAwesomeNa,e
+        [miraclectl] # set-friendly-name SomeAwesomeName
 
  4. Set the link to managed--this will force the network card to be taken by MiracleCast from NetworkManager after a few seconds
 
