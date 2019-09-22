@@ -1,7 +1,8 @@
 # MiracleCast - Wifi-Display/Miracast Implementation
 
 [![Join the chat at https://gitter.im/albfan/miraclecast](https://badges.gitter.im/albfan/miraclecast.svg)](https://gitter.im/albfan/miraclecast?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
-[![Build Status](https://semaphoreci.com/api/v1/projects/5ece4a7a-365b-4f7c-bfcc-6dcdece7002f/671892/badge.svg)](https://semaphoreci.com/albfan/miraclecast)
+[![Build Status](https://semaphoreci.com/api/v1/albfan/miraclecast-2/branches/master/badge.svg)](https://semaphoreci.com/albfan/miraclecast)
+albfan/miraclecast-2/branches/master/
 [![Coverage Status](https://coveralls.io/repos/github/albfan/miraclecast/badge.svg?branch=master)](https://coveralls.io/github/albfan/miraclecast?branch=master)
 
 The MiracleCast project provides software to connect external monitors to your system via Wi-Fi. It is compatible with the Wifi-Display specification also known as Miracast. MiracleCast implements the Display-Source as well as Display-Sink side.
