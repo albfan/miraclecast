@@ -2716,7 +2716,7 @@ error:
 	return r;
 }
 
-static void rtsp_unlink_waiting(struct rtsp_message *m)
+static bool rtsp_unlink_waiting(struct rtsp_message *m)
 {
 	if (m->is_waiting) {
 		sd_event_source_unref(m->timer_source);
@@ -2725,7 +2725,9 @@ static void rtsp_unlink_waiting(struct rtsp_message *m)
 		m->is_waiting = false;
 		--m->bus->waiting_cnt;
 		rtsp_message_unref(m);
+		return true;
 	}
+	return false;
 }
 
 static void rtsp_link_outgoing(struct rtsp_message *m)
@@ -2736,7 +2738,7 @@ static void rtsp_link_outgoing(struct rtsp_message *m)
 	rtsp_message_ref(m);
 }
 
-static void rtsp_unlink_outgoing(struct rtsp_message *m)
+static bool rtsp_unlink_outgoing(struct rtsp_message *m)
 {
 	if (m->is_outgoing) {
 		shl_dlist_unlink(&m->list);
@@ -2744,7 +2746,9 @@ static void rtsp_unlink_outgoing(struct rtsp_message *m)
 		m->is_sending = false;
 		--m->bus->outgoing_cnt;
 		rtsp_message_unref(m);
+		return true;
 	}
+	return false;
 }
 
 static int rtsp_incoming_message(struct rtsp_message *m)
@@ -2822,10 +2826,11 @@ static int rtsp_write_message(struct rtsp_message *m)
 	if (m->sent >= m->raw_size) {
 		/* no need to wait for answer if no-body listens */
 		if (!m->cb_fn)
-			rtsp_unlink_waiting(m);
-
+			if (rtsp_unlink_waiting(m))
+				m = NULL;
 		/* might destroy the message */
-		rtsp_unlink_outgoing(m);
+		if (m)
+			rtsp_unlink_outgoing(m);
 	}
 
 	return 0;
@@ -3245,10 +3250,12 @@ static void rtsp_drop_message(struct rtsp_message *m)
 
 	/* never interrupt messages while being partly sent */
 	if (!m->is_sending)
-		rtsp_unlink_outgoing(m);
+		if (rtsp_unlink_outgoing(m))
+			m = NULL;
 
 	/* remove from waiting list so neither timeouts nor completions fire */
-	rtsp_unlink_waiting(m);
+	if (m)
+		rtsp_unlink_waiting(m);
 }
 
 void rtsp_call_async_cancel(struct rtsp *bus, uint64_t cookie)
