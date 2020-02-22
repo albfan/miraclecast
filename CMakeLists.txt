@@ -15,6 +15,7 @@ SET(BUILD_BINDIR "${CMAKE_INSTALL_PREFIX}/bin")
 OPTION(BUILD_ENABLE_DEBUG "Enable Debug" ON )
 OPTION(RELY_UDEV "Rely in udev tag to select device" OFF )
 OPTION(BUILD_TESTS "Enable TEST" ON )
+OPTION(BUILD_ENABLE_CPPCHECK "Enable CPPCheck static analysis" OFF )
 
 if(BUILD_ENABLE_DEBUG)
     add_definitions(-DBUILD_ENABLE_DEBUG)
@@ -29,6 +30,20 @@ pkg_check_modules (UDEV REQUIRED libudev)
 pkg_check_modules (SYSTEMD REQUIRED libsystemd)
 
 CONFIGURE_FILE(${CMAKE_SOURCE_DIR}/config.h.cmake ${CMAKE_BINARY_DIR}/config.h)
+
+if(BUILD_ENABLE_CPPCHECK)
+    find_program(CMAKE_C_CPPCHECK NAMES cppcheck)
+    if (CMAKE_C_CPPCHECK)
+        list(
+            APPEND CMAKE_C_CPPCHECK
+                "--enable=warning"
+                "--inline-suppr"
+                "--std=c11"
+                "-D__SIZEOF_POINTER__=8"
+        )
+    endif()
+endif()
+
 
 add_subdirectory(src)
 add_subdirectory(res)
