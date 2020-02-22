@@ -2169,7 +2169,6 @@ static int parser_submit_data(struct rtsp *bus, uint8_t *p)
 				  p,
 				  dec->data_size);
 	if (r < 0) {
-		free(p);
 		return r;
 	}
 
