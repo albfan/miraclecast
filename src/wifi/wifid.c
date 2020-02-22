@@ -542,6 +542,7 @@ static int parse_argv(int argc, char *argv[])
 			break;
 		case ARG_CONFIG_METHODS:
 			config_methods = optarg;
+			break;
 		case ARG_LAZY_MANAGED:
 			lazy_managed = true;
 			break;

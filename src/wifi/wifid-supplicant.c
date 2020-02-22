@@ -1451,7 +1451,6 @@ static void supplicant_event(struct supplicant *s, struct wpas_message *m)
 		    !strcmp(name, "WPS-AP-AVAILABLE-PIN") ||
 		    !strcmp(name, "CTRL-EVENT-EAP-STATUS") ||
 		    !strcmp(name, "CTRL-EVENT-EAP-METHOD") ||
-		    !strcmp(name, "CTRL-EVENT-EAP-STATUS") ||
 		    !strcmp(name, "WPS-CRED-RECEIVED") ||
 		    !strcmp(name, "WPS-AP-AVAILABLE") ||
 		    !strcmp(name, "WPS-REG-SUCCESS") ||
