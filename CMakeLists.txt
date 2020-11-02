@@ -17,6 +17,7 @@ find_package(PkgConfig)
 
 if(ENABLE_SYSTEMD)
 	pkg_check_modules (SYSTEMD REQUIRED systemd>=213)
+    pkg_check_modules (SYSTEMD REQUIRED libsystemd)
 	SET(SESSION_LIBRARIES "${SYSTEMD_LIBRARIES}")
 else(ENABLE_SYSTEMD)
 	pkg_check_modules (ELOGIND REQUIRED libelogind>=213)
@@ -39,7 +40,6 @@ set(DATADIR "${CMAKE_INSTALL_PREFIX}/share" CACHE STRING "shared data dir")
 
 pkg_check_modules (GLIB2 REQUIRED glib-2.0)
 pkg_check_modules (UDEV REQUIRED libudev)
-pkg_check_modules (SYSTEMD REQUIRED libsystemd)
 
 CONFIGURE_FILE(${CMAKE_SOURCE_DIR}/config.h.cmake ${CMAKE_BINARY_DIR}/config.h)
 
