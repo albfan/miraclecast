@@ -486,7 +486,6 @@ static int parse_argv(int argc, char *argv[])
 		ARG_VERSION = 0x100,
 		ARG_LOG_LEVEL,
 		ARG_LOG_TIME,
-
 		ARG_WPA_LOGLEVEL,
 		ARG_WPA_SYSLOG,
 		ARG_USE_DEV,
@@ -525,9 +524,6 @@ static int parse_argv(int argc, char *argv[])
 			break;
 		case ARG_USE_DEV:
 			use_dev = true;
-			break;
-		case ARG_CONFIG_METHODS:
-			config_methods = optarg;
 			break;
 		case ARG_LAZY_MANAGED:
 			lazy_managed = true;
