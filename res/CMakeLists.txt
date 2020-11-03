@@ -76,6 +76,7 @@ execute_process(
 	OUTPUT_VARIABLE DBUS_SYSTEM_SERVICES_DIR
 	OUTPUT_STRIP_TRAILING_WHITESPACE
 )
+if(ENABLE_SYSTEMD)
 execute_process(
 	COMMAND ${PKG_CONFIG_EXECUTABLE} --variable=systemdsystemunitdir systemd
 	OUTPUT_VARIABLE SYSTEMD_SYSTEM_UNIT_DIR
@@ -105,6 +106,8 @@ install(
 install(
 	CODE "execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink miracle-dispd.service \$ENV{DESTDIR}${SYSTEMD_SYSTEM_UNIT_DIR}/dbus-org.freedesktop.miracle.wfd.service)"
 	)
+
+endif(ENABLE_SYSTEMD)
 
 configure_file(
 	org.freedesktop.miracle.wifi.service.cmake
