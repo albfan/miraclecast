@@ -640,10 +640,7 @@ int wfd_audio_codecs_from_string(const char *l,
 			return r;
 		}
 
-		l += 16;
-		if(WFD_AUDIO_FORMAT_LPCM == c->caps[i].format) {
-			++ l;
-		}
+        l = strchr(l, ',') + 1;
 
 		free(f);
 		f = NULL;
