@@ -67,7 +67,7 @@ static void dispd_encoder_exec(const char *cmd, int fd, struct dispd_session *s)
 {
 	int r;
 	sigset_t mask;
-	char disp[16], runtime_path[256];
+	char disp[16], runtime_path[256], auth[128];
 
 	log_info("child forked with pid %d", getpid());
 
@@ -76,6 +76,7 @@ static void dispd_encoder_exec(const char *cmd, int fd, struct dispd_session *s)
 	sigprocmask(SIG_SETMASK, &mask, NULL);
 
 	snprintf(disp, sizeof(disp), "DISPLAY=%s", dispd_session_get_disp_name(s));
+	snprintf(auth, sizeof(auth), "XAUTHORITY=%s", dispd_session_get_disp_auth(s));
 	snprintf(runtime_path, sizeof(runtime_path), "XDG_RUNTIME_DIR=%s", dispd_session_get_runtime_path(s));
 
 	/* after encoder connected to DBus, write unique name to fd 3,
@@ -112,7 +113,7 @@ static void dispd_encoder_exec(const char *cmd, int fd, struct dispd_session *s)
 
 	r = execvpe(cmd,
 					(char *[]){ (char *) cmd, NULL },
-					(char *[]){ disp,
+					(char *[]){ disp, auth,
 						runtime_path,
 						"G_MESSAGES_DEBUG=all",
 						NULL
