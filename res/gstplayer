@@ -50,7 +50,7 @@ class Player(object):
 
         if kwargs.get("fullscreen"):
             self.window.fullscreen()
-        else if hasattr(self,'width') and hasattr(self,'height'):
+        elif hasattr(self,'width') and hasattr(self,'height'):
             self.window.set_default_size(self.width, self.height)
 
         self.drawingarea = Gtk.DrawingArea()
