@@ -48,7 +48,9 @@ class Player(object):
         if title:
             self.window.set_title(title)
 
-        if hasattr(self,'width') and hasattr(self,'height'):
+        if kwargs.get("fullscreen"):
+            self.window.fullscreen()
+        elif hasattr(self,'width') and hasattr(self,'height'):
             self.window.set_default_size(self.width, self.height)
 
         self.drawingarea = Gtk.DrawingArea()
@@ -96,10 +98,10 @@ class Player(object):
             if scale:
                 gstcommand += "videoscale method=1 ! video/x-raw,width="+str(self.width)+",height="+str(self.height)+" ! "
 
-            gstcommand += "autovideosink "
+            gstcommand += "autovideosink sync=false "
 
             if audio:
-                gstcommand += "demuxer. ! queue max-size-buffers=0 max-size-time=0 ! aacparse ! avdec_aac ! audioconvert ! audioresample ! autoaudiosink "
+                gstcommand += "demuxer. ! queue max-size-buffers=0 max-size-time=0 ! aacparse ! avdec_aac ! audioconvert ! audioresample ! autoaudiosink sync=false "
 
             self.pipeline = Gst.parse_launch(gstcommand)
 
@@ -154,7 +156,6 @@ class Player(object):
         pos_event_x = event.x
         pos_event_y = event.y
 
-
         if min_hor_pos <= pos_event_x <= max_hor_pos and min_ver_pos <= pos_event_y <= max_ver_pos:
             uibc_x = int(pos_event_x - (half_area_width - half_def_width))
             uibc_y = int(pos_event_y - (half_area_height - half_def_height))
@@ -206,6 +207,7 @@ if __name__ == '__main__':
     parser.add_argument("--log-level",   metavar="lvl",   help="Maximum level for log messages")
     parser.add_argument("-p", "--port",  type=int, default=1991,  help="Port for rtsp")
     parser.add_argument("-a", "--audio", dest="audio", action="store_true", help="Enable audio support")
+    parser.add_argument("-f", "--full-screen", dest="fullscreen", action="store_true", help="Enter full screen mode")
     parser.add_argument("-s", "--scale", metavar="WxH",   help="Scale to resolution")
     parser.add_argument("-d", "--debug",                  help="Debug")
     parser.add_argument("--uibc",                         help="Enable UIBC")
@@ -217,6 +219,7 @@ if __name__ == '__main__':
     # "                        default HH   %08X\n"
     parser.add_argument("-r", "--resolution",             help="Resolution")
     parser.set_defaults(audio=True)
+    parser.set_defaults(fullscreen=False)
     args = parser.parse_args()
 
     p = Player(**vars(args))

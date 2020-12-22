@@ -41,7 +41,6 @@
 #include "config.h"
 
 const char *interface_name = NULL;
-const char *config_methods = NULL;
 unsigned int arg_wpa_loglevel = LOG_NOTICE;
 bool arg_wpa_syslog = false;
 bool use_dev = false;
@@ -82,6 +81,8 @@ static void manager_add_udev_link(struct manager *m,
 	struct link *l;
 	unsigned int ifindex;
 	const char *ifname;
+    const char *mac_addr;
+    char buf[18];
 	int r;
 
 	ifindex = ifindex_from_udev_device(d);
@@ -100,25 +101,23 @@ static void manager_add_udev_link(struct manager *m,
 	if (shl_startswith(ifname, "p2p-"))
 		return;
 
-	r = link_new(m, ifindex, ifname, &l);
+	mac_addr = udev_device_get_property_value(d, "ID_NET_NAME_MAC");
+    mac_addr = mac_addr + strlen(mac_addr) - 12;
+    snprintf(buf, sizeof(buf), "%.2s:%.2s:%.2s:%.2s:%.2s:%.2s", mac_addr, mac_addr + 2, mac_addr + 4, mac_addr + 6, mac_addr + 8, mac_addr + 10);
+
+	r = link_new(m, ifindex, ifname, buf, &l);
 	if (r < 0)
 		return;
 
-   if (m->friendly_name && l->managed)
-	   link_set_friendly_name(l, m->friendly_name);
-   if (m->config_methods)
-	   link_set_config_methods(l, m->config_methods);
-
-	if(use_dev)
+    if(use_dev)
         link_use_dev(l);
 
 #ifdef RELY_UDEV
-	bool managed = udev_device_has_tag(d, "miracle") && !lazy_managed;
+	if (udev_device_has_tag(d, "miracle") && !lazy_managed) {
 #else
-	bool managed = (!interface_name || !strcmp(interface_name, ifname)) && !lazy_managed;
+	if ((!interface_name || !strcmp(interface_name, ifname)) && !lazy_managed) {
 #endif
-	if (managed) {
-		link_set_managed(l, true);
+		link_manage(l, true);
 	} else {
 		log_debug("ignored device: %s", ifname);
 	}
@@ -158,12 +157,12 @@ static int manager_udev_fn(sd_event_source *source,
 
 #ifdef RELY_UDEV
 		if (udev_device_has_tag(d, "miracle") && !lazy_managed)
-			link_set_managed(l, true);
+			link_manage(l, true);
 		else
-			link_set_managed(l, false);
+			link_manage(l, false);
 #else
 		if ((!interface_name || !strcmp(interface_name, ifname)) && !lazy_managed) {
-			link_set_managed(l, true);
+			link_manage(l, true);
 		} else {
 			log_debug("ignored device: %s", ifname);
 		}
@@ -182,8 +181,9 @@ static int manager_signal_fn(sd_event_source *source,
 	struct manager *m = data;
 
 	if (ssi->ssi_signo == SIGCHLD) {
+		siginfo_t info;
 		log_debug("caught SIGCHLD for %ld, reaping child", (long)ssi->ssi_pid);
-		waitid(P_PID, ssi->ssi_pid, NULL, WNOHANG|WEXITED);
+		waitid(P_PID, ssi->ssi_pid, &info, WNOHANG|WEXITED);
 		return 0;
 	} else if (ssi->ssi_signo == SIGPIPE) {
 		/* ignore SIGPIPE */
@@ -222,7 +222,6 @@ static void manager_free(struct manager *m)
 	sd_event_unref(m->event);
 
 	free(m->friendly_name);
-	free(m->config_methods);
 	free(m);
 }
 
@@ -235,23 +234,12 @@ static int manager_new(struct manager **out)
 	unsigned int i;
 	sigset_t mask;
 	int r;
-	char *cm;
 
 	m = calloc(1, sizeof(*m));
 	if (!m)
 		return log_ENOMEM();
 
 	shl_htable_init_uint(&m->links);
-
-
-	if (config_methods) {
-		cm = strdup(config_methods);
-		if (!cm)
-			return log_ENOMEM();
-
-		free(m->config_methods);
-		m->config_methods = cm;
-	}
 
 	r = sd_event_default(&m->event);
 	if (r < 0) {
@@ -478,7 +466,6 @@ static int help(void)
 	       "     --log-time            Prefix log-messages with timestamp\n"
 	       "\n"
 	       "  -i --interface           Choose the interface to use\n"
-	       "     --config-methods      Define config methods for pairing, default 'pbc'\n"
 	       "\n"
 	       "     --wpa-loglevel <lvl>  wpa_supplicant log-level\n"
 	       "     --wpa-syslog          wpa_supplicant use syslog\n"
@@ -502,7 +489,6 @@ static int parse_argv(int argc, char *argv[])
 		ARG_WPA_LOGLEVEL,
 		ARG_WPA_SYSLOG,
 		ARG_USE_DEV,
-		ARG_CONFIG_METHODS,
 		ARG_LAZY_MANAGED,
 	};
 	static const struct option options[] = {
@@ -515,7 +501,6 @@ static int parse_argv(int argc, char *argv[])
 		{ "wpa-syslog",	no_argument,	NULL,	ARG_WPA_SYSLOG },
 		{ "interface",	required_argument,	NULL,	'i' },
 		{ "use-dev",	no_argument,	NULL,	ARG_USE_DEV },
-		{ "config-methods",	required_argument,	NULL,	ARG_CONFIG_METHODS },
 		{ "lazy-managed",	no_argument,	NULL,	ARG_LAZY_MANAGED },
 		{}
 	};
@@ -539,9 +524,6 @@ static int parse_argv(int argc, char *argv[])
 			break;
 		case ARG_USE_DEV:
 			use_dev = true;
-			break;
-		case ARG_CONFIG_METHODS:
-			config_methods = optarg;
 			break;
 		case ARG_LAZY_MANAGED:
 			lazy_managed = true;

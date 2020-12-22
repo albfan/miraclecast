@@ -214,10 +214,8 @@ static int cmd_set_friendly_name(char **args, unsigned int n)
 		return 0;
 	}
 
-	if (!l->managed) {
-		cli_printf("link %s not managed\n", l->label);
-		return 0;
-	}
+	if (!l->managed)
+		return log_EUNMANAGED();
 
 	return ctl_link_set_friendly_name(l, name);
 }
@@ -289,10 +287,8 @@ static int cmd_p2p_scan(char **args, unsigned int n)
 		return 0;
 	}
 
-	if (!l->managed) {
-		cli_printf("link %s not managed\n", l->label);
-		return 0;
-	}
+	if (!l->managed)
+		return log_EUNMANAGED();
 
 	return ctl_link_set_p2p_scanning(l, !stop);
 }
@@ -341,10 +337,8 @@ static int cmd_connect(char **args, unsigned int n)
 		pin = "";
 	}
 
-	if (!p->l->managed) {
-		cli_printf("link %s not managed\n", p->l->label);
-		return 0;
-	}
+	if (!p->l->managed)
+		return log_EUNMANAGED();
 
 	return ctl_peer_connect(p, prov, pin);
 }
@@ -368,10 +362,8 @@ static int cmd_disconnect(char **args, unsigned int n)
 		return 0;
 	}
 
-	if (!p->l->managed) {
-		cli_printf("link %s not managed\n", p->l->label);
-		return 0;
-	}
+	if (!p->l->managed)
+		return log_EUNMANAGED();
 
 	return ctl_peer_disconnect(p);
 }

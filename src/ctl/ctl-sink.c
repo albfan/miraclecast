@@ -19,6 +19,8 @@
 
 #include "ctl-sink.h"
 
+bool check_option(const struct rtsp_message *m);
+
 /*
  * RTSP Session
  */
@@ -39,7 +41,7 @@ static void sink_handle_options(struct ctl_sink *s,
 	if (r < 0)
 		return cli_vERR(r);
 
-	r = rtsp_message_append(rep, "<s>",
+	r = rtsp_message_append(rep, "<&>",
 				"Public",
 				"org.wfa.wfd1.0, GET_PARAMETER, SET_PARAMETER");
 	if (r < 0)
@@ -87,50 +89,46 @@ static void sink_handle_get_parameter(struct ctl_sink *s,
 		return cli_vERR(r);
 
 	/* wfd_content_protection */
-	if (rtsp_message_read(m, "{<>}", "wfd_content_protection") >= 0) {
-		r = rtsp_message_append(rep, "{&}",
-					"wfd_content_protection: none");
-		if (r < 0)
-			return cli_vERR(r);
-	}
+	check_and_response_option("wfd_content_protection", "none");
 	/* wfd_video_formats */
-	if (rtsp_message_read(m, "{<>}", "wfd_video_formats") >= 0) {
-		char wfd_video_formats[128];
-		sprintf(wfd_video_formats,
-			"wfd_video_formats: 00 00 03 10 %08x %08x %08x 00 0000 0000 10 none none",
+	char wfd_video_formats[128];
+	sprintf(wfd_video_formats, "wfd_video_formats: 00 00 03 10 %08x %08x %08x 00 0000 0000 10 none none",
 			s->resolutions_cea, s->resolutions_vesa, s->resolutions_hh);
-		r = rtsp_message_append(rep, "{&}", wfd_video_formats);
-		if (r < 0)
-			return cli_vERR(r);
-	}
+//	check_and_response_option("wfd_video_formats", wfd_video_formats);
+	check_and_response_option("wfd_video_formats", "40 00 01 10 0001bdeb 051557ff 00000fff 10 0000 001f 11 0780 0438, 02 10 0001bdeb 155557ff 00000fff 10 0000 001f 11 0780 0438");
 	/* wfd_audio_codecs */
-	if (rtsp_message_read(m, "{<>}", "wfd_audio_codecs") >= 0) {
-		r = rtsp_message_append(rep, "{&}",
-					"wfd_audio_codecs: AAC 00000007 00");
-		if (r < 0)
-			return cli_vERR(r);
-	}
+//	check_and_response_option("wfd_audio_codecs", "wfd_audio_codecs: AAC 00000007 00");
+	check_and_response_option("wfd_audio_codecs", "LPCM 00000003 00, AAC 0000000f 00, AC3 00000007 00");
 	/* wfd_client_rtp_ports */
-	if (rtsp_message_read(m, "{<>}", "wfd_client_rtp_ports") >= 0) {
-		char wfd_client_rtp_ports[128];
-		sprintf(wfd_client_rtp_ports,
-					"wfd_client_rtp_ports: RTP/AVP/UDP;unicast %d 0 mode=play", rstp_port);
-		r = rtsp_message_append(rep, "{&}",
-					wfd_client_rtp_ports);
-		if (r < 0)
-			return cli_vERR(r);
-	}
+	char wfd_client_rtp_ports[128];
+	sprintf(wfd_client_rtp_ports, "RTP/AVP/UDP;unicast %d 0 mode=play", rstp_port);
+	check_and_response_option("wfd_client_rtp_ports", wfd_client_rtp_ports);
+	check_and_response_option("wfd_content_protection", "none");
+	check_and_response_option("wfd_display_edid", "0001 00ffffffffffff0051f38f50010000000e100104a51d10ff2f0000a057499b2610484f000000010101010101010101010101010101011a36809c70381f403020350025a510000018000000fc00496e7465726e616c204c43440a000000fd003c3c9a9a0e00000000000000000000000000000000000000000000000000000030");
+	check_and_response_option("wfd_connector_type", "05");
+	check_and_response_option("microsoft_cursor", "none");
+	check_and_response_option("microsoft_rtcp_capability", "none");
+	check_and_response_option("wfd_idr_request_capability", "1");
+	check_and_response_option("microsoft_latency_management_capability", "none");
+	check_and_response_option("microsoft_format_change_capability", "none");
+	check_and_response_option("microsoft_diagnostics_capability", "none");
+	check_and_response_option("intel_friendly_name", "miraclecast");
+	check_and_response_option("intel_sink_manufacturer_name", "GNU Linux");
+	check_and_response_option("intel_sink_model_name", "Arch linux");
+	check_and_response_option("intel_sink_device_URL", "http://github.com/albfan/miraclecast");
 
 	/* wfd_uibc_capability */
-	if (rtsp_message_read(m, "{<>}", "wfd_uibc_capability") >= 0 && uibc_option) {
-		char wfd_uibc_capability[512];
-		sprintf(wfd_uibc_capability,
-			"wfd_uibc_capability: input_category_list=GENERIC;"
-         "generic_cap_list=Mouse,SingleTouch;"
-         "hidc_cap_list=none;port=none");
-		r = rtsp_message_append(rep, "{&}", wfd_uibc_capability);
-		if (r < 0)
-			return cli_vERR(r);
+	if (uibc_option) {
+//		check_and_response_option("wfd_uibc_capability",
+//								  "input_category_list=GENERIC;"
+//				                  "generic_cap_list=Mouse,SingleTouch;"
+//				                  "hidc_cap_list=none;"
+//				                  "port=none");
+		check_and_response_option("wfd_uibc_capability",
+								      "input_category_list=GENERIC, HIDC;"
+									  "generic_cap_list=Keyboard;"
+									  "hidc_cap_list=Keyboard/USB, Mouse/USB, MultiTouch/USB, Gesture/USB, RemoteControl/USB;"
+									  "port=none");
 	}
 	rtsp_message_seal(rep);
 	cli_debug("OUTGOING: %s\n", rtsp_message_get_raw(rep));
@@ -138,6 +136,10 @@ static void sink_handle_get_parameter(struct ctl_sink *s,
 	r = rtsp_send(s->rtsp, rep);
 	if (r < 0)
 		return cli_vERR(r);
+}
+
+bool check_rtsp_option(struct rtsp_message *m, char *option) {
+	return rtsp_message_read(m, "{<>}", option) >= 0;
 }
 
 static int sink_setup_fn(struct rtsp *bus, struct rtsp_message *m, void *data)
