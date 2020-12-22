@@ -1,0 +1,35 @@
+version: v1.0
+name: Docker
+
+agent:
+  machine:
+    type: e1-standard-2
+    os_image: ubuntu1804
+
+global_job_config:
+  secrets:
+    - name: dockerhub
+
+blocks:
+  - name: Checkout
+    task:
+      jobs:
+      - name: Checkout
+        commands:
+          - checkout
+  - name: Build
+    task:
+      jobs:
+      - name: Autotools
+        commands:
+          - checkout
+          - docker build -t autotools -f autotools.Dockerfile .
+      - name: Cmake
+        commands:
+          - checkout
+          - docker build -t cmake -f cmake.Dockerfile .
+      - name: meson
+        commands:
+          - checkout
+          - docker build -t meson -f meson.Dockerfile .
+
