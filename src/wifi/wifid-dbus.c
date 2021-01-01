@@ -937,8 +937,12 @@ int manager_dbus_connect(struct manager *m)
 
 	r = sd_bus_request_name(m->bus, "org.freedesktop.miracle.wifi", 0);
 	if (r < 0) {
-		log_error("cannot claim org.freedesktop.miracle.wifi bus-name: %d",
+		if (r == -EEXIST) {
+			log_info("cannot claim org.freedesktop.miracle.wifi bus-name: it is already being adquired");
+		} else {
+			log_error("cannot claim org.freedesktop.miracle.wifi bus-name: %d",
 			  r);
+		}
 		goto error_silent;
 	}
 
