@@ -214,11 +214,6 @@ static int cmd_set_friendly_name(char **args, unsigned int n)
 		return 0;
 	}
 
-	if (!l->managed) {
-		cli_printf("link %s not managed\n", l->label);
-		return 0;
-	}
-
 	return ctl_link_set_friendly_name(l, name);
 }
 

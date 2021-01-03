@@ -227,9 +227,6 @@ int link_set_friendly_name(struct link *l, const char *name)
 	if (!l || !name || !*name)
 		return log_EINVAL();
 
-	if (!l->managed)
-		return log_EUNMANAGED();
-
 	t = strdup(name);
 	if (!t)
 		return log_ENOMEM();
