@@ -2482,7 +2482,11 @@ static int supplicant_spawn(struct supplicant *s)
 	log_debug("spawn supplicant of %s", s->l->ifname);
 
     if (supplicant_find(&binary) < 0) {
-        log_error("execution of wpas (%s) not possible: %m", binary);
+        if (binary != NULL) {
+            log_error("execution of wpas (%s) not possible: %m", binary);
+	} else {
+            log_error("execution of wpas not possible: %m");
+	}
         return -EINVAL;
     }
 
