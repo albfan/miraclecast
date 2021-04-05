@@ -88,16 +88,16 @@ If you feel confidence enough (since systemd is the entrypoint for an OS) extrac
 
  1. shutdown wpa_supplicant and NetworkManager
 
-        $ systemctl stop NetworkManager.service
-        $ systemctl stop wpa_supplicant.service 
+        # systemctl stop NetworkManager.service
+        # systemctl stop wpa_supplicant.service 
 
  2. launch wifi daemon
 
-        $ sudo miracle-wifid &
+        # miracle-wifid &
 
  3. launch sink control (your network card will be detected. here 3)
 
-        $ sudo miracle-sinkctl
+        # miracle-sinkctl
         [ADD]  Link: 3
 
  4. run WiFi Display on link: 
@@ -114,7 +114,7 @@ If you feel confidence enough (since systemd is the entrypoint for an OS) extrac
 
  2. launch wifi control
 
-        $ sudo miracle-wifictl
+        # miracle-wifictl
 
  3. Enable visibility for other devices
 
