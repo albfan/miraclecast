@@ -12,7 +12,7 @@ then
    set -v
 fi
 
-. miracle-utils.sh
+. ./miracle-utils.sh
 
 WIFI_COUNT=0
 WIFI_NAMES="$(find_wireless_network_interfaces)"
