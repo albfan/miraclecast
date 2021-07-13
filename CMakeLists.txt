@@ -1,15 +1,12 @@
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 3.0.2)
+
 project(Miraclecast)
 
 SET(PACKAGE_NAME miraclecast)
 SET(PACKAGE_VERSION 1)
 SET(PACKAGE_STRING "${PACKAGE_NAME} ${PACKAGE_VERSION}")
 
-set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake
-                      ${CMAKE_MODULE_PATH})
-
-set(CMAKE_C_FLAGS "-std=gnu11 ${CMAKE_C_FLAGS}")
-add_definitions(-D_GNU_SOURCE)
+list(APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
 
 OPTION(ENABLE_SYSTEMD "Enable Systemd support" ON)
 
@@ -40,6 +37,19 @@ set(DATADIR "${CMAKE_INSTALL_PREFIX}/share" CACHE STRING "shared data dir")
 
 pkg_check_modules (GLIB2 REQUIRED glib-2.0)
 pkg_check_modules (UDEV REQUIRED libudev)
+pkg_check_modules (GSTREAMER REQUIRED gstreamer-1.0)
+pkg_check_modules (GSTREAMER_BASE REQUIRED gstreamer-base-1.0)
+
+set(CMAKE_C_FLAGS "-std=gnu11 -Wall ${CMAKE_C_FLAGS}")
+add_definitions(-D_GNU_SOURCE)
+
+if(CMAKE_COMPILER_IS_GNUCC)
+	execute_process(COMMAND ${CMAKE_C_COMPILER} -dumpversion
+					OUTPUT_VARIABLE GCC_VERSION)
+	if(GCC_VERSION VERSION_LESS 4.9)
+		message(FATAL_ERROR "gcc >= 4.9 is requred")
+	endif()
+endif()
 
 CONFIGURE_FILE(${CMAKE_SOURCE_DIR}/config.h.cmake ${CMAKE_BINARY_DIR}/config.h)
 
