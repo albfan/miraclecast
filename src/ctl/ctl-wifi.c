@@ -824,7 +824,10 @@ static int ctl_wifi_parse_peer(struct ctl_wifi *w,
 
 	l = ctl_wifi_find_link_by_peer(w, label);
 	if (!l)
-		return cli_EINVAL();
+		// After discover peers, a miracle-sinkctl restart can
+		// lead to peers without links. Ignore...
+		//return cli_EINVAL();
+		return 0;
 
 	r = ctl_peer_new(&p, l, label);
 	if (r < 0)

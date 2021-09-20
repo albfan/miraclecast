@@ -757,7 +757,12 @@ static int ctl_interactive(char **argv, int argc)
 
 	r = ctl_wifi_fetch(wifi);
 	if (r < 0)
-		goto error;
+		// Do not fail here as peers without links may exist...
+		// TODO: Maybe at lease give a warning or check the
+		//       return value to ignore.
+		//goto error;
+		/* NOP */;
+
 
 	if (argc > 0) {
 		r = cli_do(cli_cmds, argv, argc);

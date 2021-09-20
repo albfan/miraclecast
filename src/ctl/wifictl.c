@@ -214,8 +214,9 @@ static int cmd_set_friendly_name(char **args, unsigned int n)
 		return 0;
 	}
 
-	if (!l->managed)
-		return log_EUNMANAGED();
+	// Get the friendly name even if the link is unmanaged...
+	//if (!l->managed)
+	//	return log_EUNMANAGED();
 
 	return ctl_link_set_friendly_name(l, name);
 }
