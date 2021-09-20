@@ -44,3 +44,4 @@ libmiracle-shared.a
 install_manifest.txt
 /build/
 .vimrc
+.vscode/

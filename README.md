@@ -16,7 +16,7 @@ On the other hand, the Display-Sink side allows you to create wifi-capable exter
 
 The MiracleCast projects requires the following software to be installed:
  - **systemd**: A system management daemon. It is used for device-management (udev), dbus management (sd-bus) and service management.
-    Systemd >= 221 will work out of the box. For earlier versions, systemd must be compiled with --enable-kdbus, even though kdbus isn't used...the independent, experimental sd-libraries are used.
+    Systemd >= 221 will work out of the box. For earlier versions, systemd must be compiled with **--enable-kdbus**, even though kdbus isn't used...the independent, experimental sd-libraries are used.
     *required*: >=systemd-213
 
  - **glib**: A utility library. Used by the current DHCP implementation. This will be removed once sd-dns gains DHCP-server capabilities.
@@ -29,7 +29,7 @@ The MiracleCast projects requires the following software to be installed:
 
  - **gstreamer**: MiracleCast relies on gstreamer to cast its output. You can test for all requirements by launching [res/test-viewer.sh](https://github.com/albfan/miraclecast/blob/master/res/test-viewer.sh).
 
-   gstreamer plugins: plugins you need in order to run sinkctl or dispctl
+   gstreamer plugins (plugins you need in order to run sinkctl or dispctl):
      - gstreamer-plugins-base
      - gstreamer-plugins-good
      - gstreamer-plugins-bad
@@ -79,7 +79,7 @@ There are interface changes starting with systemd 219.  If you are below that ve
 
 ### Arch linux
 
-Use existing [AUR package](https://aur.archlinux.org/packages/miraclecast/). Remember to enable kdus to systemd-git dependency if you are below 221 systemd.
+Use existing [AUR package](https://aur.archlinux.org/packages/miraclecast-git/). Remember to enable kdus to systemd-git dependency if you are below 221 systemd.
 
     $ export _systemd_git_kdbus=--enable-kdbus
 
@@ -186,39 +186,39 @@ Steps to use MiracleCast as a peer:
 
         [miraclectl] # set-friendly-name SomeAwesomeName
 
- 4. Set the link to managed--this will force the network card to be taken by MiracleCast from NetworkManager after a few seconds
+ 5. Set the link to managed--this will force the network card to be taken by MiracleCast from NetworkManager after a few seconds
 
         [miraclectl] # set-managed yes
 
- 5. Commands:
+ 6. Commands:
 
-   Locate other peers using P2P scanning
+    - Locate other peers using P2P scanning
 
-        [miraclectl] # p2p-scan
+          [miraclectl] # p2p-scan
 
-   Stop P2P scanning
+    - Stop P2P scanning
 
-        [miraclectl] # p2p-scan stop
+          [miraclectl] # p2p-scan stop
 
-   List other peers
+    - List other peers
 
-        [miraclectl] # list
+          [miraclectl] # list
 
-   Show detailed information on other peers
+    - Show detailed information on other peers
 
-        [miraclectl] # show 4
+          [miraclectl] # show 4
 
-   Connect to a peer--the sink may require a provision or pin (not shown, see help)
+    - Connect to a peer--the sink may require a provision or pin (not shown, see help)
 
-        [miraclectl] # connect 4
+          [miraclectl] # connect 4
 
-   Disconnect from a peer
+    - Disconnect from a peer
 
-        [miraclectl] # disconnect 4
+          [miraclectl] # disconnect 4
 
- 6. While connected, you may use the connection as a source with software using the connection such as miracle-gst and miracle-omxplayer
+ 7. While connected, you may use the connection as a source with software using the connection such as miracle-gst and miracle-omxplayer
 
- 7. Exit the MiracleCast WiFi control
+ 8. Exit the MiracleCast WiFi control
 
         [miraclectl] # quit
 
@@ -226,7 +226,7 @@ Steps to use MiracleCast as a peer:
 
 > The User Input Back Channel (UIBC) is an optional WFD feature that when implemented facilitates communication of user inputs to a User Interface present at the WFD Sink back to the WFD Source.
 
-To use it just add `--uibc` on `miracle-sinkctl` startup. Single mouse events and key events are implemented.
+To use it just add **--uibc** on **miracle-sinkctl** startup. Single mouse events and key events are implemented.
 
 ## Autocompletion
 
