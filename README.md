@@ -101,7 +101,7 @@ Steps to activate MiracleCast services:
         # This will display the current status of the MiracleCast Display Daemon
         # It works with the MiracleCast WiFi Daemon
 
-        $ systemctl status miracle-dispd.service
+        $ systemctl status miracle-wifid.service
         # This will display the current status of the MiracleCast WiFi Daemon
 
  2. If needed, start the MiracleCast services
