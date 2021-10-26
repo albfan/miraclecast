@@ -9,5 +9,5 @@ install_data('miracle-gst', 'gstplayer', 'uibc-viewer',
 
 install_data(
   'miracle-wifid', 'miracle-sinkctl', 'miracle-wifictl',
-  install_dir: join_paths(get_option('datadir'), 'bash-completions', 'completions')
+  install_dir: join_paths(get_option('datadir'), 'bash-completion', 'completions')
 )
