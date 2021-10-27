@@ -140,17 +140,17 @@ void link_free(struct link *l)
 
 void link_use_dev(struct link *l)
 {
-    l->use_dev = true;
+	l->use_dev = true;
 }
 
 bool link_is_using_dev(struct link *l)
 {
-    return l->use_dev;
+	return l->use_dev;
 }
 
 int link_set_config_methods(struct link *l, char *config_methods)
 {
-   char *cm;
+	char *cm;
 
 	if (!config_methods)
 		return log_EINVAL();
@@ -161,7 +161,7 @@ int link_set_config_methods(struct link *l, char *config_methods)
 
 	free(l->config_methods);
 	l->config_methods = config_methods;
-   return 0;
+	return 0;
 }
 
 bool link_get_managed(struct link *l)

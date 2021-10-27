@@ -104,13 +104,13 @@ static void manager_add_udev_link(struct manager *m,
 	if (r < 0)
 		return;
 
-   if (m->friendly_name && l->managed)
-	   link_set_friendly_name(l, m->friendly_name);
-   if (m->config_methods)
-	   link_set_config_methods(l, m->config_methods);
+	if (m->friendly_name && l->managed)
+		link_set_friendly_name(l, m->friendly_name);
+	if (m->config_methods)
+		link_set_config_methods(l, m->config_methods);
 
 	if(use_dev)
-        link_use_dev(l);
+		link_use_dev(l);
 
 #ifdef RELY_UDEV
 	bool managed = udev_device_has_tag(d, "miracle") && !lazy_managed;
