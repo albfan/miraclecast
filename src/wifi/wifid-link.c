@@ -160,7 +160,7 @@ int link_set_config_methods(struct link *l, char *config_methods)
 		return log_ENOMEM();
 
 	free(l->config_methods);
-	l->config_methods = config_methods;
+	l->config_methods = cm;
 	return 0;
 }
 
