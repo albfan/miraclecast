@@ -40,12 +40,16 @@
 #include "wifid.h"
 #include "config.h"
 
+#define XSTR(x) STR(x)
+#define STR(x) #x
 const char *interface_name = NULL;
 const char *config_methods = NULL;
 unsigned int arg_wpa_loglevel = LOG_NOTICE;
 bool arg_wpa_syslog = false;
 bool use_dev = false;
 bool lazy_managed = false;
+const char *arg_ip_binary = NULL;
+
 
 /*
  * Manager Handling
@@ -111,6 +115,8 @@ static void manager_add_udev_link(struct manager *m,
 
 	if(use_dev)
 		link_use_dev(l);
+	if(arg_ip_binary)
+		link_set_ip_binary(l, arg_ip_binary);
 
 #ifdef RELY_UDEV
 	bool managed = udev_device_has_tag(d, "miracle") && !lazy_managed;
@@ -484,6 +490,7 @@ static int help(void)
 	       "     --wpa-syslog          wpa_supplicant use syslog\n"
 	       "     --use-dev             enable workaround for 'no ifname' issue\n"
 	       "     --lazy-managed        manage interface only when user decide to do\n"
+	       "     --ip-binary <path>    path to 'ip' binary [default: "XSTR(IP_BINARY)"]\n"
 	       , program_invocation_short_name);
 	/*
 	 * 80-char barrier:
@@ -504,6 +511,7 @@ static int parse_argv(int argc, char *argv[])
 		ARG_USE_DEV,
 		ARG_CONFIG_METHODS,
 		ARG_LAZY_MANAGED,
+		ARG_IP_BINARY,
 	};
 	static const struct option options[] = {
 		{ "help",	no_argument,		NULL,	'h' },
@@ -517,6 +525,7 @@ static int parse_argv(int argc, char *argv[])
 		{ "use-dev",	no_argument,	NULL,	ARG_USE_DEV },
 		{ "config-methods",	required_argument,	NULL,	ARG_CONFIG_METHODS },
 		{ "lazy-managed",	no_argument,	NULL,	ARG_LAZY_MANAGED },
+		{ "ip-binary",	required_argument,	NULL,	ARG_IP_BINARY },
 		{}
 	};
 	int c;
@@ -551,6 +560,9 @@ static int parse_argv(int argc, char *argv[])
 			break;
 		case ARG_WPA_SYSLOG:
 			arg_wpa_syslog = true;
+			break;
+		case ARG_IP_BINARY:
+			arg_ip_binary = optarg;
 			break;
 		case '?':
 			return -EINVAL;

@@ -41,6 +41,12 @@ AC_ARG_ENABLE([rely-udev],
               AS_HELP_STRING([--enable-rely-udev], [Use tagged device with miraclecast]), AC_DEFINE([RELY_UDEV], [], [Rely on udev to find miraclecast device]))
 AC_ARG_ENABLE([log-debug],
                   AS_HELP_STRING([--disable-log-debug], [Disable log debug]), , AC_DEFINE([BUILD_ENABLE_DEBUG], [], [Enable debug log level]))
+AC_ARG_VAR(IP_BINARY, [Path for ip binary])
+if test -z "$IP_BINARY"; then
+	IP_BINARY=/bin/ip
+fi
+AC_DEFINE_UNQUOTED([IP_BINARY], [$IP_BINARY], [Path for ip binary])
+
 #
 # Mandatory dependencies
 #
@@ -166,6 +172,7 @@ AC_MSG_NOTICE([Build configuration:
        libdir: $libdir
        includedir: $includedir
        sysconfdir: $sysconfdir
+       ip-binary: $IP_BINARY
 
 Miscellaneous Options:
        building tests: $have_check
@@ -183,6 +190,7 @@ AC_MSG_NOTICE([Build configuration:
        libdir: $libdir
        includedir: $includedir
        sysconfdir: $sysconfdir
+       ip-binary: $IP_BINARY
 
 Miscellaneous Options:
        building tests: $have_check

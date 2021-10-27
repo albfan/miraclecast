@@ -10,3 +10,7 @@ option('build-tests',
   type: 'boolean',
   value: true,
   description: 'Enable TEST')
+option('ip-binary',
+  type: 'string',
+  value: '/bin/ip',
+  description: 'Path for ip binary')

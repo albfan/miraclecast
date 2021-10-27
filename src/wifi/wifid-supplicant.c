@@ -397,6 +397,10 @@ static int supplicant_group_spawn_dhcp_server(struct supplicant_group *g,
 		argv[i++] = g->ifname;
 		argv[i++] = "--comm-fd";
 		argv[i++] = commfd;
+		if (g->s->l->ip_binary) {
+			argv[i++] = "--ip-binary";
+			argv[i++] = g->s->l->ip_binary;
+		}
 		argv[i] = NULL;
 
 		if (execvpe(argv[0], argv, environ)< 0) {
@@ -458,6 +462,10 @@ static int supplicant_group_spawn_dhcp_client(struct supplicant_group *g)
 		argv[i++] = g->ifname;
 		argv[i++] = "--comm-fd";
 		argv[i++] = commfd;
+		if (g->s->l->ip_binary) {
+			argv[i++] = "--ip-binary";
+			argv[i++] = g->s->l->ip_binary;
+		}
 		argv[i] = NULL;
 
 		if (execvpe(argv[0], argv, environ) < 0) {

@@ -32,6 +32,8 @@ if get_option('rely-udev')
   add_project_arguments('-DRELY_UDEV', language: 'c')
 endif
 
+add_project_arguments('-DIP_BINARY='+get_option('ip-binary'), language: 'c')
+
 glib2 = dependency('glib-2.0')
 udev = dependency('libudev')
 libsystemd = dependency('libsystemd')

@@ -130,6 +130,7 @@ struct link {
 	char *friendly_name;
 	char *wfd_subelements;
 	char *config_methods;
+	char *ip_binary;
 
 	size_t peer_cnt;
 	struct shl_htable peers;
@@ -158,6 +159,8 @@ void link_free(struct link *l);
 /* workaround for the 'no ifname' issue */
 void link_use_dev(struct link *l);
 bool link_is_using_dev(struct link *l);
+
+int link_set_ip_binary(struct link *l, const char *ip_binary);
 
 int link_set_managed(struct link *l, bool set);
 bool link_get_managed(struct link *l);

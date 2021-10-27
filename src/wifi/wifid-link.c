@@ -135,6 +135,7 @@ void link_free(struct link *l)
 	free(l->friendly_name);
 	free(l->ifname);
 	free(l->config_methods);
+	free(l->ip_binary);
 	free(l);
 }
 
@@ -161,6 +162,22 @@ int link_set_config_methods(struct link *l, char *config_methods)
 
 	free(l->config_methods);
 	l->config_methods = cm;
+	return 0;
+}
+
+int link_set_ip_binary(struct link *l, const char *ip_binary)
+{
+	char *ipb;
+
+	if (!ip_binary)
+		return log_EINVAL();
+
+	ipb = strdup(ip_binary);
+	if (!ipb)
+		return log_ENOMEM();
+
+	free(l->ip_binary);
+	l->ip_binary = ipb;
 	return 0;
 }
 

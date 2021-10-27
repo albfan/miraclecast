@@ -16,6 +16,7 @@ OPTION(BUILD_ENABLE_DEBUG "Enable Debug" ON )
 OPTION(RELY_UDEV "Rely in udev tag to select device" OFF )
 OPTION(BUILD_TESTS "Enable TEST" ON )
 OPTION(BUILD_ENABLE_CPPCHECK "Enable CPPCheck static analysis" OFF )
+SET(IP_BINARY "/bin/ip" CACHE STRING "Path to ip binary")
 
 if(BUILD_ENABLE_DEBUG)
     add_definitions(-DBUILD_ENABLE_DEBUG)
