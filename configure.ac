@@ -165,13 +165,14 @@ AC_MSG_NOTICE([Build configuration:
        bindir: $bindir
        libdir: $libdir
        includedir: $includedir
+       sysconfdir: $sysconfdir
 
 Miscellaneous Options:
        building tests: $have_check
        code coverage: $use_gcov
+       rely udev: ${enable_rely_udev:-no}
 
 Compilation
-       mkdir build && cd build
        "${MAKE-make}" to start compilation process
        "${MAKE-make}" check to pass test])
 else
@@ -181,11 +182,12 @@ AC_MSG_NOTICE([Build configuration:
        bindir: $bindir
        libdir: $libdir
        includedir: $includedir
+       sysconfdir: $sysconfdir
 
 Miscellaneous Options:
        building tests: $have_check
+       rely udev: ${enable_rely_udev:-no}
 
 Compilation
-       mkdir build && cd build
        "${MAKE-make}" to start compilation process])
 fi
