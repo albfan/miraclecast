@@ -41,7 +41,7 @@ if(CHECK_FOUND)
 
     add_custom_target(memcheck
                     DEPENDS memcheck-verify
-                    COMMAND for i in $(MEMTESTS) |
+                    COMMAND for i in $$(MEMTESTS) |
                             do |
                             ${VALGRIND} --log-file=${CMAKE_SOURCE_DIR}/$$i.memlog |
                             	${CMAKE_SOURCE_DIR}/$$i >/dev/null || (echo "memcheck failed on: $$i" ; exit 1) ; |
