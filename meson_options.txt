@@ -1,3 +1,7 @@
+option('use-systemd',
+  type: 'boolean',
+  value: true,
+  description: 'Use systemd')
 option('build-enable-debug',
   type: 'boolean',
   value: true,

@@ -36,7 +36,12 @@ add_project_arguments('-DIP_BINARY='+get_option('ip-binary'), language: 'c')
 
 glib2 = dependency('glib-2.0')
 udev = dependency('libudev')
-libsystemd = dependency('libsystemd')
+
+if get_option('use-systemd')
+    libsystemd = dependency('libsystemd')
+else
+    libsystemd = dependency('libelogind')
+endif
 
 subdir('src')
 subdir('res')

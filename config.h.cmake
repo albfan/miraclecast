@@ -1,6 +1,7 @@
 #ifndef CONFIG_H
 #define CONFIG_H
 
+#cmakedefine USE_SYSTEMD
 #cmakedefine BUILD_BINDIR "@BUILD_BINDIR@"
 #cmakedefine RELY_UDEV @RELY_UDEV@
 #cmakedefine IP_BINARY @IP_BINARY@
