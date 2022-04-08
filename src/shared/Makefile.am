@@ -17,7 +17,14 @@ libmiracle_shared_la_SOURCES = \
 	util.h \
 	wpas.h \
 	wpas.c
-libmiracle_shared_la_LIBADD = -lsystemd \
-	$(DEPS_LIBS) \
-	$(GLIB_LIBS)
 
+libmiracle_shared_la_LIBADD = \
+	$(GLIB_LIBS) \
+	$(DEPS_LIBS)
+
+if HAVE_SYSTEMD
+    libmiracle_shared_la_LIBADD += -lsystemd
+else
+    AM_CFLAGS += $(ELOGIND_CFLAGS)
+    libmiracle_shared_la_LIBADD += -lelogind
+endif

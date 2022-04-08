@@ -52,11 +52,19 @@ AC_DEFINE_UNQUOTED([IP_BINARY], [$IP_BINARY], [Path for ip binary])
 #
 
 m4_ifdef([PKG_CHECK_MODULES], [
-	PKG_CHECK_MODULES([DEPS], [libudev libsystemd > 219])
+	PKG_CHECK_MODULES([DEPS], [libudev])
 	PKG_CHECK_MODULES([GLIB], [glib-2.0])
 ])
 
 AC_CHECK_HEADERS(readline/readline.h,, AC_MSG_ERROR(GNU readline not found))
+
+m4_ifdef([PKG_CHECK_MODULES], [
+	PKG_CHECK_MODULES([SYSTEMD], [libsystemd > 219],
+            [have_systemd=yes], [have_systemd=no])
+	PKG_CHECK_MODULES([ELOGIND], [libelogind],
+            [have_elogind=yes], [have_elogind=no])
+])
+AM_CONDITIONAL([HAVE_SYSTEMD], [test "x$have_systemd" = "xyes"])
 
 #
 # Test for "check" which we use for our test-suite. If not found, we disable

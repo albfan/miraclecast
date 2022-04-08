@@ -17,3 +17,6 @@ miracle_wifid_LDADD = \
 	$(DEPS_LIBS) \
 	$(GLIB_LIBS)
 
+if !HAVE_SYSTEMD
+    AM_CFLAGS += $(ELOGIND_CFLAGS)
+endif

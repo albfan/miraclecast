@@ -13,3 +13,6 @@ miracled_LDADD = \
 	shared/libmiracle-shared.la \
 	$(DEPS_LIBS)
 
+if !HAVE_SYSTEMD
+    AM_CFLAGS += $(ELOGIND_CFLAGS)
+endif
