@@ -44,6 +44,7 @@
 #define STR(x) #x
 const char *interface_name = NULL;
 const char *config_methods = NULL;
+const char *friendly_name = NULL;
 unsigned int arg_wpa_loglevel = LOG_NOTICE;
 bool arg_wpa_syslog = false;
 bool use_dev = false;
@@ -241,7 +242,7 @@ static int manager_new(struct manager **out)
 	unsigned int i;
 	sigset_t mask;
 	int r;
-	char *cm;
+	char *cm, *fn;
 
 	m = calloc(1, sizeof(*m));
 	if (!m)
@@ -257,6 +258,15 @@ static int manager_new(struct manager **out)
 
 		free(m->config_methods);
 		m->config_methods = cm;
+	}
+
+	if (friendly_name) {
+		fn = strdup(friendly_name);
+		if (!fn)
+			return log_ENOMEM();
+
+		free(m->friendly_name);
+		m->friendly_name = fn;
 	}
 
 	r = sd_event_default(&m->event);
@@ -355,50 +365,27 @@ error:
 
 static void manager_read_name(struct manager *m)
 {
-	_cleanup_sd_bus_error_ sd_bus_error err = SD_BUS_ERROR_NULL;
-	_cleanup_sd_bus_message_ sd_bus_message *rep = NULL;
-	const char *name;
+	char hostname[128];
 	char *str;
 	int r;
 
-	r = sd_bus_call_method(m->bus,
-			       "org.freedesktop.hostname1",
-			       "/org/freedesktop/hostname1",
-			       "org.freedesktop.DBus.Properties",
-			       "Get",
-			       &err,
-			       &rep,
-			       "ss", "org.freedesktop.hostname1", "Hostname");
-	if (r < 0)
-		goto error;
-
-	r = sd_bus_message_enter_container(rep, 'v', "s");
-	if (r < 0)
-		goto error;
-
-	r = sd_bus_message_read(rep, "s", &name);
-	if (r < 0)
-		name = "undefined";
-
-	if (shl_isempty(name)) {
-		log_warning("no hostname set on systemd.hostname1, using: %s",
-			    m->friendly_name);
+	if (m->friendly_name) {
+		log_debug("friendly-name from command line: %s", m->friendly_name);
 		return;
 	}
 
-	str = strdup(name);
-	if (!str)
-		return log_vENOMEM();
+	r = gethostname(hostname, 127);
+	if (r < 0) {
+		log_warning("cannot get hostname: %s", strerror(errno));
+		return;
+	}
+
+	if (hostname[0] == '\0')
+		strcpy(hostname, "undefined");
 
 	free(m->friendly_name);
-	m->friendly_name = str;
-	log_debug("friendly-name from local hostname: %s", str);
-
-	return;
-
-error:
-	log_warning("cannot read hostname from systemd.hostname1: %s",
-		    bus_error_message(&err, r));
+	m->friendly_name = strdup(hostname);
+	log_debug("friendly-name from local hostname: %s", hostname);
 }
 
 static void manager_read_links(struct manager *m)
@@ -482,6 +469,7 @@ static int help(void)
 	       "     --version             Show package version\n"
 	       "     --log-level <lvl>     Maximum level for log messages\n"
 	       "     --log-time            Prefix log-messages with timestamp\n"
+	       "     --friendly-name       Set friendly name\n"
 	       "\n"
 	       "  -i --interface           Choose the interface to use\n"
 	       "     --config-methods      Define config methods for pairing, default 'pbc'\n"
@@ -506,6 +494,7 @@ static int parse_argv(int argc, char *argv[])
 		ARG_VERSION = 0x100,
 		ARG_LOG_LEVEL,
 		ARG_LOG_TIME,
+		ARG_FRIENDLY_NAME,
 		ARG_WPA_LOGLEVEL,
 		ARG_WPA_SYSLOG,
 		ARG_USE_DEV,
@@ -518,7 +507,7 @@ static int parse_argv(int argc, char *argv[])
 		{ "version",	no_argument,		NULL,	ARG_VERSION },
 		{ "log-level",	required_argument,	NULL,	ARG_LOG_LEVEL },
 		{ "log-time",	no_argument,		NULL,	ARG_LOG_TIME },
-
+		{ "friendly-name",	required_argument,	NULL,	ARG_FRIENDLY_NAME },
 		{ "wpa-loglevel",	required_argument,	NULL,	ARG_WPA_LOGLEVEL },
 		{ "wpa-syslog",	no_argument,	NULL,	ARG_WPA_SYSLOG },
 		{ "interface",	required_argument,	NULL,	'i' },
@@ -545,6 +534,9 @@ static int parse_argv(int argc, char *argv[])
 			break;
 		case ARG_LOG_TIME:
 			log_init_time();
+			break;
+		case ARG_FRIENDLY_NAME:
+			friendly_name = optarg;
 			break;
 		case ARG_USE_DEV:
 			use_dev = true;
