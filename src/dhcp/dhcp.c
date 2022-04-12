@@ -35,7 +35,7 @@
  * of Wifi-P2P support in common network managers. Once they gain proper
  * support, we will drop this helper!
  *
- * The "ip" invokation is quite fragile and ugly. However, performing these
+ * The "ip" invocation is quite fragile and ugly. However, performing these
  * steps directly involves netlink operations and more. As no-one came up with
  * patches, yet, we keep the hack. To anyone trying to fix it: Please, spend
  * this time hacking on NetworkManager, connman and friends instead! If they

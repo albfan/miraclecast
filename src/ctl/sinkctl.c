@@ -712,7 +712,7 @@ void cli_fn_help()
 	printf("%s [OPTIONS...] ...\n\n"
 	       "Control a dedicated local sink via MiracleCast.\n"
 	       "  -h --help                      Show this help\n"
-	       "     --help-commands             Show avaliable commands\n"
+	       "     --help-commands             Show available commands\n"
 	       "     --version                   Show package version\n"
 	       "     --log-level <lvl>           Maximum level for log messages\n"
 	       "     --log-journal-level <lvl>   Maximum level for journal log messages\n"
@@ -726,7 +726,7 @@ void cli_fn_help()
 	       "                                    default CEA  %08X\n"
 	       "                                    default VESA %08X\n"
 	       "                                    default HH   %08X\n"
-	       "     --help-res                  Shows avaliable values for res\n"
+	       "     --help-res                  Shows available values for res\n"
 	       "\n"
 	       , program_invocation_short_name, gst_audio_en, DEFAULT_RSTP_PORT,
 		   wfd_supported_res_cea, wfd_supported_res_vesa, wfd_supported_res_hh

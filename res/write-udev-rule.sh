@@ -8,7 +8,7 @@ ETHER_COUNT=$(echo "$ETHER_NAMES" | wc -l)
 
 if [ 0 = $ETHER_COUNT ]
 then
-   echo There is no net devices avaliable
+   echo There is no net devices available
    exit 1
 elif [ 1 = $ETHER_COUNT ]
 then

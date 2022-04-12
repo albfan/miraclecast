@@ -314,7 +314,7 @@ void getUIBCGenericKeyPacket(const char *inEventDesc,
                   typeId = atoi(*(splitedStr + i));
                   log_info("getUIBCGenericKeyPacket typeId=[%d]\n", typeId);
                   genericPacketLen = 5;
-                  uibcBodyLen = genericPacketLen + 7; // Generic header legth = 7
+                  uibcBodyLen = genericPacketLen + 7; // Generic header length = 7
                   outData = (char*)malloc(uibcBodyLen + 1);
                   // UIBC header
                   outData[0] = 0x00; //Version (3 bits),T (1 bit),Reserved(8 bits),Input Category (4 bits)

@@ -884,7 +884,7 @@ static void supplicant_parse_peer(struct supplicant *s,
 		/* TODO: wfd_dev_info only contains the dev-info sub-elem,
 		 * while wfd_sublemens contains all. Fix that! The user has no
 		 * chance to distinguish both.
-		 * We currently use it only as boolen (set/unset) but once we
+		 * We currently use it only as boolean (set/unset) but once we
 		 * parse it we _definitely_ have to provide proper data. */
 		r = wpas_message_dict_read(m, "wfd_dev_info", 's', &val);
 		if (r >= 0) {
@@ -2219,7 +2219,7 @@ static int supplicant_global_attach_fn(struct wpas *w,
 	 * Devices with P2P_DEVICE support (instead of direct P2P_GO/CLIENT
 	 * support) are broken with a *lot* of wpa_supplicant versions on the
 	 * global interface. Therefore, try to open the p2p-dev-* interface
-	 * after the global-ATTACH succeded (which means the iface is properly
+	 * after the global-ATTACH succeeded (which means the iface is properly
 	 * set up). If this works, use the p2p-dev-* interface, otherwise, just
 	 * copy the global interface over to bus_dev.
 	 * Event-forwarding is broken on the global-interface in such cases,

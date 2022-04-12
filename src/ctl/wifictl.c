@@ -478,7 +478,7 @@ void cli_fn_help()
 	       "Send control command to or query the MiracleCast Wifi-Manager. If no arguments\n"
 	       "are given, an interactive command-line tool is provided.\n\n"
 	       "  -h --help                      Show this help\n"
-	       "     --help-commands             Show avaliable commands\n"
+	       "     --help-commands             Show available commands\n"
 	       "     --version                   Show package version\n"
 	       "     --log-level <lvl>           Maximum level for log messages\n"
 	       "     --log-journal-level <lvl>   Maximum level for journal log messages\n"
