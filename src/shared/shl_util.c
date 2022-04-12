@@ -31,7 +31,7 @@
  * variants to allow these.
  * Base-prefix parsing is only done if base=0 is requested. Otherwise,
  * base-prefixes are forbidden.
- * The input string must be ASCII compatbile (which includes UTF8).
+ * The input string must be ASCII compatible (which includes UTF8).
  *
  * We also always check for overflows and return errors (but continue parsing!)
  * so callers can catch it correctly.
