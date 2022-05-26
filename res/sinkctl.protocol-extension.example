@@ -1,0 +1,18 @@
+#Example of extra parameters to extend sink request
+
+[sinkctl]
+extends.wfd_video_formats=40 00 01 10 0001bdeb 051557ff 00000fff 10 0000 001f 11 0780 0438, 02 10 0001bdeb 155557ff 00000fff 10 0000 001f 11 0780 0438
+extends.wfd_audio_codecs=LPCM 00000003 00, AAC 0000000f 00, AC3 00000007 00
+extends.wfd_display_edid=0001 00ffffffffffff0051f38f50010000000e100104a51d10ff2f0000a057499b2610484f000000010101010101010101010101010101011a36809c70381f403020350025a510000018000000fc00496e7465726e616c204c43440a000000fd003c3c9a9a0e00000000000000000000000000000000000000000000000000000030
+extends.wfd_connector_type=05
+extends.microsoft_cursor=none
+extends.microsoft_rtcp_capability=none
+extends.wfd_idr_request_capability=1
+extends.microsoft_latency_management_capability=none
+extends.microsoft_format_change_capability=none
+extends.microsoft_diagnostics_capability=none
+extends.intel_friendly_name=miraclecast
+extends.intel_sink_manufacturer_name=GNU Linux
+extends.intel_sink_model_name=Arch linux
+extends.intel_sink_device_URL=http://github.com/albfan/miraclecast
+extends.wfd_uibc_capability=input_category_list=GENERIC, HIDC;generic_cap_list=Keyboard;hidc_cap_list=Keyboard/USB, Mouse/USB, MultiTouch/USB, Gesture/USB, RemoteControl/USB;port=none

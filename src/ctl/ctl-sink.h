@@ -32,12 +32,17 @@
 #include <systemd/sd-event.h>
 #include <time.h>
 #include <unistd.h>
+#include <glib.h>
 #include "ctl.h"
 
 #include "rtsp.h"
 #include "shl_macro.h"
 #include "shl_util.h"
 #include "wfd.h"
+
+#define WFD_VIDEO_FORMATS "wfd_video_formats"
+#define WFD_AUDIO_CODECS "wfd_audio_codecs"
+#define WFD_UIBC_CAPABILITY "wfd_uibc_capability"
 
 extern int rstp_port;
 extern bool uibc_option;
@@ -68,6 +73,8 @@ struct ctl_sink {
 
     int hres;
     int vres;
+
+    GHashTable* protocol_extensions;
 };
 
 bool check_rtsp_option(struct rtsp_message *m, char *option);

@@ -66,6 +66,7 @@ bool external_player;
 int rstp_port;
 int uibc_port;
 char* player;
+GHashTable* protocol_extensions;
 
 unsigned int wfd_supported_res_cea  = 0x0001ffff;
 unsigned int wfd_supported_res_vesa = 0x1fffffff;
@@ -748,6 +749,7 @@ static int ctl_interactive(char **argv, int argc)
 	r = ctl_sink_new(&sink, cli_event);
 	if (r < 0)
 		goto error;
+        sink->protocol_extensions = protocol_extensions;
 
 	ctl_wifi_fetch(wifi);
 
@@ -937,6 +939,22 @@ int main(int argc, char **argv)
             autocmds++;
          }
          g_free(autocmd);
+      }
+      gchar** sinkctl_keys;
+      gsize len = 0;
+      protocol_extensions = g_hash_table_new(g_str_hash, g_str_equal);
+
+      sinkctl_keys = g_key_file_get_keys (gkf,
+                                          "sinkctl",
+                                          &len,
+                                          NULL);
+      for (int i = 0; i < (int)len; i++) {
+          if (g_str_has_prefix(sinkctl_keys[i], "extends.")) {
+              gchar* orig_key = sinkctl_keys[i];
+              gchar* key = orig_key+8;
+              gchar* value = g_key_file_get_string (gkf, "sinkctl", orig_key, NULL);
+              g_hash_table_insert(protocol_extensions, key, value);
+          }
       }
       g_key_file_free(gkf);
    }

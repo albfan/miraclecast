@@ -88,26 +88,67 @@ static void sink_handle_get_parameter(struct ctl_sink *s,
 
 	/* wfd_content_protection */
 	check_and_response_option("wfd_content_protection", "none");
+        GHashTable* protocol_extensions = s->protocol_extensions;
 	/* wfd_video_formats */
-	char wfd_video_formats[128];
-	sprintf(wfd_video_formats, "00 00 03 10 %08x %08x %08x 00 0000 0000 10 none none",
-		s->resolutions_cea, s->resolutions_vesa, s->resolutions_hh);
-	check_and_response_option("wfd_video_formats", wfd_video_formats);
+        gchar* wfd_video_formats = NULL;
+        if (protocol_extensions != NULL) {
+            gchar* wfd_video_formats_extension = g_hash_table_lookup(protocol_extensions, WFD_VIDEO_FORMATS);
+            if (wfd_video_formats_extension != NULL) {
+	        wfd_video_formats = wfd_video_formats_extension;
+            }
+        }
+        if (wfd_video_formats == NULL) {
+            char video_formats[128];
+            sprintf(video_formats, "00 00 03 10 %08x %08x %08x 00 0000 0000 10 none none",
+                    s->resolutions_cea, s->resolutions_vesa, s->resolutions_hh);
+	    wfd_video_formats = video_formats;
+        }
+        check_and_response_option(WFD_VIDEO_FORMATS, wfd_video_formats);
+
 	/* wfd_audio_codecs */
-	check_and_response_option("wfd_audio_codecs", "AAC 00000007 00");
+        gchar* wfd_audio_codecs = "AAC 00000007 00";
+        if (protocol_extensions != NULL) {
+            gchar* wfd_audio_codecs_extension = g_hash_table_lookup(protocol_extensions, WFD_AUDIO_CODECS);
+            if (wfd_audio_codecs_extension != NULL) {
+                wfd_audio_codecs = wfd_audio_codecs_extension;
+            }
+        }
+	check_and_response_option(WFD_AUDIO_CODECS, wfd_audio_codecs);
+
 	/* wfd_client_rtp_ports */
 	char wfd_client_rtp_ports[128];
 	sprintf(wfd_client_rtp_ports, "RTP/AVP/UDP;unicast %d 0 mode=play", rstp_port);
 	check_and_response_option("wfd_client_rtp_ports", wfd_client_rtp_ports);
 
+        if (protocol_extensions != NULL) {
+            GList* extension_keys = g_hash_table_get_keys(protocol_extensions);
+            for (int i = 0; i<g_list_length(extension_keys); i++) {
+                gchar* key = g_list_nth_data(extension_keys, i);
+                if (g_strcmp0(key, WFD_VIDEO_FORMATS) == 0
+                    || g_strcmp0(key, WFD_AUDIO_CODECS) == 0
+                    || g_strcmp0(key, WFD_UIBC_CAPABILITY) == 0) {
+                    continue;
+                }
+                gchar* value = g_hash_table_lookup(protocol_extensions, key);
+	        check_and_response_option(key, value);
+            }
+        }
+
 	/* wfd_uibc_capability */
 	if (uibc_option) {
-		check_and_response_option("wfd_uibc_capability",
-					  "input_category_list=GENERIC;"
-					  "generic_cap_list=Mouse,SingleTouch;"
-					  "hidc_cap_list=none;"
-					  "port=none");
+            gchar* wfd_uibc_capability = "input_category_list=GENERIC;"
+                                         "generic_cap_list=Mouse,SingleTouch;"
+                                         "hidc_cap_list=none;"
+                                         "port=none";
+            if (protocol_extensions != NULL) {
+                gchar* wfd_uibc_capability_extension = g_hash_table_lookup(protocol_extensions, WFD_UIBC_CAPABILITY);
+                if (wfd_uibc_capability_extension != NULL) {
+	            wfd_uibc_capability = wfd_uibc_capability_extension;
+                }
+            }
+            check_and_response_option(WFD_UIBC_CAPABILITY, wfd_uibc_capability);
 	}
+
 	rtsp_message_seal(rep);
 	cli_debug("OUTGOING: %s\n", rtsp_message_get_raw(rep));
 
@@ -525,6 +566,7 @@ void ctl_sink_free(struct ctl_sink *s)
 	free(s->session);
 	free(s->url);
 	sd_event_unref(s->event);
+        g_hash_table_destroy(s->protocol_extensions);
 	free(s);
 }
 
