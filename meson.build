@@ -32,11 +32,17 @@ if get_option('rely-udev')
   add_project_arguments('-DRELY_UDEV', language: 'c')
 endif
 
+if get_option('enable-systemd')
+  add_project_arguments('-DENABLE_SYSTEMD', language: 'c')
+  libsystemd = dependency('libsystemd')
+else
+  libsystemd = dependency('libelogind')
+endif
+
 add_project_arguments('-DIP_BINARY='+get_option('ip-binary'), language: 'c')
 
 glib2 = dependency('glib-2.0')
 udev = dependency('libudev')
-libsystemd = dependency('libsystemd')
 
 subdir('src')
 subdir('res')

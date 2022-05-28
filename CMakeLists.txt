@@ -11,7 +11,7 @@ set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake
 set(CMAKE_C_FLAGS "-std=gnu11 ${CMAKE_C_FLAGS}")
 add_definitions(-D_GNU_SOURCE)
 
-OPTION(ENABLE_SYSTEMD "Enable Systemd support" ON)
+OPTION(ENABLE_SYSTEMD "Enable Systemd" ON)
 
 find_package(PkgConfig)
 

@@ -45,16 +45,28 @@ AC_ARG_VAR(IP_BINARY, [Path for ip binary])
 if test -z "$IP_BINARY"; then
 	IP_BINARY=/bin/ip
 fi
+AC_ARG_ENABLE([disable-systemd],
+              AS_HELP_STRING([--disable-systemd], [Disable systemd]), [], [use_libsystemd=yes], [Disable systemd using elogind])
 AC_DEFINE_UNQUOTED([IP_BINARY], [$IP_BINARY], [Path for ip binary])
 
 #
 # Mandatory dependencies
 #
 
-m4_ifdef([PKG_CHECK_MODULES], [
-	PKG_CHECK_MODULES([DEPS], [libudev libsystemd > 219])
-	PKG_CHECK_MODULES([GLIB], [glib-2.0])
-])
+AS_IF([test "$use_libsystemd" == "yes"],
+  [
+     AC_DEFINE([ENABLE_SYSTEMD], [], [Use systemd])
+     m4_ifdef([PKG_CHECK_MODULES], [
+       PKG_CHECK_MODULES([DEPS], [libudev libsystemd > 219])
+       PKG_CHECK_MODULES([GLIB], [glib-2.0])
+     ])
+  ],
+  [
+     m4_ifdef([PKG_CHECK_MODULES], [
+       PKG_CHECK_MODULES([DEPS], [libudev libelogind])
+       PKG_CHECK_MODULES([GLIB], [glib-2.0])
+     ])
+  ])
 
 AC_CHECK_HEADERS(readline/readline.h,, AC_MSG_ERROR(GNU readline not found))
 
