@@ -918,7 +918,7 @@ int main(int argc, char **argv)
       }
       gchar* autocmd;
       autocmd = g_key_file_get_string (gkf, "sinkctl", "autocmd", NULL);
-      if (autocmd && argc == 1) {
+      if (autocmd) {
          gchar** autocmds = g_strsplit(autocmd, " ", -1);
          autocmds_free = autocmds;
          while (*autocmds) {
