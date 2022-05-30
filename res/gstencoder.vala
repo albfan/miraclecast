@@ -320,8 +320,13 @@ internal class GstEncoder : DispdEncoder, GLib.Object
 		conn = yield Bus.get(BusType.SESSION);
 		conn.register_object(DispdEncoder.OBJECT_PATH, this as DispdEncoder);
 
+#if VALA_0_54
+                string bus_info = "%s\n%s".printf(conn.unique_name,
+                                               BusType.SESSION.get_address_sync ());
+#else
 		string bus_info = "%s\n%s".printf(conn.unique_name,
 						BusType.get_address_sync(BusType.SESSION));
+#endif
 		/* we are ready, tell parent how to communicate with us */
 		ssize_t r = Posix.write(3, (void *) bus_info.data, bus_info.length);
 		if(0 > r) {

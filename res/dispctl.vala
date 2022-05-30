@@ -804,7 +804,7 @@ int main(string[]? argv)
 
 
 	Application app = new DispCtl();
-	app.set_default();
+	Application.set_default(app);
 
 	Sigint.add_watch((app as DispCtl).stop_wireless_display);
 
