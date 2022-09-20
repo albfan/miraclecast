@@ -70,7 +70,7 @@ See there was interface changes on systemd 219, if you are below that version, u
 
 ### Arch linux
 
-Use existing [AUR package](https://aur.archlinux.org/packages/miraclecast-git/). Remember to enable kdus to systemd-git dependency if you are below 221 systemd.
+Use existing [AUR package](https://aur.archlinux.org/packages/miraclecast-git/). Remember to enable kdbus to systemd-git dependency if you are below 221 systemd.
 
     $ export _systemd_git_kdbus=--enable-kdbus
 
