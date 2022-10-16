@@ -159,45 +159,30 @@ function check_debian_distro {
 }
 
 #
-# ubuntu manager restarts automatically wpa_supplicant
+# kills network manager
 #
-function kill_ubuntu_network_manager {
+function kill_network_manager {
+   echo stopping NetworkManager
    if check_ubuntu_distro || check_debian_distro
    then
-      echo stopping NetworkManager
+      # ubuntu manager restarts automatically wpa_supplicant
       sudo service NetworkManager stop
-   fi
-}
-
-#
-# arch linux manager restarts automatically wpa_supplicant
-#
-function kill_archlinux_network_manager {
-   if check_ubuntu_distro
-   then
-      echo stopping NetworkManager
+   elif check_archlinux_distro
+      sudo systemctl stop Network.service
+   else
       sudo systemctl stop Network.service
    fi
 }
 
 #
-# start ubuntu manager
+# start network manager
 #
-function start_ubuntu_network_manager {
+function start_network_manager {
+   echo starting NetworkManager
    if check_ubuntu_distro || check_debian_distro
    then
-      echo starting NetworkManager
       sudo service NetworkManager start
-   fi
-}
-
-#
-# start arch linux manager
-#
-function start_archlinux_network_manager {
-   if check_archlinux_distro
-   then
-      echo starting NetworkManager
+   elif check_archlinux_distro
       sudo systemctl start Network.service
    fi
 }
