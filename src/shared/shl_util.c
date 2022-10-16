@@ -826,8 +826,9 @@ int shl__mkdir_parents(const char *prefix, const char *path, mode_t mode)
 	if (!e || e == path)
 		return 0;
 
-	p = strndupa(path, e - path);
+	p = strndup(path, e - path);
 	r = shl__is_dir(p);
+	free(p);
 	if (r > 0)
 		return 0;
 	if (r == 0)
