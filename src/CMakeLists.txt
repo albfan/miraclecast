@@ -13,27 +13,3 @@ target_link_libraries(miracled m)
 install(TARGETS miracled DESTINATION bin)
 
 INCLUDE_DIRECTORIES(${CMAKE_BINARY_DIR} ${CMAKE_SOURCE_DIR}/src ${CMAKE_SOURCE_DIR}/src/shared)
-
-
-########### install files ###############
-
-
-
-
-#original Makefile.am contents follow:
-
-#include $(top_srcdir)/common.am
-#SUBDIRS = shared wifi dhcp ctl
-#
-#bin_PROGRAMS = miracled
-#
-#miracled_SOURCES = \
-#	miracled.h \
-#	miracled.c
-#miracled_CPPFLAGS = \
-#	$(AM_CPPFLAGS) \
-#	$(DEPS_CFLAGS)
-#miracled_LDADD = \
-#	shared/libmiracle-shared.la \
-#	$(DEPS_LIBS)
-#
