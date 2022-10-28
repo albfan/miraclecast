@@ -12,6 +12,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/time.h>
+#include <time.h>
+#include <math.h>
 #include <limits.h>
 #include "shl_log.h"
 
@@ -37,7 +39,7 @@ static inline void log_unlock()
 
 static struct timeval log__ftime;
 
-static bool log__have_time(void)
+bool log__have_time(void)
 {
 	return !(log__ftime.tv_sec == 0 && log__ftime.tv_usec == 0);
 }
@@ -48,7 +50,7 @@ void log_init_time(void)
 		gettimeofday(&log__ftime, NULL);
 }
 
-static void log__time(long long *sec, long long *usec)
+void log__time(long long *sec, long long *usec)
 {
 	struct timeval t;
 
@@ -84,6 +86,7 @@ const char *LOG_SUBSYSTEM = NULL;
  */
 
 unsigned int log_max_sev = LOG_NOTICE;
+bool log_date_time = false;
 
 char *gst_debug = NULL;
 
@@ -138,25 +141,51 @@ static void log__submit(const char *file,
 	const char *prefix = NULL;
 	FILE *out;
 	long long sec, usec;
+	time_t now;
+	struct tm *timeinfo;
+	struct timeval tv;
+	char buffertmp[80];
+	char buffer[80];
+	int millisec;
 
 	out = stderr;
-	log__time(&sec, &usec);
 
 	if (sev < LOG_SEV_NUM && sev > log_max_sev)
 		return;
+
+	log__time(&sec, &usec);
+
+	if (log_date_time) {
+        	gettimeofday(&tv, NULL);
+		millisec = lrint(tv.tv_usec/1000.0);
+		if (millisec>=1000) {
+			millisec -=1000;
+			tv.tv_sec++;
+		}
+
+		time(&now);
+		timeinfo = localtime(&now);
+
+		strftime(buffertmp, 80, "%x - %X.%03d", timeinfo);
+		sprintf(buffer, "%s.%03d", buffertmp, millisec);
+	}
 
 	if (sev < LOG_SEV_NUM)
 		prefix = log__sev2str[sev];
 
 	if (prefix) {
 		if (subs) {
-			if (log__have_time())
+			if (log_date_time)
+				fprintf(out, "[%s] %s: %s: ", buffer, prefix, subs);
+			else if (log__have_time())
 				fprintf(out, "[%.4lld.%.6lld] %s: %s: ",
 					sec, usec, prefix, subs);
 			else
 				fprintf(out, "%s: %s: ", prefix, subs);
 		} else {
-			if (log__have_time())
+			if (log_date_time)
+				fprintf(out, "[%s] %s: ", buffer, prefix);
+			else if (log__have_time())
 				fprintf(out, "[%.4lld.%.6lld] %s: ",
 					sec, usec, prefix);
 			else
@@ -164,13 +193,18 @@ static void log__submit(const char *file,
 		}
 	} else {
 		if (subs) {
-			if (log__have_time())
+			if (log_date_time)
+				fprintf(out, "[%s] %s: ",
+					buffer, subs);
+			else if (log__have_time())
 				fprintf(out, "[%.4lld.%.6lld] %s: ",
 					sec, usec, subs);
 			else
 				fprintf(out, "%s: ", subs);
 		} else {
-			if (log__have_time())
+			if (log_date_time)
+				fprintf(out, "[%s] ", buffer);
+			else if (log__have_time())
 				fprintf(out, "[%.4lld.%.6lld] ", sec, usec);
 		}
 	}

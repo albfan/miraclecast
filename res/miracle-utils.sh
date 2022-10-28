@@ -168,9 +168,11 @@ function kill_network_manager {
       # ubuntu manager restarts automatically wpa_supplicant
       sudo service NetworkManager stop
    elif check_archlinux_distro
+   then
       sudo systemctl stop Network.service
    else
-      sudo systemctl stop Network.service
+      sudo systemctl stop NetworkManager
+      sudo systemctl stop wpa_supplicant
    fi
 }
 
@@ -183,6 +185,9 @@ function start_network_manager {
    then
       sudo service NetworkManager start
    elif check_archlinux_distro
+   then
       sudo systemctl start Network.service
+   else
+      sudo service NetworkManager start
    fi
 }

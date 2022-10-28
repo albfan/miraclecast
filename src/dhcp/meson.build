@@ -7,5 +7,5 @@ miracle_dhcp_srcs = ['dhcp.c',
 executable('miracle-dhcp', miracle_dhcp_srcs,
   install: true,
   include_directories: include_directories('../..'),
-  dependencies: [glib2, udev, libmiracle_shared_dep]
+  dependencies: [glib2, udev, libmiracle_shared_dep, m]
 )

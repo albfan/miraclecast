@@ -62,6 +62,12 @@ enum log_severity {
 extern unsigned int log_max_sev;
 
 /*
+ * Defines if log time should use local time
+ * Default: false
+ */
+extern bool log_date_time;
+
+/*
  * Defines the debug configuration for gstreamer
  */
 extern char* gst_debug;
@@ -73,6 +79,10 @@ extern char* gst_debug;
  */
 
 void log_init_time(void);
+
+void log__time(long long *sec, long long *usec);
+
+bool log__have_time(void);
 
 /*
  * Log-Functions
