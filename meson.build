@@ -44,6 +44,8 @@ add_project_arguments('-DIP_BINARY='+get_option('ip-binary'), language: 'c')
 glib2 = dependency('glib-2.0')
 udev = dependency('libudev')
 
+m = c_compiler.find_library('m', required: false)
+
 subdir('src')
 subdir('res')
 

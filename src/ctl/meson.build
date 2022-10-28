@@ -1,5 +1,5 @@
 inc = include_directories('../..')
-deps = [libsystemd, libmiracle_shared_dep, glib2]
+deps = [libsystemd, libmiracle_shared_dep, glib2, m]
 if readline.found()
   deps += readline
 endif

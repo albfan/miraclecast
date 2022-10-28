@@ -9,6 +9,6 @@ miracle_wifid_src = ['wifid.h',
 executable('miracle-wifid', miracle_wifid_src,
   include_directories: inc,
   install: true,
-  dependencies: [udev, glib2, libsystemd, libmiracle_shared_dep]
+  dependencies: [udev, glib2, libsystemd, libmiracle_shared_dep, m]
 )
 

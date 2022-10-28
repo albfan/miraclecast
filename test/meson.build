@@ -1,5 +1,5 @@
 check = dependency('check', required: false)
-deps = [udev, glib2, check, libsystemd, libmiracle_shared_dep]
+deps = [udev, glib2, check, libsystemd, libmiracle_shared_dep, m]
 
 if check.found()
   test_rtsp = executable('test_rtsp', 'test_rtsp.c', dependencies: deps)

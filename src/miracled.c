@@ -66,6 +66,7 @@ static int help(void)
 	       "     --version          Show package version\n"
 	       "     --log-level <lvl>  Maximum level for log messages\n"
 	       "     --log-time         Prefix log-messages with timestamp\n"
+	       "     --log-date-time    Prefix log-messages with date time\n"
 	       , program_invocation_short_name);
 	/*
 	 * 80-char barrier:
@@ -81,12 +82,14 @@ static int parse_argv(int argc, char *argv[])
 		ARG_VERSION = 0x100,
 		ARG_LOG_LEVEL,
 		ARG_LOG_TIME,
+		ARG_LOG_DATE_TIME,
 	};
 	static const struct option options[] = {
-		{ "help",	no_argument,		NULL,	'h' },
-		{ "version",	no_argument,		NULL,	ARG_VERSION },
-		{ "log-level",	required_argument,	NULL,	ARG_LOG_LEVEL },
-		{ "log-time",	no_argument,		NULL,	ARG_LOG_TIME },
+		{ "help",		no_argument,		NULL,	'h' },
+		{ "version",		no_argument,		NULL,	ARG_VERSION },
+		{ "log-level",		required_argument,	NULL,	ARG_LOG_LEVEL },
+		{ "log-time",		no_argument,		NULL,	ARG_LOG_TIME },
+		{ "log-date-time",	no_argument,		NULL,	ARG_LOG_DATE_TIME },
 		{}
 	};
 	int c;
@@ -103,6 +106,9 @@ static int parse_argv(int argc, char *argv[])
 			break;
 		case ARG_LOG_TIME:
 			log_init_time();
+			break;
+		case ARG_LOG_DATE_TIME:
+			log_date_time = true;
 			break;
 		case '?':
 			return -EINVAL;

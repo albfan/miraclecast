@@ -32,6 +32,9 @@
 #include "ctl.h"
 #include "shl_macro.h"
 #include "shl_util.h"
+#include "shl_log.h"
+#include <math.h>
+#include <time.h>
 
 /* *sigh* readline doesn't include all their deps, so put them last */
 #include <readline/history.h>
@@ -72,6 +75,37 @@ void cli_printv(const char *fmt, va_list args)
 		rl_replace_line("", 0);
 		rl_redisplay();
 	}
+
+	long long sec, usec;
+	time_t now;
+	struct tm *timeinfo;
+	struct timeval tv;
+	char buffertmp[80];
+	char buffer[80];
+	int millisec;
+
+
+	log__time(&sec, &usec);
+
+	if (log_date_time) {
+		gettimeofday(&tv, NULL);
+		millisec = lrint(tv.tv_usec/1000.0);
+		if (millisec>=1000) {
+			millisec -=1000;
+			tv.tv_sec++;
+		}
+
+		time(&now);
+		timeinfo = localtime(&now);
+
+		strftime(buffertmp, 80, "%x - %X.%03d", timeinfo);
+		sprintf(buffer, "%s.%03d", buffertmp, millisec);
+	}
+
+	if (log_date_time)
+		printf("[%s] ", buffer);
+	else if (log__have_time())
+		printf("[%.4lld.%.6lld] ", sec, usec);
 
 	vprintf(fmt, args);
 

@@ -726,6 +726,9 @@ void cli_fn_help()
 	       "     --help-commands             Show available commands\n"
 	       "     --version                   Show package version\n"
 	       "     --log-level <lvl>           Maximum level for log messages\n"
+	       "     --log-time                  Prefix log-messages with timestamp\n"
+	       "     --log-date-time             Prefix log-messages with date time\n"
+	       "\n"
 	       "     --log-journal-level <lvl>   Maximum level for journal log messages\n"
 	       "     --gst-debug [cat:]lvl[,...] List of categories an level of debug\n"
 	       "     --audio <0/1>               Enable audio support (default %d)\n"
@@ -813,6 +816,8 @@ static int parse_argv(int argc, char *argv[])
 	enum {
 		ARG_VERSION = 0x100,
 		ARG_LOG_LEVEL,
+		ARG_LOG_TIME,
+		ARG_LOG_DATE_TIME,
 		ARG_JOURNAL_LEVEL,
 		ARG_GST_DEBUG,
 		ARG_AUDIO,
@@ -823,10 +828,12 @@ static int parse_argv(int argc, char *argv[])
       ARG_HELP_COMMANDS,
 	};
 	static const struct option options[] = {
-		{ "help",	no_argument,		NULL,	'h' },
+		{ "help",		no_argument,		NULL,	'h' },
 		{ "help-commands",	no_argument,		NULL,	ARG_HELP_COMMANDS },
-		{ "version",	no_argument,		NULL,	ARG_VERSION },
-		{ "log-level",	required_argument,	NULL,	ARG_LOG_LEVEL },
+		{ "version"	,	no_argument,		NULL,	ARG_VERSION },
+		{ "log-level",		required_argument,	NULL,	ARG_LOG_LEVEL },
+		{ "log-time",	        no_argument,		NULL,	ARG_LOG_TIME },
+		{ "log-date-time",	no_argument,		NULL,	ARG_LOG_DATE_TIME },
 		{ "log-journal-level",	required_argument,	NULL,	ARG_JOURNAL_LEVEL },
 		{ "gst-debug",	required_argument,	NULL,	ARG_GST_DEBUG },
 		{ "audio",	required_argument,	NULL,	ARG_AUDIO },
@@ -860,6 +867,12 @@ static int parse_argv(int argc, char *argv[])
 			return 0;
 		case ARG_LOG_LEVEL:
 			cli_max_sev = log_parse_arg(optarg);
+			break;
+		case ARG_LOG_TIME:
+			log_init_time();
+			break;
+		case ARG_LOG_DATE_TIME:
+			log_date_time = true;
 			break;
 		case ARG_GST_DEBUG:
 			gst_debug = optarg;
