@@ -24,6 +24,7 @@ if(READLINE_FOUND)
 endif(READLINE_FOUND)
 
 target_link_libraries(miracle-wifictl miracle-shared)
+target_link_libraries(miracle-wifictl m)
 target_link_libraries(miracle-wifictl ${GLIB2_LIBRARIES})
 ########### next target ###############
 
@@ -37,6 +38,7 @@ set(miracle-sinkctl_SRCS ctl.h
 
 add_executable(miracle-sinkctl ${miracle-sinkctl_SRCS})
 target_link_libraries(miracle-sinkctl ${GLIB2_LIBRARIES})
+target_link_libraries(miracle-sinkctl m)
 
 install(TARGETS miracle-sinkctl DESTINATION bin)
 

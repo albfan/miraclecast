@@ -9,6 +9,7 @@ add_subdirectory(uibc)
 set(miracled_SRCS miracled.h miracled.c)
 add_executable(miracled ${miracled_SRCS})
 target_link_libraries(miracled miracle-shared)
+target_link_libraries(miracled m)
 install(TARGETS miracled DESTINATION bin)
 
 INCLUDE_DIRECTORIES(${CMAKE_BINARY_DIR} ${CMAKE_SOURCE_DIR}/src ${CMAKE_SOURCE_DIR}/src/shared)

@@ -20,6 +20,7 @@ if(CHECK_FOUND)
     target_link_libraries(test_wpas ${GLIB2_LIBRARIES})
     target_link_libraries(test_wpas ${CHECK_LIBRARIES})
     target_link_libraries(test_wpas ${CHECK_CFLAGS})
+    target_link_libraries(test_wpas m)
 
     set(test_valgrind_SOURCES test_common.h test_valgrind.c)
     add_executable(test_valgrind ${test_valgrind_SOURCES})
