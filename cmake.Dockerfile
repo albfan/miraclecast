@@ -1,9 +1,9 @@
 FROM docker.io/albfan/miraclecast-ci
 
-COPY . ./
+RUN mkdir src
 
-RUN rm -rf build-cmake; \
-    mkdir build-cmake; \
-    cd build-cmake; \
-    cmake ..; \
-    make
+COPY . ./src
+
+WORKDIR src
+
+RUN cmake -Bbuild . && make -C build
