@@ -377,14 +377,14 @@ static int sink_timeout_fn(sd_event_source *s, uint64_t usec, void *data)
 }
 
 static const struct cli_cmd cli_cmds[] = {
-	{ "list",		NULL,					CLI_M,	CLI_LESS,	0,	cmd_list,		"List all objects" },
-	{ "show",		"<link|peer>",				CLI_M,	CLI_LESS,	1,	cmd_show,		"Show detailed object information" },
-	{ "run",		"<link>",				CLI_M,	CLI_EQUAL,	1,	cmd_run,		"Run sink on given link" },
-	{ "bind",		"<link>",				CLI_M,	CLI_EQUAL,	1,	cmd_bind,		"Like 'run' but bind the link name to run when it is hotplugged" },
+	{ "list",		NULL,			CLI_M,	CLI_LESS,	0,	cmd_list,		"List all objects" },
+	{ "show",		"<link|peer>",		CLI_M,	CLI_LESS,	1,	cmd_show,		"Show detailed object information" },
+	{ "run",		"<link>",		CLI_M,	CLI_EQUAL,	1,	cmd_run,		"Run sink on given link" },
+	{ "bind",		"<link>",		CLI_M,	CLI_EQUAL,	1,	cmd_bind,		"Like 'run' but bind the link name to run when it is hotplugged" },
 	{ "set-managed",	"<link> <yes|no>",	CLI_M,	CLI_EQUAL,	2,	cmd_set_managed,	"Manage or unmnage a link" },
-	{ "quit",		NULL,					CLI_Y,	CLI_MORE,	0,	cmd_quit,		"Quit program" },
-	{ "exit",		NULL,					CLI_Y,	CLI_MORE,	0,	cmd_quit,		NULL },
-	{ "help",		NULL,					CLI_M,	CLI_MORE,	0,	NULL,			"Print help" },
+	{ "quit",		NULL,			CLI_Y,	CLI_MORE,	0,	cmd_quit,		"Quit program" },
+	{ "exit",		NULL,			CLI_Y,	CLI_MORE,	0,	cmd_quit,		NULL },
+	{ "help",		NULL,			CLI_M,	CLI_MORE,	0,	NULL,			"Print help" },
 	{ },
 };
 
@@ -733,8 +733,8 @@ void cli_fn_help()
 	       "     --gst-debug [cat:]lvl[,...] List of categories an level of debug\n"
 	       "     --audio <0/1>               Enable audio support (default %d)\n"
 	       "     --scale WxH                 Scale to resolution\n"
-	       "  -p --port <port>                  Port for rtsp (default %d)\n"
-	       "     --uibc                         Enables UIBC\n"
+	       "  -p --port <port>               Port for rtsp (default %d)\n"
+	       "     --uibc                      Enables UIBC\n"
 	       "  -e --external-player           Configure player to use\n"
 	       "     --res <n,n,n>               Supported resolutions masks (CEA, VESA, HH)\n"
 	       "                                    default CEA  %08X\n"
@@ -825,7 +825,7 @@ static int parse_argv(int argc, char *argv[])
 		ARG_RES,
 		ARG_HELP_RES,
 		ARG_UIBC,
-      ARG_HELP_COMMANDS,
+		ARG_HELP_COMMANDS,
 	};
 	static const struct option options[] = {
 		{ "help",		no_argument,		NULL,	'h' },
@@ -835,33 +835,33 @@ static int parse_argv(int argc, char *argv[])
 		{ "log-time",	        no_argument,		NULL,	ARG_LOG_TIME },
 		{ "log-date-time",	no_argument,		NULL,	ARG_LOG_DATE_TIME },
 		{ "log-journal-level",	required_argument,	NULL,	ARG_JOURNAL_LEVEL },
-		{ "gst-debug",	required_argument,	NULL,	ARG_GST_DEBUG },
-		{ "audio",	required_argument,	NULL,	ARG_AUDIO },
-		{ "scale",	required_argument,	NULL,	ARG_SCALE },
-		{ "res",	required_argument,	NULL,	ARG_RES },
-		{ "help-res",	no_argument,	NULL,	ARG_HELP_RES },
+		{ "gst-debug",		required_argument,	NULL,	ARG_GST_DEBUG },
+		{ "audio",		required_argument,	NULL,	ARG_AUDIO },
+		{ "scale",		required_argument,	NULL,	ARG_SCALE },
+		{ "res",		required_argument,	NULL,	ARG_RES },
+		{ "help-res",		no_argument,		NULL,	ARG_HELP_RES },
 		{ "port",		required_argument,	NULL,	'p' },
 		{ "uibc",		no_argument,		NULL,	ARG_UIBC },
-		{ "external-player",		required_argument,		NULL,	'e' },
+		{ "external-player",	required_argument,	NULL,	'e' },
 		{}
 	};
 	int c;
 
 	uibc_option = false;
 	uibc_enabled = false;
-   external_player = false;
+	external_player = false;
 	rstp_port = DEFAULT_RSTP_PORT;
 
 	while ((c = getopt_long(argc, argv, "he:p:", options, NULL)) >= 0) {
 		switch (c) {
 		case 'h':
-		   cli_fn_help();
-         return 0;
+			cli_fn_help();
+			return 0;
 		case ARG_HELP_COMMANDS:
 			return cli_help(cli_cmds, 20);
 		case ARG_HELP_RES:
 			wfd_print_resolutions("");
-         return 0;
+			return 0;
 		case ARG_VERSION:
 			puts(PACKAGE_STRING);
 			return 0;

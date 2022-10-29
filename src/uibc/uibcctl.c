@@ -1,34 +1,197 @@
 
-#include "miracle-uibcctl.h"
+#include "uibcctl.h"
+#include <locale.h>
+#include <glib.h>
+#include <getopt.h>
+#include "config.h"
+#include "util.h"
+//#include "ctl.h"
 
+int portno = -1;
+gchar* host;
+bool is_daemon = true;
+
+void usage(gchar* prgname) {
+  fprintf(stderr, "Usage:\n");
+  fprintf(stderr, "   %s <hostname> <port>\n", prgname);
+  fprintf(stderr, "or define host and port on ini file\n");
+}
+
+/*
+ * cmd: quit/exit
+ */
+
+//static int cmd_quit(char **args, unsigned int n)
+//{
+//	cli_exit();
+//	return 0;
+//}
+//
+//static const struct cli_cmd cli_cmds[] = {
+//	{ "info",	NULL,	CLI_M,	CLI_LESS,	1,	cmd_show,	"Show detailed information" },
+//	{ "quit",	NULL,	CLI_Y,	CLI_MORE,	0,	cmd_quit,	"Quit program" },
+//	{ "exit",	NULL,	CLI_Y,	CLI_MORE,	0,	cmd_quit,	NULL },
+//	{ "event",	NULL,	CLI_Y,	CLI_MORE,	0,	cmd_event,	"launch an event: <type>,<count>,<id>,<x>,<y>" },
+//	{ "help",	NULL,	CLI_M,	CLI_MORE,	0,	NULL,		"Print help" },
+//	{ },
+//};
+
+void cli_fn_help()
+{
+	/*
+	 * 80-char barrier:
+	 *      01234567890123456789012345678901234567890123456789012345678901234567890123456789
+	 */
+	fprintf(stderr, "%s [OPTIONS...] <hostname> <port>\n\n"
+	       "Manage the User Input Back Channel.\n"
+	       "  -h --help                      Show this help\n"
+	       "     --help-commands             Show available commands\n"
+	       "     --version                   Show package version\n"
+	       "     --daemon                    Run in background\n"
+	       "     --log-level <lvl>           Maximum level for log messages\n"
+	       "     --host                      Defines the host\n"
+	       "  -p --port <port>               Defines the Port\n"
+	       "\n"
+	       , program_invocation_short_name);
+	/*
+	 * 80-char barrier:
+	 *      01234567890123456789012345678901234567890123456789012345678901234567890123456789
+	 */
+}
+
+static int parse_argv(int argc, char *argv[])
+{
+	enum {
+		ARG_VERSION = 0x100,
+		ARG_LOG_LEVEL,
+		ARG_DAEMON,
+		ARG_HOST,
+		ARG_HELP_COMMANDS,
+	};
+	static const struct option options[] = {
+		{ "help",		no_argument,		NULL,	'h' },
+		{ "help-commands",	no_argument,		NULL,	ARG_HELP_COMMANDS },
+		{ "version",		no_argument,		NULL,	ARG_VERSION },
+		{ "log-level",		required_argument,	NULL,	ARG_LOG_LEVEL },
+		{ "daemon",		no_argument,		NULL,	ARG_DAEMON },
+		{ "host",		required_argument,	NULL,	ARG_HOST },
+		{ "port",		required_argument,	NULL,	'p' },
+		{}
+	};
+	int c;
+
+	while ((c = getopt_long(argc, argv, "he:p:", options, NULL)) >= 0) {
+		switch (c) {
+		case 'h':
+			cli_fn_help();
+			return 0;
+		case ARG_HELP_COMMANDS:
+//			return cli_help(cli_cmds, 20);
+			cli_fn_help();
+			return 0;
+		case ARG_VERSION:
+			puts(PACKAGE_STRING);
+			return 0;
+		case ARG_LOG_LEVEL:
+			log_max_sev = log_parse_arg(optarg);
+			break;
+		case ARG_HOST:
+			host = optarg;
+			break;
+		case ARG_DAEMON:
+			is_daemon = true;
+			break;
+		case 'p':
+			portno = atoi(optarg);
+			break;
+		case '?':
+			return -EINVAL;
+		}
+	}
+
+	return 1;
+}
 int main(int argc, char *argv[]) {
-    //TODO: Add miracle TUI interface
-    //TODO: Add parsearg
-    //--daemon (read stdin)
-
-  int portno;
+  bool free_host = false;
   struct hostent *server;
   int sockfd;
   struct sockaddr_in serv_addr;
   char buffer[256];
   int r;
 
+  setlocale(LC_ALL, "");
+
+  GKeyFile* gkf = load_ini_file();
+
   log_max_sev = LOG_INFO;
 
-  if (argc < 3) {
-    fprintf(stderr, "Usage:\n");
-    fprintf(stderr, "   %s <hostname> <port>\n", argv[0]);
-    return EXIT_FAILURE;
+  gchar** autocmds_free = NULL;
+  if (gkf) {
+    gchar* log_level;
+    log_level = g_key_file_get_string (gkf, "uibcctl", "log-level", NULL);
+    if (log_level) {
+      log_max_sev = log_parse_arg(log_level);
+      g_free(log_level);
+    }
+    if (g_key_file_has_key (gkf, "uibcctl", "daemon", NULL)) {
+      is_daemon = g_key_file_get_boolean (gkf, "uibcctl", "daemon", NULL);
+    }
+    host = g_key_file_get_string (gkf, "uibcctl", "host", NULL);
+    if (host) {
+      host = log_parse_arg(log_level);
+      free_host = true;
+    }
+    if (g_key_file_has_key (gkf, "uibcctl", "port", NULL)) {
+      portno = g_key_file_get_uint64 (gkf, "uibcctl", "port", NULL);
+    }
   }
 
-  server = gethostbyname(argv[1]);
-  portno = atoi(argv[2]);
+  r = parse_argv(argc, argv);
+  if (r < 0)
+    return EXIT_FAILURE;
+  if (!r)
+    return EXIT_SUCCESS;
 
-  log_info("server %s port %d", argv[1], portno);
+  gchar* prgname = argv[0];
+  gboolean has_port = portno != -1;
+  gboolean has_host = host != NULL;
+  if (has_host) {
+    if (has_port) {
+      //Everything defined
+    } else {
+      if (argc < 1) {
+        usage(prgname);
+        return EXIT_FAILURE;
+      } else {
+        portno = atoi(argv[1]);
+      }
+    }
+  } else {
+    if (has_port) {
+      if (argc < 1) {
+        usage(prgname);
+        return EXIT_FAILURE;
+      } else {
+        host = argv[1];
+      }
+    } else {
+      if (argc < 2) {
+        usage(prgname);
+        return EXIT_FAILURE;
+      } else {
+        host = argv[1];
+        portno = atoi(argv[1]);
+      }
+    }
+  }
+
+  server = gethostbyname(host);
+
+  log_info("server %s port %d", server, portno);
 
   if (server == NULL) {
-    fprintf(stderr,"ERROR, no such host\n");
-    exit(0);
+    perror("no such host");
+    return EXIT_FAILURE;
   }
 
   sockfd = socket(AF_INET, SOCK_STREAM, 0);
@@ -48,9 +211,10 @@ int main(int argc, char *argv[]) {
     return EXIT_FAILURE;
   }
 
-  bool daemon = true;
+  //TODO: Add miracle TUI interface
+
   while(1) {
-    if (!daemon) {
+    if (!is_daemon) {
       printf("enter event <type>,<count>,<id>,<x>,<y>: ");
     }
     bzero(buffer, 256);
@@ -58,7 +222,7 @@ int main(int argc, char *argv[]) {
     if (buffer == NULL) {
       break;
     }
-    if (!daemon) {
+    if (!is_daemon) {
       printf("input: %s", buffer);
     }
     char type = buffer[0];
@@ -68,7 +232,7 @@ int main(int argc, char *argv[]) {
     } else if (type == '3' || type == '4') {
       uibcmessage = buildUibcMessage(GENERIC_KEY_DOWN, buffer, 1, 1);
     } else {
-      if (!daemon) {
+      if (!is_daemon) {
         printf("unknow event type: %s", buffer);
       }
       continue;
@@ -79,6 +243,9 @@ int main(int argc, char *argv[]) {
       return r;
     }
   }
+
+  if (free_host)
+    g_free(host);
 
   close(sockfd);
   return EXIT_SUCCESS;

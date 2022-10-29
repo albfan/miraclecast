@@ -1,4 +1,6 @@
-executable('miracle-uibcctl', 'miracle-uibcctl.h', 'miracle-uibcctl.c',
+inc = include_directories('../..')
+executable('miracle-uibcctl', 'uibcctl.h', 'uibcctl.c',
   install: true,
-  dependencies: [m, libmiracle_shared_dep]
+  include_directories: inc,
+  dependencies: [m, glib2, libmiracle_shared_dep]
 )
