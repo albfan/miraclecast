@@ -1,6 +1,8 @@
 #!/bin/bash
 
-. miracle-utils.sh
+DIRNAME=$(dirname $0)
+
+. $DIRNAME/miracle-utils.sh
 
 kill_network_manager
 

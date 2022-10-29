@@ -1,7 +1,9 @@
 #!/bin/bash
 
-. miracle-utils.sh
+DIRNAME=$(dirname $0)
 
-./kill-wpa.sh
+. $DIRNAME/miracle-utils.sh
+
+./$DIRNAME/kill-wpa.sh
 
 start_network_manager
