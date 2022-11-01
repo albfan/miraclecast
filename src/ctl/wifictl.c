@@ -240,6 +240,9 @@ static int cmd_set_friendly_name(char **args, unsigned int n)
 		return 0;
 	}
 
+	if (!l->managed)
+		return log_EUNMANAGED();
+
 	return ctl_link_set_friendly_name(l, name);
 }
 
@@ -310,10 +313,8 @@ static int cmd_p2p_scan(char **args, unsigned int n)
 		return 0;
 	}
 
-	if (!l->managed) {
-		cli_printf("link %s not managed\n", l->label);
-		return 0;
-	}
+	if (!l->managed)
+		return log_EUNMANAGED();
 
 	return ctl_link_set_p2p_scanning(l, !stop);
 }
@@ -362,10 +363,8 @@ static int cmd_connect(char **args, unsigned int n)
 		pin = "";
 	}
 
-	if (!p->l->managed) {
-		cli_printf("link %s not managed\n", p->l->label);
-		return 0;
-	}
+	if (!p->l->managed)
+		return log_EUNMANAGED();
 
 	return ctl_peer_connect(p, prov, pin);
 }
@@ -389,10 +388,8 @@ static int cmd_disconnect(char **args, unsigned int n)
 		return 0;
 	}
 
-	if (!p->l->managed) {
-		cli_printf("link %s not managed\n", p->l->label);
-		return 0;
-	}
+	if (!p->l->managed)
+		return log_EUNMANAGED();
 
 	return ctl_peer_disconnect(p);
 }
@@ -605,7 +602,7 @@ static int parse_argv(int argc, char *argv[])
 	while ((c = getopt_long(argc, argv, "h", options, NULL)) >= 0) {
 		switch (c) {
 		case 'h':
-		   cli_fn_help();
+			cli_fn_help();
 			return 0;
 		case ARG_HELP_COMMANDS:
 			return cli_help(cli_cmds, 20);
@@ -638,22 +635,22 @@ int main(int argc, char **argv)
 
 	setlocale(LC_ALL, "");
 
-   GKeyFile* gkf = load_ini_file();
+	GKeyFile* gkf = load_ini_file();
 
-   if (gkf) {
-      gchar* log_level;
-      log_level = g_key_file_get_string (gkf, "wifictl", "log-journal-level", NULL);
-      if (log_level) {
-         log_max_sev = log_parse_arg(log_level);
-         g_free(log_level);
-      }
-      log_level = g_key_file_get_string (gkf, "wifictl", "log-level", NULL);
-      if (log_level) {
-         cli_max_sev = log_parse_arg(log_level);
-         g_free(log_level);
-      }
-      g_key_file_free(gkf);
-   }
+	if (gkf) {
+		gchar* log_level;
+		log_level = g_key_file_get_string (gkf, "wifictl", "log-journal-level", NULL);
+		if (log_level) {
+			log_max_sev = log_parse_arg(log_level);
+			g_free(log_level);
+		}
+		log_level = g_key_file_get_string (gkf, "wifictl", "log-level", NULL);
+		if (log_level) {
+			cli_max_sev = log_parse_arg(log_level);
+			g_free(log_level);
+		}
+		g_key_file_free(gkf);
+	}
 
 	r = parse_argv(argc, argv);
 	if (r < 0)

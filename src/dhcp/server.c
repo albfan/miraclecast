@@ -456,7 +456,7 @@ static void init_packet(GDHCPServer *dhcp_server, struct dhcp_packet *packet,
 	packet->gateway_nip = client_packet->gateway_nip;
 	packet->ciaddr = client_packet->ciaddr;
 	dhcp_add_option_uint32(packet, DHCP_SERVER_ID,
-						dhcp_server->server_nip);
+						get_be32(&dhcp_server->server_nip));
 }
 
 static void add_option(gpointer key, gpointer value, gpointer user_data)
@@ -675,7 +675,7 @@ static gboolean listener_event(GIOChannel *channel, GIOCondition condition,
 
 	server_id_option = dhcp_get_option(&packet, DHCP_SERVER_ID);
 	if (server_id_option) {
-		uint32_t server_nid = get_be32(server_id_option);
+		uint32_t server_nid = get_unaligned((uint32_t *) server_id_option);
 
 		if (server_nid != dhcp_server->server_nip)
 			return TRUE;

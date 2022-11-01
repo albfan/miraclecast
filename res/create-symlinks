@@ -1,0 +1,6 @@
+#!/bin/sh
+SYSTEMD_SYSTEM_UNIT_DIR=${DESTDIR}`pkg-config --variable=systemdsystemunitdir systemd`
+ln -sfv miracle-wifid.service \
+    ${SYSTEMD_SYSTEM_UNIT_DIR}/dbos-org.freedesktop.miracle.wifi.service
+ln -sfv miracle-dispd.service \
+    ${SYSTEMD_SYSTEM_UNIT_DIR}/dbos-org.freedesktop.miracle.wfd.service

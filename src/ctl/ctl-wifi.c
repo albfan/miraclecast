@@ -637,6 +637,7 @@ int ctl_link_set_managed(struct ctl_link *l, bool val)
 	_sd_bus_message_unref_ sd_bus_message *m = NULL;
 	_sd_bus_error_free_ sd_bus_error err = SD_BUS_ERROR_NULL;
 	_shl_free_ char *node = NULL;
+	const char *method = val ? "Manage" : "Unmanage";
 	int r;
 
 	if (!l)
@@ -654,26 +655,8 @@ int ctl_link_set_managed(struct ctl_link *l, bool val)
 					   &m,
 					   "org.freedesktop.miracle.wifi",
 					   node,
-					   "org.freedesktop.DBus.Properties",
-					   "Set");
-	if (r < 0)
-		return cli_log_create(r);
-
-	r = sd_bus_message_append(m, "ss",
-				  "org.freedesktop.miracle.wifi.Link",
-				  "Managed");
-	if (r < 0)
-		return cli_log_create(r);
-
-	r = sd_bus_message_open_container(m, 'v', "b");
-	if (r < 0)
-		return cli_log_create(r);
-
-	r = sd_bus_message_append(m, "b", val);
-	if (r < 0)
-		return cli_log_create(r);
-
-	r = sd_bus_message_close_container(m);
+					   "org.freedesktop.miracle.wifi.Link",
+					   method);
 	if (r < 0)
 		return cli_log_create(r);
 
@@ -823,7 +806,7 @@ static int ctl_wifi_parse_peer(struct ctl_wifi *w,
 
 	l = ctl_wifi_find_link_by_peer(w, label);
 	if (!l)
-		return 0;
+		return -EINVAL;
 
 	r = ctl_peer_new(&p, l, label);
 	if (r < 0)
@@ -900,6 +883,9 @@ static int ctl_wifi_parse_object(struct ctl_wifi *w,
 			ctl_link_free(l);
 		}
 	}
+
+	free(label);
+	label = NULL;
 
 	r = sd_bus_path_decode(t,
 			       "/org/freedesktop/miracle/wifi/peer",
@@ -1068,6 +1054,38 @@ static int ctl_wifi_peer_fn(sd_bus_message *m,
 	return 0;
 }
 
+static void ctl_wifi_unlink_all_links(struct ctl_wifi *w)
+{
+	struct ctl_link *l;
+	while (!shl_dlist_empty(&w->links)) {
+		l = shl_dlist_last_entry(&w->links, struct ctl_link, list);
+		ctl_link_free(l);
+	}
+}
+
+static int ctl_wifi_wifid_up_or_down_fn(sd_bus_message *m,
+			    void *data,
+			    sd_bus_error *err)
+{
+	struct ctl_wifi *w = data;
+	char *from = NULL, *to = NULL;
+	int r;
+
+	r = sd_bus_message_read(m, "sss", NULL, &from, &to);
+	if(r < 0) {
+		return r;
+	}
+
+	if(*from && !*to) {
+		ctl_wifi_unlink_all_links(w);
+	}
+	else if(!*from && *to) {
+		r = ctl_wifi_fetch(w);
+	}
+
+	return r;
+}
+
 static int ctl_wifi_init(struct ctl_wifi *w)
 {
 	int r;
@@ -1095,6 +1113,18 @@ static int ctl_wifi_init(struct ctl_wifi *w)
 			     "sender='org.freedesktop.miracle.wifi',"
 			     "interface='org.freedesktop.miracle.wifi.Peer'",
 			     ctl_wifi_peer_fn,
+			     w);
+	if (r < 0)
+		return r;
+
+	r = sd_bus_add_match(w->bus, NULL,
+			     "type='signal',"
+			     "sender='org.freedesktop.DBus',"
+				 "path='/org/freedesktop/DBus',"
+			     "interface='org.freedesktop.DBus',"
+				 "member='NameOwnerChanged',"
+				 "arg0namespace='org.freedesktop.miracle.wifi'",
+			     ctl_wifi_wifid_up_or_down_fn,
 			     w);
 	if (r < 0)
 		return r;
@@ -1135,19 +1165,50 @@ int ctl_wifi_new(struct ctl_wifi **out, sd_bus *bus)
 
 void ctl_wifi_free(struct ctl_wifi *w)
 {
-	struct ctl_link *l;
-
 	if (!w)
 		return;
 
-	while (!shl_dlist_empty(&w->links)) {
-		l = shl_dlist_last_entry(&w->links, struct ctl_link, list);
-		ctl_link_free(l);
-	}
+	ctl_wifi_unlink_all_links(w);
 
 	ctl_wifi_destroy(w);
 	sd_bus_unref(w->bus);
 	free(w);
+}
+
+static int ctl_wifi_parse_objects(struct ctl_wifi *w,
+				sd_bus_message *m,
+				bool ignore_link_not_found)
+{
+	bool again = false;
+	int r = sd_bus_message_enter_container(m, 'a', "{oa{sa{sv}}}");
+	if (r < 0)
+		return cli_log_parser(r);
+
+	while ((r = sd_bus_message_enter_container(m,
+						   'e',
+						   "oa{sa{sv}}")) > 0) {
+		r = ctl_wifi_parse_object(w, m, true);
+		if(ignore_link_not_found && -EINVAL == r) {
+			r = sd_bus_message_skip(m, "a{sa{sv}}");
+			if(0 > r)
+				return cli_log_parser(r);
+			again = true;
+		}
+		if (r < 0)
+			return r;
+
+		r = sd_bus_message_exit_container(m);
+		if (r < 0)
+			return cli_log_parser(r);
+	}
+	if (r < 0)
+		return cli_log_parser(r);
+
+	r = sd_bus_message_exit_container(m);
+	if (r < 0)
+		return cli_log_parser(r);
+
+	return again ? -EAGAIN : 0;
 }
 
 int ctl_wifi_fetch(struct ctl_wifi *w)
@@ -1173,29 +1234,20 @@ int ctl_wifi_fetch(struct ctl_wifi *w)
 		return r;
 	}
 
-	r = sd_bus_message_enter_container(m, 'a', "{oa{sa{sv}}}");
-	if (r < 0)
-		return cli_log_parser(r);
-
-	while ((r = sd_bus_message_enter_container(m,
-						   'e',
-						   "oa{sa{sv}}")) > 0) {
-		r = ctl_wifi_parse_object(w, m, true);
-		if (r < 0)
-			return r;
-
-		r = sd_bus_message_exit_container(m);
-		if (r < 0)
-			return cli_log_parser(r);
+	r = ctl_wifi_parse_objects(w, m, true);
+	if(0 <= r || -EAGAIN != r) {
+		goto end;
 	}
-	if (r < 0)
-		return cli_log_parser(r);
 
-	r = sd_bus_message_exit_container(m);
-	if (r < 0)
-		return cli_log_parser(r);
+	r = sd_bus_message_rewind(m, true);
+	if(0 > r) {
+		return r;
+	}
 
-	return 0;
+	r = ctl_wifi_parse_objects(w, m, false);
+
+end:
+	return r;
 }
 
 struct ctl_link *ctl_wifi_find_link(struct ctl_wifi *w,

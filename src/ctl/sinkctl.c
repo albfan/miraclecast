@@ -279,10 +279,8 @@ static int cmd_run(char **args, unsigned int n)
 		return 0;
 	}
 
-	if (!l->managed) {
-		cli_printf("link %s not managed\n", l->label);
-		return 0;
-	}
+	if (!l->managed)
+		return log_EUNMANAGED();
 
 	run_on(l);
 
@@ -314,10 +312,8 @@ static int cmd_bind(char **args, unsigned int n)
 	if (!l)
 		return 0;
 
-	if (!l->managed) {
-		cli_printf("link %s not managed\n", l->label);
-		return 0;
-	}
+	if (!l->managed)
+		return log_EUNMANAGED();
 
 	run_on(l);
 
@@ -859,9 +855,8 @@ static int ctl_main(int argc, char *argv[])
 	if (r < 0)
 		return r;
 
-   left = argc - optind;
-   left = left <= 0 ? 0 : left;
-	r = ctl_interactive(argv + optind, left);
+	left = argc - optind;
+	r = ctl_interactive(argv + optind, left <= 0 ? 0 : left);
 
 	/* stop all scans */
 	shl_dlist_for_each(i, &wifi->links) {
@@ -912,19 +907,19 @@ static int parse_argv(int argc, char *argv[])
 
 	uibc_option = false;
 	uibc_enabled = false;
-   external_player = false;
+	external_player = false;
 	rstp_port = DEFAULT_RSTP_PORT;
 
 	while ((c = getopt_long(argc, argv, "he:p:", options, NULL)) >= 0) {
 		switch (c) {
 		case 'h':
-		   cli_fn_help();
-         return 0;
+			cli_fn_help();
+			return 0;
 		case ARG_HELP_COMMANDS:
 			return cli_help(cli_cmds, 20);
 		case ARG_HELP_RES:
 			wfd_print_resolutions("");
-         return 0;
+			return 0;
 		case ARG_VERSION:
 			puts(PACKAGE_STRING);
 			return 0;
@@ -976,74 +971,74 @@ static int parse_argv(int argc, char *argv[])
 int main(int argc, char **argv)
 {
 	int r;
-   bool free_argv = false;
+	bool free_argv = false;
 
 	setlocale(LC_ALL, "");
 
-   GKeyFile* gkf = load_ini_file();
+	GKeyFile* gkf = load_ini_file();
 
-   gchar** autocmds_free = NULL;
-   if (gkf) {
-      player = g_key_file_get_string (gkf, "sinkctl", "external-player", NULL);
-      if (player) {
+	gchar** autocmds_free = NULL;
+	if (gkf) {
+		player = g_key_file_get_string (gkf, "sinkctl", "external-player", NULL);
+		if (player) {
 			external_player = true;
-      }
-      gchar* log_level;
-      log_level = g_key_file_get_string (gkf, "sinkctl", "log-journal-level", NULL);
-      if (log_level) {
-         log_max_sev = log_parse_arg(log_level);
-         g_free(log_level);
-      }
-      log_level = g_key_file_get_string (gkf, "sinkctl", "log-level", NULL);
-      if (log_level) {
-         cli_max_sev = log_parse_arg(log_level);
-         g_free(log_level);
-      }
-      gchar* rstp_port_str = g_key_file_get_string (gkf, "sinkctl", "rstp-port", NULL);
-      if (rstp_port_str) {
-         rstp_port = atoi(rstp_port_str);
-         g_free(rstp_port_str);
-      }
-      gchar* autocmd;
-      autocmd = g_key_file_get_string (gkf, "sinkctl", "autocmd", NULL);
-      if (autocmd) {
-         gchar** autocmds = g_strsplit(autocmd, " ", -1);
-         autocmds_free = autocmds;
-         while (*autocmds) {
-            if (strcmp(*autocmds, "") != 0) {
-               gchar **newv = malloc((argc + 2) * sizeof(gchar*));
-               memmove(newv, argv, sizeof(gchar*) * argc);
-               newv[argc] = *autocmds;
-               newv[argc+1] = NULL;
-               argc++;
-               if (free_argv) {
-                  free(argv);
-               }
-               argv = newv;
-               free_argv = true;
-            }
-            autocmds++;
-         }
-         g_free(autocmd);
-      }
-      gchar** sinkctl_keys;
-      gsize len = 0;
-      protocol_extensions = g_hash_table_new(g_str_hash, g_str_equal);
+		}
+		gchar* log_level;
+		log_level = g_key_file_get_string (gkf, "sinkctl", "log-journal-level", NULL);
+		if (log_level) {
+			log_max_sev = log_parse_arg(log_level);
+			g_free(log_level);
+		}
+		log_level = g_key_file_get_string (gkf, "sinkctl", "log-level", NULL);
+		if (log_level) {
+			cli_max_sev = log_parse_arg(log_level);
+			g_free(log_level);
+		}
+		gchar* rstp_port_str = g_key_file_get_string (gkf, "sinkctl", "rstp-port", NULL);
+		if (rstp_port_str) {
+			rstp_port = atoi(rstp_port_str);
+			g_free(rstp_port_str);
+		}
+		gchar* autocmd;
+		autocmd = g_key_file_get_string (gkf, "sinkctl", "autocmd", NULL);
+		if (autocmd) {
+         		gchar** autocmds = g_strsplit(autocmd, " ", -1);
+			autocmds_free = autocmds;
+			while (*autocmds) {
+				if (strcmp(*autocmds, "") != 0) {
+					gchar **newv = malloc((argc + 2) * sizeof(gchar*));
+					memmove(newv, argv, sizeof(gchar*) * argc);
+					newv[argc] = *autocmds;
+					newv[argc+1] = NULL;
+					argc++;
+					if (free_argv) {
+						free(argv);
+					}
+					argv = newv;
+					free_argv = true;
+				}
+				autocmds++;
+			}
+			g_free(autocmd);
+		}
+		gchar** sinkctl_keys;
+		gsize len = 0;
+		protocol_extensions = g_hash_table_new(g_str_hash, g_str_equal);
 
-      sinkctl_keys = g_key_file_get_keys (gkf,
-                                          "sinkctl",
-                                          &len,
-                                          NULL);
-      for (int i = 0; i < (int)len; i++) {
-          if (g_str_has_prefix(sinkctl_keys[i], "extends.")) {
-              gchar* orig_key = sinkctl_keys[i];
-              gchar* key = orig_key+8;
-              gchar* value = g_key_file_get_string (gkf, "sinkctl", orig_key, NULL);
-              g_hash_table_insert(protocol_extensions, key, value);
-          }
-      }
-      g_key_file_free(gkf);
-   }
+		sinkctl_keys = g_key_file_get_keys (gkf,
+						    "sinkctl",
+						    &len,
+						    NULL);
+		for (int i = 0; i < (int)len; i++) {
+			if (g_str_has_prefix(sinkctl_keys[i], "extends.")) {
+				gchar* orig_key = sinkctl_keys[i];
+				gchar* key = orig_key+8;
+				gchar* value = g_key_file_get_string (gkf, "sinkctl", orig_key, NULL);
+				g_hash_table_insert(protocol_extensions, key, value);
+			}
+		}
+		g_key_file_free(gkf);
+	}
 
 	r = parse_argv(argc, argv);
 	if (r < 0)
@@ -1058,10 +1053,10 @@ int main(int argc, char **argv)
 	}
 
 	r = ctl_main(argc, argv);
-   g_strfreev(autocmds_free);
-   if (free_argv) {
-      free(argv);
-   }
+	g_strfreev(autocmds_free);
+	if (free_argv) {
+		free(argv);
+	}
 	sd_bus_unref(bus);
 
 	return r < 0 ? EXIT_FAILURE : EXIT_SUCCESS;
