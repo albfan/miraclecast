@@ -52,27 +52,27 @@ static int cmd_list(char **args, unsigned int n)
 
 	/* list links */
 
-	cli_printf("%6s %-24s %-30s %-10s\n",
+	cli_command_printf("%6s %-24s %-30s %-10s\n",
 		   "LINK", "INTERFACE", "FRIENDLY-NAME", "MANAGED");
 
 	shl_dlist_for_each(i, &wifi->links) {
 		l = link_from_dlist(i);
 		++link_cnt;
 
-		cli_printf("%6s %-24s %-30s %-10s\n",
-			   l->label,
-			   shl_isempty(l->ifname) ?
-			       "<unknown>" : l->ifname,
-			   shl_isempty(l->friendly_name) ?
-			       "<unknown>" : l->friendly_name,
-			   l->managed ? "yes": "no");
+		cli_command_printf("%6s %-24s %-30s %-10s\n",
+				   l->label,
+				   shl_isempty(l->ifname) ?
+				       "<unknown>" : l->ifname,
+				   shl_isempty(l->friendly_name) ?
+				       "<unknown>" : l->friendly_name,
+				   l->managed ? "yes": "no");
 	}
 
-	cli_printf("\n");
+	cli_command_printf("\n");
 
 	/* list peers */
 
-	cli_printf("%6s %-24s %-30s %-10s\n",
+	cli_command_printf("%6s %-24s %-30s %-10s\n",
 		   "LINK", "PEER-ID", "FRIENDLY-NAME", "CONNECTED");
 
 	shl_dlist_for_each(i, &wifi->links) {
@@ -82,16 +82,16 @@ static int cmd_list(char **args, unsigned int n)
 			p = peer_from_dlist(j);
 			++peer_cnt;
 
-			cli_printf("%6s %-24s %-30s %-10s\n",
-				   p->l->label,
-				   p->label,
-				   shl_isempty(p->friendly_name) ?
-				       "<unknown>" : p->friendly_name,
-				   p->connected ? "yes" : "no");
+			cli_command_printf("%6s %-24s %-30s %-10s\n",
+					   p->l->label,
+					   p->label,
+					   shl_isempty(p->friendly_name) ?
+					       "<unknown>" : p->friendly_name,
+					   p->connected ? "yes" : "no");
 		}
 	}
 
-	cli_printf("\n %u peers and %u links listed.\n", peer_cnt, link_cnt);
+	cli_command_printf("\n %u peers and %u links listed.\n", peer_cnt, link_cnt);
 
 	return 0;
 }
@@ -148,34 +148,34 @@ static int cmd_show(char **args, unsigned int n)
 	}
 
 	if (l) {
-		cli_printf("Link=%s\n", l->label);
+		cli_command_printf("Link=%s\n", l->label);
 		if (l->ifindex > 0)
-			cli_printf("InterfaceIndex=%u\n", l->ifindex);
+			cli_command_printf("InterfaceIndex=%u\n", l->ifindex);
 		if (l->ifname && *l->ifname)
-			cli_printf("InterfaceName=%s\n", l->ifname);
+			cli_command_printf("InterfaceName=%s\n", l->ifname);
 		if (l->friendly_name && *l->friendly_name)
-			cli_printf("FriendlyName=%s\n", l->friendly_name);
-		cli_printf("P2PScanning=%d\n", l->p2p_scanning);
+			cli_command_printf("FriendlyName=%s\n", l->friendly_name);
+		cli_command_printf("P2PScanning=%d\n", l->p2p_scanning);
 		if (l->wfd_subelements && *l->wfd_subelements)
-			cli_printf("WfdSubelements=%s\n", l->wfd_subelements);
-		cli_printf("Managed=%d\n", l->managed);
+			cli_command_printf("WfdSubelements=%s\n", l->wfd_subelements);
+		cli_command_printf("Managed=%d\n", l->managed);
 	} else if (p) {
-		cli_printf("Peer=%s\n", p->label);
+		cli_command_printf("Peer=%s\n", p->label);
 		if (p->p2p_mac && *p->p2p_mac)
-			cli_printf("P2PMac=%s\n", p->p2p_mac);
+			cli_command_printf("P2PMac=%s\n", p->p2p_mac);
 		if (p->friendly_name && *p->friendly_name)
-			cli_printf("FriendlyName=%s\n", p->friendly_name);
-		cli_printf("Connected=%d\n", p->connected);
+			cli_command_printf("FriendlyName=%s\n", p->friendly_name);
+		cli_command_printf("Connected=%d\n", p->connected);
 		if (p->interface && *p->interface)
-			cli_printf("Interface=%s\n", p->interface);
+			cli_command_printf("Interface=%s\n", p->interface);
 		if (p->local_address && *p->local_address)
-			cli_printf("LocalAddress=%s\n", p->local_address);
+			cli_command_printf("LocalAddress=%s\n", p->local_address);
 		if (p->remote_address && *p->remote_address)
-			cli_printf("RemoteAddress=%s\n", p->remote_address);
+			cli_command_printf("RemoteAddress=%s\n", p->remote_address);
 		if (p->wfd_subelements && *p->wfd_subelements)
-			cli_printf("WfdSubelements=%s\n", p->wfd_subelements);
+			cli_command_printf("WfdSubelements=%s\n", p->wfd_subelements);
 	} else {
-		cli_printf("Show what?\n");
+		cli_command_printf("Show what?\n");
 		return 0;
 	}
 
@@ -192,7 +192,7 @@ static int cmd_set_friendly_name(char **args, unsigned int n)
 	const char *name;
 
 	if (n < 1) {
-		cli_printf("To what?\n");
+		cli_command_printf("To what?\n");
 		return 0;
 	}
 
@@ -228,7 +228,7 @@ static int cmd_set_managed(char **args, unsigned int n)
 	bool managed = true;
 
 	if (n < 1) {
-		cli_printf("To what?\n");
+		cli_command_printf("To what?\n");
 		return 0;
 	}
 
@@ -310,7 +310,7 @@ static int cmd_connect(char **args, unsigned int n)
 	const char *prov, *pin;
 
 	if (n < 1) {
-		cli_printf("To whom?\n");
+		cli_command_printf("To whom?\n");
 		return 0;
 	}
 
@@ -353,7 +353,7 @@ static int cmd_disconnect(char **args, unsigned int n)
 	struct ctl_peer *p;
 
 	if (n < 1) {
-		cli_printf("From whom?\n");
+		cli_command_printf("From whom?\n");
 		return 0;
 	}
 

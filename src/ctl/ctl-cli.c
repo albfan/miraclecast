@@ -57,7 +57,7 @@ static bool is_cli(void)
 	return cli_rl;
 }
 
-void cli_printv(const char *fmt, va_list args)
+void cli_printv(const char *fmt, bool prefix_time, va_list args)
 {
 	SHL_PROTECT_ERRNO;
 	_shl_free_ char *line = NULL;
@@ -76,6 +76,22 @@ void cli_printv(const char *fmt, va_list args)
 		rl_redisplay();
 	}
 
+	if (prefix_time) {
+		cli_printf_time_prefix();
+	}
+
+	vprintf(fmt, args);
+
+	if (async) {
+		rl_restore_prompt();
+		rl_replace_line(line, 0);
+		rl_point = point;
+		rl_redisplay();
+	}
+}
+
+void cli_printf_time_prefix(const char *fmt, va_list args)
+{
 	long long sec, usec;
 	time_t now;
 	struct tm *timeinfo;
@@ -106,15 +122,16 @@ void cli_printv(const char *fmt, va_list args)
 		printf("[%s] ", buffer);
 	else if (log__have_time())
 		printf("[%.4lld.%.6lld] ", sec, usec);
+}
 
-	vprintf(fmt, args);
+void cli_command_printf(const char *fmt, ...)
+{
+	SHL_PROTECT_ERRNO;
+	va_list args;
 
-	if (async) {
-		rl_restore_prompt();
-		rl_replace_line(line, 0);
-		rl_point = point;
-		rl_redisplay();
-	}
+	va_start(args, fmt);
+	cli_printv(fmt, false, args);
+	va_end(args);
 }
 
 void cli_printf(const char *fmt, ...)
@@ -123,7 +140,7 @@ void cli_printf(const char *fmt, ...)
 	va_list args;
 
 	va_start(args, fmt);
-	cli_printv(fmt, args);
+	cli_printv(fmt, true, args);
 	va_end(args);
 }
 
@@ -131,7 +148,7 @@ int cli_help(const struct cli_cmd *cmds, int whitespace)
 {
 	unsigned int i;
 
-	cli_printf("Available commands:\n");
+	cli_command_printf("Available commands:\n");
 
 	for (i = 0; cmds[i].cmd; ++i) {
 		if (!cmds[i].desc)
@@ -141,11 +158,11 @@ int cli_help(const struct cli_cmd *cmds, int whitespace)
 		if (!is_cli() && cmds[i].cli_cmp == CLI_Y)
 			continue;
 
-		cli_printf("  %s %-*s %s\n",
-			   cmds[i].cmd,
-			   (int)(whitespace - strlen(cmds[i].cmd)),
-			   cmds[i].args ? : "",
-			   cmds[i].desc ? : "");
+		cli_command_printf("  %s %-*s %s\n",
+				   cmds[i].cmd,
+				   (int)(whitespace - strlen(cmds[i].cmd)),
+				   cmds[i].args ? : "",
+				   cmds[i].desc ? : "");
 	}
 
 	return 0;
@@ -174,21 +191,21 @@ int cli_do(const struct cli_cmd *cmds, char **args, unsigned int n)
 		switch (cmds[i].argc_cmp) {
 		case CLI_EQUAL:
 			if (n != cmds[i].argc) {
-				cli_printf("Invalid number of arguments\n");
+				cli_command_printf("Invalid number of arguments\n");
 				return -EINVAL;
 			}
 
 			break;
 		case CLI_MORE:
 			if (n < cmds[i].argc) {
-				cli_printf("too few arguments\n");
+				cli_command_printf("too few arguments\n");
 				return -EINVAL;
 			}
 
 			break;
 		case CLI_LESS:
 			if (n > cmds[i].argc) {
-				cli_printf("too many arguments\n");
+				cli_command_printf("too many arguments\n");
 				return -EINVAL;
 			}
 
@@ -234,7 +251,7 @@ static void cli_handler_fn(char *input)
 	if (r != -EAGAIN)
 		return;
 
-	cli_printf("Command not found\n");
+	cli_command_printf("Command not found\n");
 }
 
 static int cli_stdin_fn(sd_event_source *source,

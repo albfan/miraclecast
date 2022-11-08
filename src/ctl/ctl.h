@@ -123,8 +123,10 @@ bool ctl_sink_is_closed(struct ctl_sink *s);
 /* CLI handling */
 
 extern unsigned int cli_max_sev;
-void cli_printv(const char *fmt, va_list args);
+void cli_printv(const char *fmt, bool prefix_time, va_list args);
+void cli_printf_time_prefix();
 void cli_printf(const char *fmt, ...);
+void cli_command_printf(const char *fmt, ...);
 
 #define cli_log(_fmt, ...) \
 	cli_printf(_fmt "\n", ##__VA_ARGS__)
