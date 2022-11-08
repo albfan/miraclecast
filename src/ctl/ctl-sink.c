@@ -566,7 +566,8 @@ void ctl_sink_free(struct ctl_sink *s)
 	free(s->session);
 	free(s->url);
 	sd_event_unref(s->event);
-        g_hash_table_destroy(s->protocol_extensions);
+        if (s->protocol_extensions)
+        	g_hash_table_destroy(s->protocol_extensions);
 	free(s);
 }
 
