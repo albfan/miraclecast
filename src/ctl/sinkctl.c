@@ -69,7 +69,7 @@ void launch_player(struct ctl_sink *s);
 
 char *gst_scale_res;
 int gst_audio_en = 1;
-static const int DEFAULT_RSTP_PORT = 1991;
+static const int DEFAULT_RSTP_PORT = 7236;
 bool uibc_option;
 bool uibc_enabled;
 bool external_player;

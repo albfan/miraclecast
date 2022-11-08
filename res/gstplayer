@@ -204,7 +204,7 @@ if __name__ == '__main__':
     parser.add_argument("uri", nargs="?",                 help="Uri to play")
     parser.add_argument("-v", "--version",                help="Show package version")
     parser.add_argument("--log-level",   metavar="lvl",   help="Maximum level for log messages")
-    parser.add_argument("-p", "--port",  type=int, default=1991,  help="Port for rtsp")
+    parser.add_argument("-p", "--port",  type=int, default=7236,  help="Port for rtsp")
     parser.add_argument("-a", "--audio", dest="audio", action="store_true", help="Enable audio support")
     parser.add_argument("-s", "--scale", metavar="WxH",   help="Scale to resolution")
     parser.add_argument("-d", "--debug",                  help="Debug")

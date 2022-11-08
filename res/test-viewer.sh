@@ -35,7 +35,7 @@ Try installing packages "gst-plugins-bad, gst-plugins-base, gst-plugins-base-lib
 
 If that fails too, try:
 
-$ vlc rtp://@:1991
+$ vlc rtp://@:7236
 
 EOF
 else
