@@ -764,7 +764,9 @@ static int ctl_interactive(char **argv, int argc)
 		goto error;
         sink->protocol_extensions = protocol_extensions;
 
-	ctl_wifi_fetch(wifi);
+	r = ctl_wifi_fetch(wifi);
+	if (r < 0)
+		goto error;
 
 	if (argc > 0) {
 		r = cli_do(cli_cmds, argv, argc);
