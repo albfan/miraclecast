@@ -190,6 +190,41 @@ static int cmd_show(char **args, unsigned int n)
 }
 
 /*
+ * cmd: set-friendly-name
+ */
+
+static int cmd_set_friendly_name(char **args, unsigned int n)
+{
+	struct ctl_link *l = NULL;
+	const char *name;
+
+	if (n < 1) {
+		cli_command_printf("To what?\n");
+		return 0;
+	}
+
+	if (n > 1) {
+		l = ctl_wifi_search_link(wifi, args[0]);
+		if (!l) {
+			cli_error("unknown link %s", args[0]);
+			return 0;
+		}
+
+		name = args[1];
+	} else {
+		name = args[0];
+	}
+
+	l = l ? : running_link;
+	if (!l) {
+		cli_error("no running link");
+		return 0;
+	}
+
+	return ctl_link_set_friendly_name(l, name);
+}
+
+/*
  * cmd: run
  */
 
@@ -381,6 +416,7 @@ static const struct cli_cmd cli_cmds[] = {
 	{ "show",		"<link|peer>",				CLI_M,	CLI_LESS,	1,	cmd_show,		"Show detailed object information" },
 	{ "run",		"<link>",				CLI_M,	CLI_EQUAL,	1,	cmd_run,		"Run sink on given link" },
 	{ "bind",		"<link>",				CLI_M,	CLI_EQUAL,	1,	cmd_bind,		"Like 'run' but bind the link name to run when it is hotplugged" },
+	{ "set-friendly-name",	"[link] <name>",			CLI_M,	CLI_LESS,	2,	cmd_set_friendly_name,	"Set friendly name of an object" },
 	{ "set-managed",	"<link> <yes|no>",	CLI_M,	CLI_EQUAL,	2,	cmd_set_managed,	"Manage or unmnage a link" },
 	{ "quit",		NULL,					CLI_Y,	CLI_MORE,	0,	cmd_quit,		"Quit program" },
 	{ "exit",		NULL,					CLI_Y,	CLI_MORE,	0,	cmd_quit,		NULL },
