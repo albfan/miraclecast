@@ -139,6 +139,7 @@ static int cmd_select(char **args, unsigned int n)
 	}
 
 	selected_link = l;
+	ctl_link_set_wfd_subelements(l, "000600111c4400c8");
 	cli_printf("link %s selected\n", selected_link->label);
 
 	return 0;
