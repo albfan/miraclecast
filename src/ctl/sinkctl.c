@@ -47,6 +47,10 @@
 #include "util.h"
 #include "config.h"
 
+#include <readline/readline.h>
+
+#define HISTORY_FILENAME ".miracle-sink.history"
+
 static sd_bus *bus;
 static struct ctl_wifi *wifi;
 static struct ctl_sink *sink;
@@ -77,6 +81,21 @@ GHashTable* protocol_extensions;
 unsigned int wfd_supported_res_cea  = 0x0001ffff;
 unsigned int wfd_supported_res_vesa = 0x1fffffff;
 unsigned int wfd_supported_res_hh   = 0x00001fff;
+
+struct ctl_wifi *get_wifi()
+{
+        return wifi;
+}
+
+
+/*
+ * get history filename
+ */
+
+char* get_history_filename()
+{
+  return HISTORY_FILENAME;
+}
 
 /*
  * cmd list
@@ -412,15 +431,15 @@ static int sink_timeout_fn(sd_event_source *s, uint64_t usec, void *data)
 }
 
 static const struct cli_cmd cli_cmds[] = {
-	{ "list",		NULL,					CLI_M,	CLI_LESS,	0,	cmd_list,		"List all objects" },
-	{ "show",		"<link|peer>",				CLI_M,	CLI_LESS,	1,	cmd_show,		"Show detailed object information" },
-	{ "run",		"<link>",				CLI_M,	CLI_EQUAL,	1,	cmd_run,		"Run sink on given link" },
-	{ "bind",		"<link>",				CLI_M,	CLI_EQUAL,	1,	cmd_bind,		"Like 'run' but bind the link name to run when it is hotplugged" },
-	{ "set-friendly-name",	"[link] <name>",			CLI_M,	CLI_LESS,	2,	cmd_set_friendly_name,	"Set friendly name of an object" },
-	{ "set-managed",	"<link> <yes|no>",	CLI_M,	CLI_EQUAL,	2,	cmd_set_managed,	"Manage or unmnage a link" },
-	{ "quit",		NULL,					CLI_Y,	CLI_MORE,	0,	cmd_quit,		"Quit program" },
-	{ "exit",		NULL,					CLI_Y,	CLI_MORE,	0,	cmd_quit,		NULL },
-	{ "help",		NULL,					CLI_M,	CLI_MORE,	0,	NULL,			"Print help" },
+	{ "list",		NULL,			CLI_M,	CLI_LESS,	0,	cmd_list,		"List all objects", {NULL} },
+	{ "show",		"<link|peer>",		CLI_M,	CLI_LESS,	1,	cmd_show,		"Show detailed object information", {links_peers_generator, NULL} },
+	{ "run",		"<link>",		CLI_M,	CLI_EQUAL,	1,	cmd_run,		"Run sink on given link", {links_generator, NULL} },
+	{ "bind",		"<link>",		CLI_M,	CLI_EQUAL,	1,	cmd_bind,		"Like 'run' but bind the link name to run when it is hotplugged", {links_generator, NULL} },
+	{ "set-friendly-name",	"[link] <name>",	CLI_M,	CLI_LESS,	2,	cmd_set_friendly_name,	"Set friendly name of an object", {links_generator, NULL} },
+	{ "set-managed",	"<link> <yes|no>",	CLI_M,	CLI_EQUAL,	2,	cmd_set_managed,	"Manage or unmnage a link", {links_generator, yes_no_generator, NULL} },
+	{ "quit",		NULL,			CLI_Y,	CLI_MORE,	0,	cmd_quit,		"Quit program", {NULL} },
+	{ "exit",		NULL,			CLI_Y,	CLI_MORE,	0,	cmd_quit,		NULL, {NULL} },
+	{ "help",		NULL,			CLI_M,	CLI_MORE,	0,	NULL,			"Print help", {NULL} },
 	{ },
 };
 

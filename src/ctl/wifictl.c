@@ -34,10 +34,28 @@
 #include "util.h"
 #include "config.h"
 
+#include <readline/readline.h>
+
+#define HISTORY_FILENAME ".miracle-wifi.history"
+
 static sd_bus *bus;
 static struct ctl_wifi *wifi;
 
 static struct ctl_link *selected_link;
+
+/*
+ * get history filename
+ */
+
+char* get_history_filename()
+{
+    return HISTORY_FILENAME;
+}
+
+struct ctl_wifi *get_wifi()
+{
+    return wifi;
+}
 
 /*
  * cmd list
@@ -386,17 +404,17 @@ static int cmd_quit(char **args, unsigned int n)
  */
 
 static const struct cli_cmd cli_cmds[] = {
-	{ "list",		NULL,					CLI_M,	CLI_LESS,	0,	cmd_list,		"List all objects" },
-	{ "select",		"[link]",				CLI_Y,	CLI_LESS,	1,	cmd_select,		"Select default link" },
-	{ "show",		"[link|peer]",				CLI_M,	CLI_LESS,	1,	cmd_show,		"Show detailed object information" },
-	{ "set-friendly-name",	"[link] <name>",			CLI_M,	CLI_LESS,	2,	cmd_set_friendly_name,	"Set friendly name of an object" },
+	{ "list",		NULL,					CLI_M,	CLI_LESS,	0,	cmd_list,		"List all objects", {NULL}},
+	{ "select",		"[link]",				CLI_Y,	CLI_LESS,	1,	cmd_select,		"Select default link", {links_generator, NULL} },
+	{ "show",		"[link|peer]",				CLI_M,	CLI_LESS,	1,	cmd_show,		"Show detailed object information", {links_peers_generator, NULL} },
+	{ "set-friendly-name",	"[link] <name>",			CLI_M,	CLI_LESS,	2,	cmd_set_friendly_name,	"Set friendly name of an object", {links_generator, yes_no_generator, NULL} },
 	{ "set-managed",	"[link] <yes|no>",	CLI_M,	CLI_LESS,	2,	cmd_set_managed,	"Manage or unmnage a link" },
-	{ "p2p-scan",		"[link] [stop]",			CLI_Y,	CLI_LESS,	2,	cmd_p2p_scan,		"Control neighborhood P2P scanning" },
-	{ "connect",		"<peer> [provision] [pin]",		CLI_M,	CLI_LESS,	3,	cmd_connect,		"Connect to peer" },
-	{ "disconnect",		"<peer>",				CLI_M,	CLI_EQUAL,	1,	cmd_disconnect,		"Disconnect from peer" },
-	{ "quit",		NULL,					CLI_Y,	CLI_MORE,	0,	cmd_quit,		"Quit program" },
-	{ "exit",		NULL,					CLI_Y,	CLI_MORE,	0,	cmd_quit,		NULL },
-	{ "help",		NULL,					CLI_M,	CLI_MORE,	0,	NULL,			"Print help" },
+	{ "p2p-scan",		"[link] [stop]",			CLI_Y,	CLI_LESS,	2,	cmd_p2p_scan,		"Control neighborhood P2P scanning", {links_generator, NULL} },
+	{ "connect",		"<peer> [provision] [pin]",		CLI_M,	CLI_LESS,	3,	cmd_connect,		"Connect to peer", {peers_generator, NULL} },
+	{ "disconnect",		"<peer>",				CLI_M,	CLI_EQUAL,	1,	cmd_disconnect,		"Disconnect from peer", {peers_generator, NULL} },
+	{ "quit",		NULL,					CLI_Y,	CLI_MORE,	0,	cmd_quit,		"Quit program", {NULL} },
+	{ "exit",		NULL,					CLI_Y,	CLI_MORE,	0,	cmd_quit,		NULL , {NULL}},
+	{ "help",		NULL,					CLI_M,	CLI_MORE,	0,	NULL,			"Print help" , {NULL} },
 	{ },
 };
 

@@ -36,9 +36,6 @@
 #include <math.h>
 #include <time.h>
 
-/* *sigh* readline doesn't include all their deps, so put them last */
-#include <readline/history.h>
-#include <readline/readline.h>
 
 /*
  * Helpers for interactive commands
@@ -246,7 +243,10 @@ static void cli_handler_fn(char *input)
 	else if (!r)
 		return;
 
-	add_history(original);
+	if (!(strcmp(original, "quit") == 0 || strcmp(original, "exit") == 0)) {
+		add_history(original);
+		write_history(get_history_filename());
+        }
 	r = cli_do(cli_cmds, args, r);
 	if (r != -EAGAIN)
 		return;
@@ -325,6 +325,315 @@ void cli_destroy(void)
 	cli_event = NULL;
 }
 
+char *yes_no_options[] = {"yes", "no", NULL};
+
+char *
+yes_no_generator (const char *text, int state)
+{
+  static int list_index, len;
+  char *name;
+
+  /* If this is a new word to complete, initialize now.  This includes
+     saving the length of TEXT for efficiency, and initializing the index
+     variable to 0. */
+  if (!state)
+    {
+      list_index = 0;
+      len = strlen (text);
+    }
+
+  /* Return the next name which partially matches from the command list. */
+  while (name = yes_no_options[list_index])
+    {
+      list_index++;
+
+      if (strncmp (name, text, len) == 0)
+        return (strdup(name));
+    }
+
+  /* If no names matched, then return NULL. */
+  return ((char *)NULL);
+}
+
+char *
+links_peers_generator (const char *text, int state)
+{
+  static int list_index, len;
+  char *name;
+  size_t peer_cnt = 0;
+  size_t link_cnt = 0;
+  struct shl_dlist *i, *j;
+  struct ctl_link *l;
+  struct ctl_peer *p;
+
+  /* If this is a new word to complete, initialize now.  This includes
+     saving the length of TEXT for efficiency, and initializing the index
+     variable to 0. */
+  if (!state)
+  {
+    list_index = 0;
+    len = strlen (text);
+  }
+
+  shl_dlist_for_each(i, &get_wifi()->links) {
+      l = link_from_dlist(i);
+
+      char *name = l->label;
+      if (strncmp (name, text, len) == 0)
+      {
+          if (link_cnt == list_index)
+          {
+              list_index++;
+              return strdup(name);
+          }
+          link_cnt++;
+      }
+
+      name = l->friendly_name;
+      if (!shl_isempty(name))
+      {
+          if (strncmp (name, text, len) == 0)
+          {
+              if (link_cnt == list_index)
+              {
+                  list_index++;
+                  return strdup(name);
+              }
+              link_cnt++;
+          }
+      }
+  }
+
+  peer_cnt = link_cnt;
+
+  shl_dlist_for_each(i, &get_wifi()->links) {
+      l = link_from_dlist(i);
+
+      shl_dlist_for_each(j, &l->peers) {
+          p = peer_from_dlist(j);
+          char *name = p->label;
+          if (strncmp (name, text, len) == 0)
+          {
+              if (peer_cnt == list_index)
+              {
+                  list_index++;
+                  return strdup(name);
+              }
+              peer_cnt++;
+          }
+          name = p->friendly_name;
+          if (!shl_isempty(name))
+          {
+              if (strncmp (name, text, len) == 0)
+              {
+                  if (peer_cnt == list_index)
+                  {
+                      list_index++;
+                      return strdup(name);
+                  }
+                  peer_cnt++;
+              }
+          }
+      }
+  }
+  /* If no names matched, then return NULL. */
+  return ((char *)NULL);
+}
+
+char *
+peers_generator (const char *text, int state)
+{
+  static int list_index, len;
+  char *name;
+  size_t peer_cnt = 0;
+  struct shl_dlist *i, *j;
+  struct ctl_link *l;
+  struct ctl_peer *p;
+
+  /* If this is a new word to complete, initialize now.  This includes
+     saving the length of TEXT for efficiency, and initializing the index
+     variable to 0. */
+  if (!state)
+  {
+    list_index = 0;
+    len = strlen (text);
+  }
+
+  shl_dlist_for_each(i, &get_wifi()->links) {
+      l = link_from_dlist(i);
+
+      shl_dlist_for_each(j, &l->peers) {
+          p = peer_from_dlist(j);
+          char *name = p->label;
+          if (strncmp (name, text, len) == 0)
+          {
+              if (peer_cnt == list_index)
+              {
+                  list_index++;
+                  return strdup(name);
+              }
+              peer_cnt++;
+          }
+          name = p->friendly_name;
+          if (!shl_isempty(name))
+          {
+              if (strncmp (name, text, len) == 0)
+              {
+                  if (peer_cnt == list_index)
+                  {
+                      list_index++;
+                      return strdup(name);
+                  }
+                  peer_cnt++;
+              }
+          }
+      }
+  }
+  /* If no names matched, then return NULL. */
+  return ((char *)NULL);
+}
+
+char *
+links_generator (const char *text, int state)
+{
+  static int list_index, len;
+  char *name;
+  size_t link_cnt = 0;
+  struct shl_dlist *i;
+  struct ctl_link *l;
+
+
+  /* If this is a new word to complete, initialize now.  This includes
+     saving the length of TEXT for efficiency, and initializing the index
+     variable to 0. */
+  if (!state)
+  {
+    list_index = 0;
+    len = strlen (text);
+  }
+
+  shl_dlist_for_each(i, &get_wifi()->links) {
+      l = link_from_dlist(i);
+
+
+      char *name = l->label;
+      if (strncmp (name, text, len) == 0)
+      {
+          if (link_cnt == list_index)
+          {
+              list_index++;
+              return strdup(name);
+          }
+          link_cnt++;
+      }
+      name = l->friendly_name;
+      if (!shl_isempty(name))
+      {
+          if (strncmp (name, text, len) == 0)
+          {
+              if (link_cnt == list_index)
+              {
+                  list_index++;
+                  return strdup(name);
+              }
+              link_cnt++;
+          }
+      }
+  }
+  /* If no names matched, then return NULL. */
+  return ((char *)NULL);
+}
+
+/* Generator function for command completion.  STATE lets us know whether
+ * to start from scratch; without any state (i.e. STATE == 0), then we
+ * start at the top of the list.
+ */
+
+char *
+command_generator (const char *text, int state)
+{
+  static int list_index, len;
+  char *name;
+
+  /* If this is a new word to complete, initialize now.  This includes
+     saving the length of TEXT for efficiency, and initializing the index
+     variable to 0. */
+  if (!state)
+    {
+      list_index = 0;
+      len = strlen (text);
+    }
+
+  /* Return the next name which partially matches from the command list. */
+  while (name = cli_cmds[list_index].cmd)
+    {
+      list_index++;
+
+      if (strncmp (name, text, len) == 0)
+        return (strdup(name));
+    }
+
+  /* If no names matched, then return NULL. */
+  return ((char *)NULL);
+}
+
+int get_args(char* line)
+{
+    char* tmp        = line;
+    char* last_delim = tmp;
+    int count = 0;
+
+    /* Count how many elements will be extracted. */
+    while (*tmp)
+    {
+        if (' ' == *tmp)
+        {
+            if (last_delim+1 < tmp)
+                count++;
+            last_delim = tmp;
+        }
+        tmp++;
+    }
+    if (" " != *last_delim)
+        count++;
+    return count;
+}
+
+/*
+ * Attempt to complete on the contents of TEXT.  START and END bound the
+ * region of rl_line_buffer that contains the word to complete.  TEXT is
+ * the word to complete.  We can use the entire contents of rl_line_buffer
+ * in case we want to do some simple parsing.  Return the array of matches,
+ * or NULL if there aren't any.
+ */
+char **
+completion_fn (const char *text, int start, int end)
+{
+  char **matches;
+
+  rl_attempted_completion_over = 1;
+  if (start == 0)
+    matches = rl_completion_matches (text, command_generator);
+  else
+  {
+    matches = (char **)NULL;
+    struct cli_cmd cmd;
+    int cmd_pos = 0;
+    while ((cmd = cli_cmds[cmd_pos++]).cmd)
+    {
+      if (strncmp(cmd.cmd, rl_line_buffer, strlen(cmd.cmd)) == 0)
+      {
+        int nargs = get_args(rl_line_buffer);
+        rl_compentry_func_t* completion_fn = cmd.completion_fns[nargs-2];
+        if (completion_fn)
+            matches = rl_completion_matches (text, completion_fn);
+      }
+    }
+  }
+
+  return (matches);
+}
+
 int cli_init(sd_bus *bus, const struct cli_cmd *cmds)
 {
 	static const int sigs[] = {
@@ -382,7 +691,11 @@ int cli_init(sd_bus *bus, const struct cli_cmd *cmds)
 		cli_rl = true;
 
 		rl_erase_empty_line = 1;
+                rl_attempted_completion_function = completion_fn;
 		rl_callback_handler_install(NULL, cli_handler_fn);
+                using_history();
+                read_history(get_history_filename());
+                rl_end_of_history(0, 0);
 
 		rl_set_prompt(CLI_PROMPT);
 		printf("\r");
