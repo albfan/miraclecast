@@ -29,12 +29,24 @@
 #include "shl_dlist.h"
 #include "shl_log.h"
 
+/* *sigh* readline doesn't include all their deps, so put them last */
+#include <readline/history.h>
+#include <readline/readline.h>
+#include <readline/rltypedefs.h>
+
 #ifndef CTL_CTL_H
 #define CTL_CTL_H
 
 struct ctl_wifi;
 struct ctl_link;
 struct ctl_peer;
+
+char*   get_history_filename  ();
+struct  ctl_wifi * get_wifi   ();
+char *  links_peers_generator (const char *text, int state);
+char *  links_generator       (const char *text, int state);
+char *  peers_generator       (const char *text, int state);
+char *  yes_no_generator      (const char *text, int state);
 
 /* wifi handling */
 
@@ -209,6 +221,7 @@ struct cli_cmd {
 	int argc;
 	int (*fn) (char **args, unsigned int n);
 	const char *desc;
+	rl_compentry_func_t *completion_fns[2];
 };
 
 extern sd_event *cli_event;
