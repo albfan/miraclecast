@@ -414,6 +414,22 @@ static int supplicant_group_spawn_dhcp_server(struct supplicant_group *g,
 		}
 		argv[i] = NULL;
 
+		i = 0;
+		size_t size = 0;
+		while (argv[i]) {
+			size += strlen(argv[i++]) + 1;
+		}
+
+		gchar* dhcp_command = malloc(size);
+		i = 0;
+		strcpy(dhcp_command, argv[i++]);
+		while (argv[i]) {
+			strcat(dhcp_command, " ");
+			strcat(dhcp_command, argv[i++]);
+		}
+		log_debug("dhcp command:%s", dhcp_command);
+		g_free(dhcp_command);
+
 		if (execvpe(argv[0], argv, environ)< 0) {
 			log_error("dhcp failed (%d): %m", errno);
 		}
@@ -482,6 +498,22 @@ static int supplicant_group_spawn_dhcp_client(struct supplicant_group *g)
 			argv[i++] = g->s->l->ip_binary;
 		}
 		argv[i] = NULL;
+
+		i = 0;
+		size_t size = 0;
+		while (argv[i]) {
+			size += strlen(argv[i++]) + 1;
+		}
+
+		gchar* dhcp_command = malloc(size);
+		i = 0;
+		strcpy(dhcp_command, argv[i++]);
+		while (argv[i]) {
+			strcat(dhcp_command, " ");
+			strcat(dhcp_command, argv[i++]);
+		}
+		log_debug("dhcp command:%s", dhcp_command);
+		g_free(dhcp_command);
 
 		if (execvpe(argv[0], argv, environ) < 0) {
 			log_error("dhcp failed (%d): %m", errno);
