@@ -697,7 +697,7 @@ int cli_init(sd_bus *bus, const struct cli_cmd *cmds)
                 read_history(get_history_filename());
                 rl_end_of_history(0, 0);
 
-		rl_set_prompt(CLI_PROMPT);
+		rl_set_prompt(get_cli_prompt());
 		printf("\r");
 		rl_on_new_line();
 		rl_redisplay();

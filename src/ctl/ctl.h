@@ -17,6 +17,9 @@
  * along with MiracleCast; If not, see <http://www.gnu.org/licenses/>.
  */
 
+#ifndef CTL_CTL_H
+#define CTL_CTL_H
+
 #include <errno.h>
 #include <stdarg.h>
 #include <stdbool.h>
@@ -33,9 +36,6 @@
 #include <readline/history.h>
 #include <readline/readline.h>
 #include <readline/rltypedefs.h>
-
-#ifndef CTL_CTL_H
-#define CTL_CTL_H
 
 struct ctl_wifi;
 struct ctl_link;
@@ -203,8 +203,6 @@ void cli_command_printf(const char *fmt, ...);
 #define CLI_BOLDGRAY		"\x1B[1;30m"
 #define CLI_BOLDWHITE		"\x1B[1;37m"
 
-#define CLI_PROMPT		CLI_BLUE "[miraclectl] # " CLI_DEFAULT
-
 struct cli_cmd {
 	const char *cmd;
 	const char *args;
@@ -231,6 +229,7 @@ extern unsigned int wfd_supported_res_cea;
 extern unsigned int wfd_supported_res_vesa;
 extern unsigned int wfd_supported_res_hh;
 
+char* get_cli_prompt();
 int cli_init(sd_bus *bus, const struct cli_cmd *cmds);
 void cli_destroy(void);
 int cli_run(void);

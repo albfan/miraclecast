@@ -51,6 +51,8 @@
 
 #define HISTORY_FILENAME ".miracle-sink.history"
 
+#define CLI_PROMPT CLI_BLUE "[sinkctl] # " CLI_DEFAULT
+
 static sd_bus *bus;
 static struct ctl_wifi *wifi;
 static struct ctl_sink *sink;
@@ -87,6 +89,10 @@ struct ctl_wifi *get_wifi()
         return wifi;
 }
 
+char* get_cli_prompt()
+{
+        return CLI_PROMPT;
+}
 
 /*
  * get history filename
