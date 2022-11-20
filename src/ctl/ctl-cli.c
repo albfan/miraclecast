@@ -692,12 +692,11 @@ int cli_init(sd_bus *bus, const struct cli_cmd *cmds)
 
 		rl_erase_empty_line = 1;
                 rl_attempted_completion_function = completion_fn;
-		rl_callback_handler_install(NULL, cli_handler_fn);
+		rl_callback_handler_install(get_cli_prompt(), cli_handler_fn);
                 using_history();
                 read_history(get_history_filename());
                 rl_end_of_history(0, 0);
 
-		rl_set_prompt(get_cli_prompt());
 		printf("\r");
 		rl_on_new_line();
 		rl_redisplay();

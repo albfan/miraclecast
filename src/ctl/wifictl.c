@@ -38,7 +38,7 @@
 
 #define HISTORY_FILENAME ".miracle-wifi.history"
 
-#define CLI_PROMPT CLI_BLUE "[wifictl] # " CLI_DEFAULT
+#define CLI_PROMPT "\001" CLI_BLUE "\002" "[wifictl] # " "\001" CLI_DEFAULT "\002"
 
 static sd_bus *bus;
 static struct ctl_wifi *wifi;

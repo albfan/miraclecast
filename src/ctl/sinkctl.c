@@ -51,7 +51,7 @@
 
 #define HISTORY_FILENAME ".miracle-sink.history"
 
-#define CLI_PROMPT CLI_BLUE "[sinkctl] # " CLI_DEFAULT
+#define CLI_PROMPT "\001" CLI_BLUE "\002" "[sinkctl] # " "\001" CLI_DEFAULT "\002"
 
 static sd_bus *bus;
 static struct ctl_wifi *wifi;
