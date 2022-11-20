@@ -538,7 +538,7 @@ void launch_player(struct ctl_sink *s) {
       size += strlen(argv[i++]) + 1;
    }
 
-   char* player_command = malloc(size);
+   gchar* player_command = malloc(size);
    i = 0;
    strcpy(player_command, argv[i++]);
    while (argv[i]) {
@@ -546,6 +546,7 @@ void launch_player(struct ctl_sink *s) {
       strcat(player_command, argv[i++]);
    }
    log_debug("player command: %s", player_command);
+   g_free(player_command);
    if (execvpe(argv[0], argv, environ) < 0) {
       cli_debug("stream player failed (%d): %m", errno);
       int i = 0;
