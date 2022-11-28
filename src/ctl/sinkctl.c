@@ -174,7 +174,7 @@ static int cmd_show(char **args, unsigned int n)
 		    !(p = ctl_wifi_find_peer(wifi, args[0])) &&
 		    !(l = ctl_wifi_search_link(wifi, args[0])) &&
 		    !(p = ctl_wifi_search_peer(wifi, args[0]))) {
-			cli_error("unknown link or peer %s", args[0]);
+			cli_error("unknown %s", args[0]);
 			return 0;
 		}
 	}
