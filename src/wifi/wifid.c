@@ -86,6 +86,8 @@ static void manager_add_udev_link(struct manager *m,
 	struct link *l;
 	unsigned int ifindex;
 	const char *ifname;
+    const char *mac_addr;
+    char buf[18];
 	int r;
 
 	ifindex = ifindex_from_udev_device(d);
@@ -104,7 +106,11 @@ static void manager_add_udev_link(struct manager *m,
 	if (shl_startswith(ifname, "p2p-"))
 		return;
 
-	r = link_new(m, ifindex, ifname, &l);
+	mac_addr = udev_device_get_property_value(d, "ID_NET_NAME_MAC");
+	mac_addr = mac_addr + strlen(mac_addr) - 12;
+	snprintf(buf, sizeof(buf), "%.2s:%.2s:%.2s:%.2s:%.2s:%.2s", mac_addr, mac_addr + 2, mac_addr + 4, mac_addr + 6, mac_addr + 8, mac_addr + 10);
+
+	r = link_new(m, ifindex, ifname, buf, &l);
 	if (r < 0)
 		return;
 
@@ -124,7 +130,7 @@ static void manager_add_udev_link(struct manager *m,
 	bool managed = (!interface_name || !strcmp(interface_name, ifname)) && !lazy_managed;
 #endif
 	if (managed) {
-		link_set_managed(l, true);
+		link_manage(l, true);
 	} else {
 		log_debug("ignored device: %s", ifname);
 	}
@@ -164,12 +170,12 @@ static int manager_udev_fn(sd_event_source *source,
 
 #ifdef RELY_UDEV
 		if (udev_device_has_tag(d, "miracle") && !lazy_managed)
-			link_set_managed(l, true);
+			link_manage(l, true);
 		else
-			link_set_managed(l, false);
+			link_manage(l, false);
 #else
 		if ((!interface_name || !strcmp(interface_name, ifname)) && !lazy_managed) {
-			link_set_managed(l, true);
+			link_manage(l, true);
 		} else {
 			log_debug("ignored device: %s", ifname);
 		}
@@ -188,8 +194,9 @@ static int manager_signal_fn(sd_event_source *source,
 	struct manager *m = data;
 
 	if (ssi->ssi_signo == SIGCHLD) {
+		siginfo_t info;
 		log_debug("caught SIGCHLD for %ld, reaping child", (long)ssi->ssi_pid);
-		waitid(P_PID, ssi->ssi_pid, NULL, WNOHANG|WEXITED);
+		waitid(P_PID, ssi->ssi_pid, &info, WNOHANG|WEXITED);
 		return 0;
 	} else if (ssi->ssi_signo == SIGPIPE) {
 		/* ignore SIGPIPE */
@@ -595,17 +602,17 @@ int main(int argc, char **argv)
 
 	srand(time(NULL));
 
-   GKeyFile* gkf = load_ini_file();
+	GKeyFile* gkf = load_ini_file();
 
-   if (gkf) {
-      gchar* log_level;
-      log_level = g_key_file_get_string (gkf, "wifid", "log-level", NULL);
-      if (log_level) {
-         log_max_sev = log_parse_arg(log_level);
-         g_free(log_level);
-      }
-      g_key_file_free(gkf);
-   }
+	if (gkf) {
+		gchar* log_level;
+		log_level = g_key_file_get_string (gkf, "wifid", "log-level", NULL);
+		if (log_level) {
+			log_max_sev = log_parse_arg(log_level);
+			g_free(log_level);
+		}
+		g_key_file_free(gkf);
+	}
 
 	r = parse_argv(argc, argv);
 	if (r < 0)
@@ -614,9 +621,9 @@ int main(int argc, char **argv)
 		return EXIT_SUCCESS;
 
 	if (getuid() != 0) {
-      r = EACCES;
+		r = EACCES;
 		log_notice("Must run as root");
-      goto finish;
+		goto finish;
 	}
 
 	r = manager_new(&m);

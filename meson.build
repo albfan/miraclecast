@@ -52,4 +52,3 @@ subdir('res')
 if get_option('build-tests')
   subdir('test')
 endif
-

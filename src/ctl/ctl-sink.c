@@ -39,7 +39,7 @@ static void sink_handle_options(struct ctl_sink *s,
 	if (r < 0)
 		return cli_vERR(r);
 
-	r = rtsp_message_append(rep, "<s>",
+	r = rtsp_message_append(rep, "<&>",
 				"Public",
 				"org.wfa.wfd1.0, GET_PARAMETER, SET_PARAMETER");
 	if (r < 0)

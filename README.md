@@ -7,7 +7,7 @@
 
 The MiracleCast project provides software to connect external monitors to your system via Wi-Fi. It is compatible to the Wifi-Display specification also known as Miracast. MiracleCast implements the Display-Source as well as Display-Sink side.
 
-The Display-Source side allows you to connect external displays to your system and stream local content to the device. A lot of effort is put into making this as easy as connecting external displays via HDMI. *Note: This is not implemented yet. Please see [#4](../../issues/4).*
+The Display-Source side allows you to connect external displays to your system and stream local content to the device. A lot of effort is put into making this as easy as connecting external displays via HDMI.
 
 On the other hand, the Display-Sink side allows you to create wifi-capable external displays yourself. You can use it on your embedded devices or even on full desktops to allow other systems to use your device as external display.
 
@@ -21,9 +21,20 @@ The MiracleCast projects requires the following software to be installed:
  - **glib**: A utility library. Used by the current DHCP implementation. Will be removed once sd-dns gains DHCP-server capabilities.
     *required*: ~=glib2-2.38 (might work with older releases, untested..)
 
- - **gstreamer**: MiracleCast rely on gstreamer to show cast its output. You can test if all needed is installed launching [res/test-viewer.sh](https://github.com/albfan/miraclecast/blob/master/res/test-viewer.sh)
+ - readline**: A library which is used to provide command line interface to control wifid, sink, etc..
 
- - **wpa_supplicant**: MiracleCast spawns wpa_supplicant with a custom config.
+ - **check**: Test-suite for C programs. Used for optional tests of the MiracleCast code base.
+    *optional*: ~=check-0.9.11 (might work with older releases, untested..)
+
+ - **gstreamer**: MiracleCast rely on gstreamer to show cast its output. You can test if all needed is installed launching [res/test-viewer.sh](https://github.com/albfan/miraclecast/blob/master/res/test-viewer.sh).
+
+ - gstreamer plugins: here are the gstreamer plugins you need in order to run sinkctl or dispctl
+     - gstreamer-plugins-base
+     - gstreamer-plugins-good
+     - gstreamer-plugins-bad
+     - gstreamer-plugins-ugly
+     - gstreamer-plugins-vaapi
+     - gstreamer-plugins-libav
 
  - **P2P Wi-Fi device** Although widespread these days, there are some devices not compatible with [Wi-Fi Direct](http://en.wikipedia.org/wiki/Wi-Fi_Direct) (prior know as Wi-Fi P2P). Test yours with [res/test-hardware-capabilities.sh](https://github.com/albfan/miraclecast/blob/master/res/test-hardware-capabilities.sh)
 

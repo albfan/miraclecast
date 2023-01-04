@@ -231,6 +231,11 @@ extern const char *LOG_SUBSYSTEM;
 #define log_vEPIPE() \
 	((void)log_EPIPE())
 
+#define log_EPROTO() \
+	(log_error("protocol error"), -EPROTO)
+#define log_vEPROTO() \
+	((void)log_EPROTO())
+
 #define log_ERRNO() \
 	(log_error("syscall failed (%d): %m", errno), -errno)
 #define log_vERRNO() \
@@ -245,5 +250,14 @@ extern const char *LOG_SUBSYSTEM;
 	(log_error("interface unmanaged"), -EFAULT)
 #define log_vEUNMANAGED() \
 	((void)log_EUNMANAGED())
+
+#define assert_ret(c) \
+	if(!(c)) return (log_error("assertion " #c " failed"), -EINVAL)
+
+#define assert_retv(c, v) \
+	if(!(c)) return (log_error("assertion " #c " failed"), (v))
+
+#define assert_vret(c) \
+	if(!(c)) { log_error("assertion " #c " failed"); return; }
 
 #endif /* SHL_LOG_H */

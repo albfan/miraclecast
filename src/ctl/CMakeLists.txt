@@ -50,4 +50,5 @@ endif(READLINE_FOUND)
 
 target_link_libraries(miracle-sinkctl miracle-shared)
 
-INCLUDE_DIRECTORIES(${CMAKE_BINARY_DIR} ${CMAKE_SOURCE_DIR}/src ${CMAKE_SOURCE_DIR}/src/shared)
+include_directories(${CMAKE_BINARY_DIR} ${CMAKE_SOURCE_DIR}/src
+                    ${CMAKE_SOURCE_DIR}/src/shared)

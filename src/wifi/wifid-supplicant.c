@@ -218,8 +218,10 @@ static void supplicant_group_free(struct supplicant_group *g)
 	}
 
 	LINK_FOREACH_PEER(p, g->s->l)
-		if (p->sp->g == g)
-			supplicant_peer_drop_group(p->sp);
+	if (p->sp->g == g) {
+		supplicant_peer_drop_group(p->sp);
+		return;
+	}
 
 	shl_dlist_unlink(&g->list);
 
@@ -412,6 +414,22 @@ static int supplicant_group_spawn_dhcp_server(struct supplicant_group *g,
 		}
 		argv[i] = NULL;
 
+		i = 0;
+		size_t size = 0;
+		while (argv[i]) {
+			size += strlen(argv[i++]) + 1;
+		}
+
+		gchar* dhcp_command = malloc(size);
+		i = 0;
+		strcpy(dhcp_command, argv[i++]);
+		while (argv[i]) {
+			strcat(dhcp_command, " ");
+			strcat(dhcp_command, argv[i++]);
+		}
+		log_debug("dhcp command:%s", dhcp_command);
+		g_free(dhcp_command);
+
 		if (execvpe(argv[0], argv, environ)< 0) {
 			log_error("dhcp failed (%d): %m", errno);
 		}
@@ -480,6 +498,22 @@ static int supplicant_group_spawn_dhcp_client(struct supplicant_group *g)
 			argv[i++] = g->s->l->ip_binary;
 		}
 		argv[i] = NULL;
+
+		i = 0;
+		size_t size = 0;
+		while (argv[i]) {
+			size += strlen(argv[i++]) + 1;
+		}
+
+		gchar* dhcp_command = malloc(size);
+		i = 0;
+		strcpy(dhcp_command, argv[i++]);
+		while (argv[i]) {
+			strcat(dhcp_command, " ");
+			strcat(dhcp_command, argv[i++]);
+		}
+		log_debug("dhcp command:%s", dhcp_command);
+		g_free(dhcp_command);
 
 		if (execvpe(argv[0], argv, environ) < 0) {
 			log_error("dhcp failed (%d): %m", errno);
@@ -901,7 +935,13 @@ static void supplicant_parse_peer(struct supplicant *s,
 		 * parse it we _definitely_ have to provide proper data. */
 		r = wpas_message_dict_read(m, "wfd_dev_info", 's', &val);
 		if (r >= 0) {
-			t = strdup(val);
+			/* remove "0x" from the start of wfd_dev_info and prepend
+			 * subelement ID and lenght to it to make it compliant
+			 * with the format of wfd_subelems */
+			char buf[19] = "000006";
+			t = strdup(strncmp("0x", val, 2)
+							? val
+							: strncat(buf, val + 2, sizeof(buf) - 7));
 			if (!t) {
 				log_vENOMEM();
 			} else {
@@ -1538,10 +1578,12 @@ static void supplicant_try_ready(struct supplicant *s)
 		s->has_wfd = false;
 
 	s->running = true;
-	link_supplicant_started(s->l);
 
 	LINK_FOREACH_PEER(p, s->l)
 		peer_supplicant_started(p);
+
+	link_supplicant_started(s->l);
+	link_supplicant_p2p_state_known(s->l, s->has_p2p ? 1 : -1);
 }
 
 static int supplicant_p2p_set_disallow_freq_fn(struct wpas *w,
@@ -1716,8 +1758,10 @@ static int supplicant_status_fn(struct wpas *w,
 
 	if (!p2p_state) {
 		log_warning("wpa_supplicant or driver does not support P2P");
+		link_supplicant_p2p_state_known(s->l, -1);
 	} else if (!strcmp(p2p_state, "DISABLED")) {
 		log_warning("P2P support disabled on given interface");
+		link_supplicant_p2p_state_known(s->l, -1);
 	} else {
 		s->has_p2p = true;
 
@@ -1743,6 +1787,8 @@ static int supplicant_status_fn(struct wpas *w,
 				    NULL,
 				    0,
 				    NULL);
+		wpas_message_unref(m);
+		m = NULL;
 		if (r < 0) {
 			log_vERR(r);
 			goto error;
@@ -1771,6 +1817,8 @@ static int supplicant_status_fn(struct wpas *w,
 				    s,
 				    0,
 				    NULL);
+		wpas_message_unref(m);
+		m = NULL;
 		if (r < 0) {
 			log_vERR(r);
 			goto error;
@@ -1799,6 +1847,8 @@ static int supplicant_status_fn(struct wpas *w,
 				    s,
 				    0,
 				    NULL);
+		wpas_message_unref(m);
+		m = NULL;
 		if (r < 0) {
 			log_vERR(r);
 			goto error;
@@ -1915,6 +1965,7 @@ static void supplicant_stopped(struct supplicant *s)
 
 	if (s->running) {
 		s->running = false;
+		link_supplicant_p2p_state_known(s->l, 0);
 		link_supplicant_stopped(s->l);
 	}
 }
@@ -2452,45 +2503,45 @@ static void supplicant_run(struct supplicant *s, const char *binary)
 
 static int supplicant_find(char **binary)
 {
-    _shl_free_ char *path = getenv("PATH");
-    if(!path) {
-        return -EINVAL;
-    }
+	_shl_free_ char *path = getenv("PATH");
+	if(!path) {
+		return -EINVAL;
+	}
 
-    path = strdup(path);
-    if(!path) {
-        return log_ENOMEM();
-    }
+	path = strdup(path);
+	if(!path) {
+		return log_ENOMEM();
+	}
 
-    struct stat bin_stat;
-    char *curr = path, *next;
-    while(1) {
-        curr = strtok_r(curr, ":", &next);
-        if(!curr) {
-            break;
-        }
+	struct stat bin_stat;
+	char *curr = path, *next;
+	while(1) {
+		curr = strtok_r(curr, ":", &next);
+		if(!curr) {
+			break;
+		}
 
-        _shl_free_ char *bin = shl_strcat(curr, "/wpa_supplicant");
-        if (!bin)
-            return log_ENOMEM();
+		_shl_free_ char *bin = shl_strcat(curr, "/wpa_supplicant");
+		if (!bin)
+			return log_ENOMEM();
 
-        if(stat(bin, &bin_stat) < 0) {
-            if(ENOENT == errno || ENOTDIR == errno) {
-                goto end;
-            }
-            return log_ERRNO();
-        }
+		if(stat(bin, &bin_stat) < 0) {
+			if(ENOENT == errno || ENOTDIR == errno) {
+				goto end;
+			}
+			return log_ERRNO();
+		}
 
-        if (!access(bin, X_OK)) {
-            *binary = strdup(bin);
-            return 0;
-        }
+		if (!access(bin, X_OK)) {
+			*binary = strdup(bin);
+			return 0;
+		}
 
 end:
-        curr = NULL;
-    }
+		curr = NULL;
+	}
 
-    return -EINVAL;
+	return -EINVAL;
 }
 
 static int supplicant_spawn(struct supplicant *s)
@@ -2506,16 +2557,16 @@ static int supplicant_spawn(struct supplicant *s)
 
 	log_debug("spawn supplicant of %s", s->l->ifname);
 
-    if (supplicant_find(&binary) < 0) {
-        if (binary != NULL) {
-            log_error("execution of wpas (%s) not possible: %m", binary);
-	} else {
-            log_error("execution of wpas not possible: %m");
+	if (supplicant_find(&binary) < 0) {
+		if (binary != NULL) {
+			log_error("execution of wpas (%s) not possible: %m", binary);
+		} else {
+			log_error("execution of wpas not possible: %m");
+		}
+		return -EINVAL;
 	}
-        return -EINVAL;
-    }
 
-    log_info("wpa_supplicant found: %s", binary);
+	log_info("wpa_supplicant found: %s", binary);
 
 	pid = fork();
 	if (pid < 0) {
