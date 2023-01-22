@@ -97,14 +97,17 @@ static void sink_handle_get_parameter(struct ctl_sink *s,
 	        wfd_video_formats = wfd_video_formats_extension;
             }
         }
-        if (wfd_video_formats == NULL) {
+        bool create_wfd_video_formats = wfd_video_formats == NULL;
+        if (create_wfd_video_formats) {
             gchar video_formats[128];
             sprintf(video_formats, "00 00 03 10 %08x %08x %08x 00 0000 0000 10 none none",
                     s->resolutions_cea, s->resolutions_vesa, s->resolutions_hh);
 	    wfd_video_formats = strdup(video_formats);
         }
         check_and_response_option(WFD_VIDEO_FORMATS, wfd_video_formats);
-        g_free(wfd_video_formats);
+        if (create_wfd_video_formats) {
+            g_free(wfd_video_formats);
+        }
 
 	/* wfd_audio_codecs */
         gchar* wfd_audio_codecs = "AAC 00000007 00";
