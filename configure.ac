@@ -53,7 +53,7 @@ AC_DEFINE_UNQUOTED([IP_BINARY], [$IP_BINARY], [Path for ip binary])
 # Mandatory dependencies
 #
 
-AS_IF([test "$use_libsystemd" == "yes"],
+AS_IF([test "$use_libsystemd" = "yes"],
   [
      AC_DEFINE([ENABLE_SYSTEMD], [], [Use systemd])
      m4_ifdef([PKG_CHECK_MODULES], [
