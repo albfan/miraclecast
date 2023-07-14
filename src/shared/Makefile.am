@@ -19,5 +19,6 @@ libmiracle_shared_la_SOURCES = \
 	wpas.c
 libmiracle_shared_la_LIBADD = -lsystemd \
 	$(DEPS_LIBS) \
-	$(GLIB_LIBS)
+	$(GLIB_LIBS) \
+	$(LIBM)
 
