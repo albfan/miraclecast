@@ -68,6 +68,7 @@ static struct ctl_peer *running_peer;
 static struct ctl_peer *pending_peer;
 
 void launch_player(struct ctl_sink *s);
+void launch_vlc_player(struct ctl_sink *s);
 
 char *gst_scale_res;
 int gst_audio_en = 1;
@@ -490,48 +491,8 @@ static void spawn_gst(struct ctl_sink *s)
 		sink_pid = pid;
 	}
 }
-void launch_vlc_player(struct ctl_sink *s) {
-	char *argv[64];
-	char resolution[64];
-	char port[64];
-	char uibc_portStr[64];
-	int i = 0;
-   	argv[i++] = player;
 
-	sprintf(port, "rtp://@:%d", rstp_port);
-	argv[i++] = port;
 
-	if (s->hres && s->vres) {
-		sprintf(resolution, "%dx%d", s->hres, s->vres);
-		argv[i++] = "-r";
-		argv[i++] = resolution;
-	}
-
-   argv[i] = NULL;
-
-   i = 0;
-   size_t size = 0;
-   while (argv[i]) {
-      size += strlen(argv[i++]) + 1;
-   }
-
-   char* player_command = malloc(size);
-   i = 0;
-   strcpy(player_command, argv[i++]);
-   while (argv[i]) {
-      strcat(player_command, " ");
-      strcat(player_command, argv[i++]);
-   }
-   log_debug("player command: %s", player_command);
-   if (execvpe(argv[0], argv, environ) < 0) {
-      cli_debug("stream player failed (%d): %m", errno);
-      int i = 0;
-      cli_debug("printing environment: ");
-      while (environ[i]) {
-         cli_debug("%s", environ[i++]);
-      }
-   }
-}
 void launch_player(struct ctl_sink *s) {
 	char *argv[64];
 	char resolution[64];
@@ -617,9 +578,40 @@ void launch_uibc_daemon(int port) {
 
 static void kill_gst(void)
 {
+	char *argv[64];
+	int i = 0, vlc_pid = 0;
+
 	if (sink_pid <= 0)
 		return;
 
+		cli_debug("killing vlc_pid 1 : %d", vlc_pid);
+	char *command = "pgrep vlc";
+		cli_debug("killing vlc_pid 2: %d", vlc_pid);
+	FILE* file = popen(command, "r");
+		cli_debug("killing vlc_pid 3: %d", vlc_pid);
+
+	while (fscanf(file, "%d", &vlc_pid) != EOF) {
+		cli_debug("killing vlc_pid 4: %d", vlc_pid);
+		kill(vlc_pid, SIGTERM);
+	}
+
+	pclose(file);
+
+
+	/*
+	argv[i++] = "kill-vlc.sh";
+	argv[i++] = "-c";
+
+	//kill all the vlc players spawned
+	sprintf(command, "ps -x | grep \"rtp://@:%d", rstp_port);
+	argv[i++] = command; 
+
+	argv[i] = NULL;
+
+	cli_debug("command used to kill vlc : %s", argv[0]);
+	execvpe(argv[0], argv, environ);*/
+
+	cli_debug("killing pid : %d", sink_pid);
 	kill(sink_pid, SIGTERM);
 	sink_pid = 0;
 }
@@ -638,6 +630,8 @@ void ctl_fn_sink_disconnected(struct ctl_sink *s)
 	} else {
 		cli_notice("SINK disconnected");
 		sink_connected = false;
+		kill_gst();
+		cli_notice("Killed Player");
 	}
 }
 
@@ -674,8 +668,8 @@ void ctl_fn_peer_free(struct ctl_peer *p)
 	if (p == running_peer) {
 		cli_printf("no longer running on peer %s\n",
 			   running_peer->label);
-		stop_timeout(&sink_timeout);
 		kill_gst();
+		stop_timeout(&sink_timeout);
 		ctl_sink_close(sink);
 		running_peer = NULL;
 		stop_timeout(&scan_timeout);
