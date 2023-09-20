@@ -490,7 +490,48 @@ static void spawn_gst(struct ctl_sink *s)
 		sink_pid = pid;
 	}
 }
+void launch_vlc_player(struct ctl_sink *s) {
+	char *argv[64];
+	char resolution[64];
+	char port[64];
+	char uibc_portStr[64];
+	int i = 0;
+   	argv[i++] = player;
 
+	sprintf(port, "rtp://@:%d", rstp_port);
+	argv[i++] = port;
+
+	if (s->hres && s->vres) {
+		sprintf(resolution, "%dx%d", s->hres, s->vres);
+		argv[i++] = "-r";
+		argv[i++] = resolution;
+	}
+
+   argv[i] = NULL;
+
+   i = 0;
+   size_t size = 0;
+   while (argv[i]) {
+      size += strlen(argv[i++]) + 1;
+   }
+
+   char* player_command = malloc(size);
+   i = 0;
+   strcpy(player_command, argv[i++]);
+   while (argv[i]) {
+      strcat(player_command, " ");
+      strcat(player_command, argv[i++]);
+   }
+   log_debug("player command: %s", player_command);
+   if (execvpe(argv[0], argv, environ) < 0) {
+      cli_debug("stream player failed (%d): %m", errno);
+      int i = 0;
+      cli_debug("printing environment: ");
+      while (environ[i]) {
+         cli_debug("%s", environ[i++]);
+      }
+   }
+}
 void launch_player(struct ctl_sink *s) {
 	char *argv[64];
 	char resolution[64];

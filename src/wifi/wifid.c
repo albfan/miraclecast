@@ -44,7 +44,7 @@
 #define STR(x) #x
 const char *interface_name = NULL;
 const char *config_methods = NULL;
-unsigned int arg_wpa_loglevel = LOG_NOTICE;
+unsigned int arg_wpa_loglevel = LOG_DEBUG;
 bool arg_wpa_syslog = false;
 bool use_dev = false;
 bool lazy_managed = false;
