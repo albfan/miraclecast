@@ -2634,7 +2634,7 @@ static int supplicant_write_config(struct supplicant *s)
 		    "p2p_go_intent=0\n"
 		    "disable_scan_offload=1\n"
 		    "# End of configuration\n",
-		    s->l->friendly_name ?: "uknown",
+		    s->l->friendly_name ?: "unknown",
 		    "1-0050F204-1",
 		    s->l->config_methods ?: "pbc",
 		    "p2p_device=1",
