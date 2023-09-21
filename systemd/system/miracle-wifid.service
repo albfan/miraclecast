@@ -1,11 +1,15 @@
 [Unit]
 Description=wpa_supplicant with Miracast support
 Before=network.target
-After=dbus.service
+After=dbus.socket
 
 [Service]
 Type=simple
+ExecStartPre=/usr/bin/systemctl stop ap.service
+ExecStartPre=/usr/bin/systemctl stop NetworkManager.service
 ExecStart=/usr/bin/miracle-wifid
+ExecStopPost=/usr/bin/systemctl start NetworkManager.service
+ExecStopPost=/usr/bin/systemctl start ap.service
 Restart=always
 User=root
 

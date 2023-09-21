@@ -1,11 +1,11 @@
 [Unit]
 Description=Miraclecast sink on default link
 Before=network.target
-After=miracle-wifid.service
+Requires=miracle-wifid.service
 
 [Service]
 Type=simple
-ExecStart=/usr/bin/miracle-sinkctl
+ExecStart=/usr/bin/miracle-sinkctl -- set-friendly-name VingMiracle
 Restart=always
 User=root
 
