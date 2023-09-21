@@ -2633,12 +2633,8 @@ static int supplicant_write_config(struct supplicant *s)
 		    "p2p_cli_probe=1\n"
 		    "p2p_go_intent=0\n"
 		    "disable_scan_offload=1\n"
-		    "network={\n"
-		    "\tssid=\"mrpixel\"\n"
-		    "\tpsk=b5ee7c4a2a062bec0aecd029b8218054ce6761873af15a7349730bf5a32e0ba8\n"
-		    "}\n"
 		    "# End of configuration\n",
-		    "DIRECT-AnuragTesting",
+		    s->l->friendly_name ?: "uknown",
 		    "1-0050F204-1",
 		    s->l->config_methods ?: "pbc",
 		    "p2p_device=1",

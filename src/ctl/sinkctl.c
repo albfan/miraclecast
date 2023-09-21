@@ -68,7 +68,6 @@ static struct ctl_peer *running_peer;
 static struct ctl_peer *pending_peer;
 
 void launch_player(struct ctl_sink *s);
-void launch_vlc_player(struct ctl_sink *s);
 
 char *gst_scale_res;
 int gst_audio_en = 1;
@@ -584,32 +583,20 @@ static void kill_gst(void)
 	if (sink_pid <= 0)
 		return;
 
-		cli_debug("killing vlc_pid 1 : %d", vlc_pid);
+	cli_debug("killing vlc [start]");
 	char *command = "pgrep vlc";
-		cli_debug("killing vlc_pid 2: %d", vlc_pid);
+	cli_debug("killing vlc [using command : pgrep vlc]");
 	FILE* file = popen(command, "r");
-		cli_debug("killing vlc_pid 3: %d", vlc_pid);
+	cli_debug("killing vlc  [opening file]");
 
 	while (fscanf(file, "%d", &vlc_pid) != EOF) {
-		cli_debug("killing vlc_pid 4: %d", vlc_pid);
+		cli_debug("killing vlc [pid : %d]", vlc_pid);
 		kill(vlc_pid, SIGTERM);
+		cli_debug("killed vlc [pid : %d]", vlc_pid);
 	}
 
 	pclose(file);
-
-
-	/*
-	argv[i++] = "kill-vlc.sh";
-	argv[i++] = "-c";
-
-	//kill all the vlc players spawned
-	sprintf(command, "ps -x | grep \"rtp://@:%d", rstp_port);
-	argv[i++] = command; 
-
-	argv[i] = NULL;
-
-	cli_debug("command used to kill vlc : %s", argv[0]);
-	execvpe(argv[0], argv, environ);*/
+	cli_debug(" Closed file, kill [end]");
 
 	cli_debug("killing pid : %d", sink_pid);
 	kill(sink_pid, SIGTERM);
@@ -630,6 +617,7 @@ void ctl_fn_sink_disconnected(struct ctl_sink *s)
 	} else {
 		cli_notice("SINK disconnected");
 		sink_connected = false;
+		cli_notice("Killing Player...");
 		kill_gst();
 		cli_notice("Killed Player");
 	}
@@ -668,8 +656,8 @@ void ctl_fn_peer_free(struct ctl_peer *p)
 	if (p == running_peer) {
 		cli_printf("no longer running on peer %s\n",
 			   running_peer->label);
-		kill_gst();
 		stop_timeout(&sink_timeout);
+		kill_gst();
 		ctl_sink_close(sink);
 		running_peer = NULL;
 		stop_timeout(&scan_timeout);
