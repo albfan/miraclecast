@@ -1,0 +1,14 @@
+[Unit]
+Description=wpa_supplicant with Miracast support
+Before=network.target
+After=dbus.service
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/miracle-wifid
+Restart=always
+User=root
+
+[Install]
+WantedBy=multi-user.target
+Alias=miracle-wifid.service

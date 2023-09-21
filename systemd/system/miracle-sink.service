@@ -1,0 +1,14 @@
+[Unit]
+Description=Miraclecast sink on default link
+Before=network.target
+After=miracle-wifid.service
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/miracle-sinkctl
+Restart=always
+User=root
+
+[Install]
+WantedBy=multi-user.target
+Alias=miracle-sink.service

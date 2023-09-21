@@ -771,9 +771,14 @@ void ctl_fn_peer_disconnected(struct ctl_peer *p)
 
 void ctl_fn_link_new(struct ctl_link *l)
 {
-	if (cli_running())
+	if (cli_running()){
 		cli_printf("[" CLI_GREEN "ADD" CLI_DEFAULT "] Link: %s\n",
 			   l->label);
+		
+		// Automatically start the sink on the link.
+		char *args[1] = {l->label};
+		cmd_run(args, 1);
+	}
 
 	/* If we're not running but have a bound link, try to find it now and
 	 * start running if the link is now available. */
