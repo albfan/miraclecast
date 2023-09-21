@@ -41,4 +41,6 @@ cmake_install.cmake
 CMakeCache.txt
 libmiracle-shared.a
 install_manifest.txt
+.miracle-sink.history
+/tags
 /build/

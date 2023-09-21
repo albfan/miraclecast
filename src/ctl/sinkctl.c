@@ -491,6 +491,7 @@ static void spawn_gst(struct ctl_sink *s)
 	}
 }
 
+
 void launch_player(struct ctl_sink *s) {
 	char *argv[64];
 	char resolution[64];
@@ -576,9 +577,28 @@ void launch_uibc_daemon(int port) {
 
 static void kill_gst(void)
 {
+	char *argv[64];
+	int i = 0, vlc_pid = 0;
+
 	if (sink_pid <= 0)
 		return;
 
+	cli_debug("killing vlc [start]");
+	char *command = "pgrep vlc";
+	cli_debug("killing vlc [using command : pgrep vlc]");
+	FILE* file = popen(command, "r");
+	cli_debug("killing vlc  [opening file]");
+
+	while (fscanf(file, "%d", &vlc_pid) != EOF) {
+		cli_debug("killing vlc [pid : %d]", vlc_pid);
+		kill(vlc_pid, SIGTERM);
+		cli_debug("killed vlc [pid : %d]", vlc_pid);
+	}
+
+	pclose(file);
+	cli_debug(" Closed file, kill [end]");
+
+	cli_debug("killing pid : %d", sink_pid);
 	kill(sink_pid, SIGTERM);
 	sink_pid = 0;
 }
@@ -597,6 +617,9 @@ void ctl_fn_sink_disconnected(struct ctl_sink *s)
 	} else {
 		cli_notice("SINK disconnected");
 		sink_connected = false;
+		cli_notice("Killing Player...");
+		kill_gst();
+		cli_notice("Killed Player");
 	}
 }
 

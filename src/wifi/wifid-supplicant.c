@@ -2629,6 +2629,10 @@ static int supplicant_write_config(struct supplicant *s)
 		    "config_methods=%s\n"
 		    "driver_param=%s\n"
 		    "ap_scan=%s\n"
+		    "persistent_reconnect=1\n"
+		    "p2p_cli_probe=1\n"
+		    "p2p_go_intent=0\n"
+		    "disable_scan_offload=1\n"
 		    "# End of configuration\n",
 		    s->l->friendly_name ?: "unknown",
 		    "1-0050F204-1",

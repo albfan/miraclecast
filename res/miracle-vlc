@@ -63,7 +63,7 @@ while getopts "r:d:as:p:h" optname
     esac
   done
 
-RUN="vlc rtp://@:$PORT"
+RUN="cvlc --no-osd --fullscreen --no-video-title-show --network-caching=50 rtp://@:$PORT"
 
 echo "running: $RUN"
 exec ${RUN}
