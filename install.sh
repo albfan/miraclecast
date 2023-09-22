@@ -1,17 +1,16 @@
 #!/bin/bash
 
 apt install cmake libglib2.0-dev libudev-dev libsystemd-dev libreadline-dev check libtool -y
-
 apt install gstreamer1.0-plugins-bad gstreamer1.0-libav gstreamer1.0-tools -y
 
 apt install vlc -y
 
+rm -rf build/
 mkdir build
 cd build
 cmake -DCMAKE_INSTALL_PREFIX=/usr .. 
 make
 make install
-
 cd ..
 
 echo "-- Installing: /root/.miraclecast"
