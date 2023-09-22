@@ -11,6 +11,16 @@ The Display-Source side allows you to connect external displays to your system a
 
 On the other hand, the Display-Sink side allows you to create wifi-capable external displays yourself. You can use it on your embedded devices or even on full desktops to allow other systems to use your device as external display.
 
+## Steps to Setup MiracleCast on Ving NUC
+
+In the root of the project directory, run `sudo ./install.sh`
+
+Steps to run:
+1. Run `sudo miracle-wifid --log-level trace --log-date-time` in a terminal.
+2. Run `sudo miracle-sinkctl -e run-vlc.sh --log-level trace --log-journal-level trace --log-date-time -- set-friendly-name VingMiracle` in a separate terminal.
+
+Now you should be able to cast your Windows 10/11 devices on Ving NUC.
+
 ## Requirements
 
 The MiracleCast projects requires the following software to be installed:
