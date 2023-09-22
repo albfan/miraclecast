@@ -5,7 +5,7 @@ Requires=miracle-wifid.service
 
 [Service]
 Type=simple
-ExecStart=/usr/bin/miracle-sinkctl -- set-friendly-name VingMiracle
+ExecStart=/usr/bin/miracle-sinkctl --log-level debug --log-journal-level debug -- set-friendly-name VingMiracle
 ExecStopPost=-/usr/bin/systemctl stop miracle-wifid.service
 Restart=always
 User=root
