@@ -16,10 +16,12 @@ On the other hand, the Display-Sink side allows you to create wifi-capable exter
 In the root of the project directory, run `sudo ./install.sh`
 
 Steps to run:
+
 1. Make sure 'NetworkManger', 'wpa_supplicant' and 'AP' are all stopped/killed.
 2. Make sure no instance of 'miracle-wifid' or 'miracle-sinkctl' are already running.
 3. Run `sudo miracle-wifid --log-level trace --log-date-time` in a terminal.
 4. Run `sudo miracle-sinkctl -e run-vlc.sh --log-level trace --log-journal-level trace --log-date-time -- set-friendly-name VingMiracle` in a separate terminal.
+
 
 Now you should be able to cast your Windows 10/11 devices on Ving NUC.
 
