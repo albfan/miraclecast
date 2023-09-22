@@ -10,7 +10,6 @@ ExecStartPre=-/usr/bin/systemctl stop NetworkManager.service
 ExecStart=/usr/bin/miracle-wifid --log-level debug
 ExecStopPost=-/usr/bin/systemctl start NetworkManager.service
 ExecStopPost=-/usr/bin/systemctl start ap.service
-Restart=always
 User=root
 
 [Install]
