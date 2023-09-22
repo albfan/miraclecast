@@ -4,6 +4,8 @@ apt install cmake libglib2.0-dev libudev-dev libsystemd-dev libreadline-dev chec
 
 apt install gstreamer1.0-plugins-bad gstreamer1.0-libav gstreamer1.0-tools -y
 
+apt install vlc -y
+
 mkdir build
 cd build
 cmake -DCMAKE_INSTALL_PREFIX=/usr .. 
