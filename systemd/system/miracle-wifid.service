@@ -12,6 +12,7 @@ ExecStartPre=-/usr/bin/systemctl stop wpa_supplicant.service
 
 ExecStart=/usr/bin/miracle-wifid --log-level debug
 
+ExecStopPost=-/usr/bin/systemctl stop miracle-sink.service
 ExecStopPost=-/usr/bin/systemctl start wpa_supplicant.service
 ExecStopPost=-/usr/bin/systemctl start NetworkManager.service
 ExecStopPost=-/usr/bin/systemctl start ap.service

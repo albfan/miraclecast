@@ -677,7 +677,8 @@ int cli_init(sd_bus *bus, const struct cli_cmd *cmds)
 		}
 	}
 
-	if (isatty(fileno(stdin))) {
+	if (1) {
+		/*
 		r = sd_event_add_io(cli_event,
 			    &cli_stdin,
 			    fileno(stdin),
@@ -687,7 +688,7 @@ int cli_init(sd_bus *bus, const struct cli_cmd *cmds)
 		if (r < 0) {
 			cli_vERR(r);
 			goto error;
-		}
+		}*/
 		cli_rl = true;
 
 		rl_erase_empty_line = 1;
