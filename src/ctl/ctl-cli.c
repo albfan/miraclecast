@@ -27,6 +27,7 @@
 #include <string.h>
 #include <strings.h>
 #include <sys/signalfd.h>
+#include <sys/time.h>
 #include <sys/wait.h>
 #include <systemd/sd-bus.h>
 #include "ctl.h"
