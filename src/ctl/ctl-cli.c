@@ -27,6 +27,7 @@
 #include <string.h>
 #include <strings.h>
 #include <sys/signalfd.h>
+#include <sys/time.h>
 #include <sys/wait.h>
 #include <systemd/sd-bus.h>
 #include "ctl.h"
@@ -34,7 +35,6 @@
 #include "shl_util.h"
 #include "shl_log.h"
 #include <math.h>
-#include <time.h>
 
 
 /*
