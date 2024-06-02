@@ -45,8 +45,15 @@ AC_ARG_VAR(IP_BINARY, [Path for ip binary])
 if test -z "$IP_BINARY"; then
 	IP_BINARY=/bin/ip
 fi
-AC_ARG_ENABLE([disable-systemd],
-              AS_HELP_STRING([--disable-systemd], [Disable systemd]), [], [use_libsystemd=yes], [Disable systemd using elogind])
+AC_ARG_ENABLE([systemd],
+              AS_HELP_STRING([--disable-systemd], [Disable systemd]),
+              [case "${enableval}" in
+                yes) use_libsystemd=yes ;;
+                no)  use_libsystemd=no ;;
+                *) AC_MSG_ERROR([bad value ${enableval} for --enable-systemd]) ;;
+              esac],
+              [use_libsystemd=yes])
+
 AC_DEFINE_UNQUOTED([IP_BINARY], [$IP_BINARY], [Path for ip binary])
 
 #
