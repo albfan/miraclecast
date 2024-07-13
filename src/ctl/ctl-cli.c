@@ -591,7 +591,7 @@ int get_args(char* line)
         }
         tmp++;
     }
-    if (" " != *last_delim)
+    if (' ' != *last_delim)
         count++;
     return count;
 }
