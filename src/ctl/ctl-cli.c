@@ -331,7 +331,7 @@ char *
 yes_no_generator (const char *text, int state)
 {
   static int list_index, len;
-  char *name;
+  const char *name;
 
   /* If this is a new word to complete, initialize now.  This includes
      saving the length of TEXT for efficiency, and initializing the index
@@ -343,7 +343,7 @@ yes_no_generator (const char *text, int state)
     }
 
   /* Return the next name which partially matches from the command list. */
-  while (name = yes_no_options[list_index])
+  while ((name = yes_no_options[list_index]) != NULL)
     {
       list_index++;
 
@@ -550,7 +550,7 @@ char *
 command_generator (const char *text, int state)
 {
   static int list_index, len;
-  char *name;
+  const char *name;
 
   /* If this is a new word to complete, initialize now.  This includes
      saving the length of TEXT for efficiency, and initializing the index
@@ -562,7 +562,7 @@ command_generator (const char *text, int state)
     }
 
   /* Return the next name which partially matches from the command list. */
-  while (name = cli_cmds[list_index].cmd)
+  while ((name = cli_cmds[list_index].cmd) != NULL)
     {
       list_index++;
 
