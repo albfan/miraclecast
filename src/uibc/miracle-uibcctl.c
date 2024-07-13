@@ -55,7 +55,7 @@ int main(int argc, char *argv[]) {
     }
     bzero(buffer, 256);
     fgets(buffer, 255, stdin);
-    if (buffer == NULL) {
+    if (strlen(buffer) == 0) {
       break;
     }
     if (!daemon) {
