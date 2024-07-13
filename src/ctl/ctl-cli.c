@@ -94,7 +94,7 @@ void cli_printf_time_prefix(const char *fmt, va_list args)
 	struct tm *timeinfo;
 	struct timeval tv;
 	char buffertmp[80];
-	char buffer[80];
+	char buffer[120];
 	int millisec;
 
 

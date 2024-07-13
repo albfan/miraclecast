@@ -145,7 +145,7 @@ static void log__submit(const char *file,
 	struct tm *timeinfo;
 	struct timeval tv;
 	char buffertmp[80];
-	char buffer[80];
+	char buffer[120];
 	int millisec;
 
 	out = stderr;
