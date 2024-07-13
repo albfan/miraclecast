@@ -415,7 +415,7 @@ static const struct cli_cmd cli_cmds[] = {
 	{ "list",		NULL,					CLI_M,	CLI_LESS,	0,	cmd_list,		"List all objects", {NULL}},
 	{ "select",		"[link]",				CLI_Y,	CLI_LESS,	1,	cmd_select,		"Select default link", {links_generator, NULL} },
 	{ "show",		"[link|peer]",				CLI_M,	CLI_LESS,	1,	cmd_show,		"Show detailed object information", {links_peers_generator, NULL} },
-	{ "set-friendly-name",	"[link] <name>",			CLI_M,	CLI_LESS,	2,	cmd_set_friendly_name,	"Set friendly name of an object", {links_generator, yes_no_generator, NULL} },
+	{ "set-friendly-name",	"[link] <name>",			CLI_M,	CLI_LESS,	2,	cmd_set_friendly_name,	"Set friendly name of an object", {links_generator, yes_no_generator} },
 	{ "set-managed",	"[link] <yes|no>",	CLI_M,	CLI_LESS,	2,	cmd_set_managed,	"Manage or unmnage a link" },
 	{ "p2p-scan",		"[link] [stop]",			CLI_Y,	CLI_LESS,	2,	cmd_p2p_scan,		"Control neighborhood P2P scanning", {links_generator, NULL} },
 	{ "connect",		"<peer> [provision] [pin]",		CLI_M,	CLI_LESS,	3,	cmd_connect,		"Connect to peer", {peers_generator, NULL} },
