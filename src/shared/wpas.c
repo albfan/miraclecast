@@ -1054,7 +1054,7 @@ static int wpas__bind_server_socket(int fd, const char *ctrl_path, char *name)
 		}
 	}
 
-	strncpy(name, src.sun_path, UNIX_PATH_MAX - 1);
+	strncpy(name, src.sun_path, UNIX_PATH_MAX);
 	name[UNIX_PATH_MAX - 1] = 0;
 
 	return 0;

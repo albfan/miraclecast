@@ -61,7 +61,8 @@ int peer_new(struct link *l,
 		r = log_ENOMEM();
 		goto error;
 	}
-	strncpy(p->p2p_mac, mac, MAC_STRLEN - 1);
+	strncpy(p->p2p_mac, mac, MAC_STRLEN);
+	p->p2p_mac[MAC_STRLEN - 1] = 0;
 
 	r = shl_htable_insert_str(&l->peers, &p->p2p_mac, NULL);
 	if (r < 0) {
