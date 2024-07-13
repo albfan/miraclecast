@@ -359,7 +359,6 @@ char *
 links_peers_generator (const char *text, int state)
 {
   static int list_index, len;
-  char *name;
   size_t peer_cnt = 0;
   size_t link_cnt = 0;
   struct shl_dlist *i, *j;
@@ -444,7 +443,6 @@ char *
 peers_generator (const char *text, int state)
 {
   static int list_index, len;
-  char *name;
   size_t peer_cnt = 0;
   struct shl_dlist *i, *j;
   struct ctl_link *l;
@@ -497,7 +495,6 @@ char *
 links_generator (const char *text, int state)
 {
   static int list_index, len;
-  char *name;
   size_t link_cnt = 0;
   struct shl_dlist *i;
   struct ctl_link *l;
