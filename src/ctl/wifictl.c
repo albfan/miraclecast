@@ -34,7 +34,6 @@
 #include "util.h"
 #include "config.h"
 
-#include <readline/readline.h>
 
 #define HISTORY_FILENAME ".miracle-wifi.history"
 
