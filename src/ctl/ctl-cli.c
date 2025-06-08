@@ -87,7 +87,7 @@ void cli_printv(const char *fmt, bool prefix_time, va_list args)
 	}
 }
 
-void cli_printf_time_prefix(const char *fmt, va_list args)
+void cli_printf_time_prefix()
 {
 	long long sec, usec;
 	time_t now;
@@ -306,7 +306,7 @@ void cli_destroy(void)
 		rl_on_new_line();
 		rl_redisplay();
 
-		rl_message("");
+		rl_message("%s", "");
 		rl_callback_handler_remove();
 	}
 

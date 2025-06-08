@@ -32,6 +32,8 @@
 #include "shl_dlist.h"
 #include "shl_log.h"
 
+// Force readline to use va_list variants (fixes gcc15 compilation on certain distros)
+#define HAVE_STDARG_H
 /* *sigh* readline doesn't include all their deps, so put them last */
 #include <readline/history.h>
 #include <readline/readline.h>
