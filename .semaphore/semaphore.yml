@@ -1,10 +1,10 @@
 version: v1.0
-name: Docker
+name: CI
 
 agent:
   machine:
     type: e1-standard-2
-    os_image: ubuntu1804
+    os_image: ubuntu2004
 
 global_job_config:
   secrets:
