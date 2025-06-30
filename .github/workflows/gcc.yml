@@ -1,0 +1,28 @@
+name: Check gcc build
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+jobs:
+  gcc14:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Build gcc14 image
+        run: docker build -f gcc14.Dockerfile -t gcc14 .
+
+  gcc15:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Build gcc15 image
+        run: docker build -f gcc15.Dockerfile -t gcc15 .
