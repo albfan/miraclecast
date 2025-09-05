@@ -10,7 +10,6 @@ AC_INIT([miracle],
         [http://www.freedesktop.org/wiki/Software/miracle],
         [miracle],
         [http://www.freedesktop.org/wiki/Software/miracle])
-AC_CONFIG_SRCDIR([src/miracled.h])
 AC_CONFIG_AUX_DIR([build-aux])
 AC_CONFIG_MACRO_DIR([m4])
 AC_CONFIG_HEADER(config.h)
