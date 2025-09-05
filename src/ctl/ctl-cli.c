@@ -621,7 +621,7 @@ completion_fn (const char *text, int start, int end)
       if (strncmp(cmd.cmd, rl_line_buffer, strlen(cmd.cmd)) == 0)
       {
         int nargs = get_args(rl_line_buffer);
-        rl_compentry_func_t* completion_fn = cmd.completion_fns[nargs-2];
+        rl_compentry_func_t* completion_fn = cmd.completion_fns[nargs - 1];
         if (completion_fn)
             matches = rl_completion_matches (text, completion_fn);
       }
