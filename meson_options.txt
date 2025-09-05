@@ -16,5 +16,5 @@ option('ip-binary',
   description: 'Path for ip binary')
 option('enable-systemd',
   type: 'boolean',
-  value: 'true',
+  value: true,
   description: 'Enable systemd')
