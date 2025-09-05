@@ -221,7 +221,7 @@ struct cli_cmd {
 	int argc;
 	int (*fn) (char **args, unsigned int n);
 	const char *desc;
-	rl_compentry_func_t *completion_fns[2];
+	rl_compentry_func_t *completion_fns[3];
 };
 
 extern sd_event *cli_event;

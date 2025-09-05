@@ -441,7 +441,7 @@ static const struct cli_cmd cli_cmds[] = {
 	{ "run",		"<link>",		CLI_M,	CLI_EQUAL,	1,	cmd_run,		"Run sink on given link", {links_generator, NULL} },
 	{ "bind",		"<link>",		CLI_M,	CLI_EQUAL,	1,	cmd_bind,		"Like 'run' but bind the link name to run when it is hotplugged", {links_generator, NULL} },
 	{ "set-friendly-name",	"[link] <name>",	CLI_M,	CLI_LESS,	2,	cmd_set_friendly_name,	"Set friendly name of an object", {links_generator, NULL} },
-	{ "set-managed",	"<link> <yes|no>",	CLI_M,	CLI_EQUAL,	2,	cmd_set_managed,	"Manage or unmnage a link", {links_generator, yes_no_generator} },
+	{ "set-managed",	"<link> <yes|no>",	CLI_M,	CLI_EQUAL,	2,	cmd_set_managed,	"Manage or unmnage a link", {links_generator, yes_no_generator, NULL} },
 	{ "quit",		NULL,			CLI_Y,	CLI_MORE,	0,	cmd_quit,		"Quit program", {NULL} },
 	{ "exit",		NULL,			CLI_Y,	CLI_MORE,	0,	cmd_quit,		NULL, {NULL} },
 	{ "help",		NULL,			CLI_M,	CLI_MORE,	0,	NULL,			"Print help", {NULL} },
