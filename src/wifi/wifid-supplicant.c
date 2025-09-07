@@ -2422,13 +2422,13 @@ static void supplicant_run(struct supplicant *s, const char *binary)
 	argv[i++] = (char*)binary;
 
 	/* debugging? */
-	if (arg_wpa_loglevel >= LOG_DEBUG)
+	if (wpa_loglevel >= LOG_DEBUG)
 		argv[i++] = "-dd";
-	else if (arg_wpa_loglevel >= LOG_INFO)
+	else if (wpa_loglevel >= LOG_INFO)
 		argv[i++] = "-d";
-	else if (arg_wpa_loglevel < LOG_ERROR)
+	else if (wpa_loglevel < LOG_ERROR)
 		argv[i++] = "-qq";
-	else if (arg_wpa_loglevel < LOG_NOTICE)
+	else if (wpa_loglevel < LOG_NOTICE)
 		argv[i++] = "-q";
 
 	argv[i++] = "-c";
@@ -2440,7 +2440,7 @@ static void supplicant_run(struct supplicant *s, const char *binary)
 	argv[i++] = "-g";
 	argv[i++] = s->global_ctrl;
 
-	if (arg_wpa_syslog) {
+	if (wpa_syslog) {
 		argv[i++] = "-s";
 	}
 
@@ -2452,45 +2452,45 @@ static void supplicant_run(struct supplicant *s, const char *binary)
 
 static int supplicant_find(char **binary)
 {
-    _shl_free_ char *path = getenv("PATH");
-    if(!path) {
-        return -EINVAL;
-    }
+	_shl_free_ char *path = getenv("PATH");
+	if(!path) {
+		return -EINVAL;
+	}
 
-    path = strdup(path);
-    if(!path) {
-        return log_ENOMEM();
-    }
+	path = strdup(path);
+	if(!path) {
+		return log_ENOMEM();
+	}
 
-    struct stat bin_stat;
-    char *curr = path, *next;
-    while(1) {
-        curr = strtok_r(curr, ":", &next);
-        if(!curr) {
-            break;
-        }
+	struct stat bin_stat;
+	char *curr = path, *next;
+	while(1) {
+		curr = strtok_r(curr, ":", &next);
+		if(!curr) {
+			break;
+		}
 
-        _shl_free_ char *bin = shl_strcat(curr, "/wpa_supplicant");
-        if (!bin)
-            return log_ENOMEM();
+		_shl_free_ char *bin = shl_strcat(curr, "/wpa_supplicant");
+		if (!bin)
+			return log_ENOMEM();
 
-        if(stat(bin, &bin_stat) < 0) {
-            if(ENOENT == errno || ENOTDIR == errno) {
-                goto end;
-            }
-            return log_ERRNO();
-        }
+		if(stat(bin, &bin_stat) < 0) {
+			if(ENOENT == errno || ENOTDIR == errno) {
+				goto end;
+			}
+			return log_ERRNO();
+		}
 
-        if (!access(bin, X_OK)) {
-            *binary = strdup(bin);
-            return 0;
-        }
+		if (!access(bin, X_OK)) {
+			*binary = strdup(bin);
+			return 0;
+		}
 
 end:
-        curr = NULL;
-    }
+		curr = NULL;
+	}
 
-    return -EINVAL;
+	return -EINVAL;
 }
 
 static int supplicant_spawn(struct supplicant *s)
@@ -2506,16 +2506,16 @@ static int supplicant_spawn(struct supplicant *s)
 
 	log_debug("spawn supplicant of %s", s->l->ifname);
 
-    if (supplicant_find(&binary) < 0) {
-        if (binary != NULL) {
-            log_error("execution of wpas (%s) not possible: %m", binary);
-	} else {
-            log_error("execution of wpas not possible: %m");
+	if (supplicant_find(&binary) < 0) {
+		if (binary != NULL) {
+			log_error("execution of wpas (%s) not possible: %m", binary);
+		} else {
+			log_error("execution of wpas not possible: %m");
+		}
+		return -EINVAL;
 	}
-        return -EINVAL;
-    }
 
-    log_info("wpa_supplicant found: %s", binary);
+	log_info("wpa_supplicant found: %s", binary);
 
 	pid = fork();
 	if (pid < 0) {
@@ -2623,18 +2623,21 @@ static int supplicant_write_config(struct supplicant *s)
 		return log_ERRNO();
 
 	r = fprintf(f,
-		    "# Generated configuration - DO NOT EDIT!\n"
-		    "device_name=%s\n"
-		    "device_type=%s\n"
-		    "config_methods=%s\n"
-		    "driver_param=%s\n"
-		    "ap_scan=%s\n"
-		    "# End of configuration\n",
-		    s->l->friendly_name ?: "unknown",
-		    "1-0050F204-1",
-		    s->l->config_methods ?: "pbc",
-		    "p2p_device=1",
-		    "1");
+		"# Generated configuration - DO NOT EDIT!\n"
+		"device_name=%s\n"
+		"device_type=%s\n"
+		"config_methods=%s\n"
+		"driver_param=%s\n"
+		"ap_scan=%s\n"
+		"p2p_go_intent=%d\n"
+		"# End of configuration\n",
+
+		s->l->friendly_name ?: "unknown",
+		"1-0050F204-1",
+		s->l->config_methods ?: "pbc",
+		s->l->driver_param ?: "",
+		"1",
+		s->l->go_intent ?: 0);
 	if (r < 0) {
 		r = log_ERRNO();
 		fclose(f);
