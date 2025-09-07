@@ -44,11 +44,13 @@
 #define STR(x) #x
 const char *interface_name = NULL;
 const char *config_methods = NULL;
-unsigned int arg_wpa_loglevel = LOG_NOTICE;
-bool arg_wpa_syslog = false;
+unsigned int wpa_loglevel = LOG_NOTICE;
+unsigned int go_intent = 0;
+const char *driver_param = NULL;
+bool wpa_syslog = false;
 bool use_dev = false;
 bool lazy_managed = false;
-const char *arg_ip_binary = NULL;
+const char *ip_binary = NULL;
 
 
 /*
@@ -112,11 +114,14 @@ static void manager_add_udev_link(struct manager *m,
 		link_set_friendly_name(l, m->friendly_name);
 	if (m->config_methods)
 		link_set_config_methods(l, m->config_methods);
+	if (m->driver_param)
+		link_set_driver_param(l, m->driver_param);
+	link_set_go_intent(l, m->go_intent);
 
 	if(use_dev)
 		link_use_dev(l);
-	if(arg_ip_binary)
-		link_set_ip_binary(l, arg_ip_binary);
+	if(ip_binary)
+		link_set_ip_binary(l, ip_binary);
 
 #ifdef RELY_UDEV
 	bool managed = udev_device_has_tag(d, "miracle") && !lazy_managed;
@@ -241,7 +246,6 @@ static int manager_new(struct manager **out)
 	unsigned int i;
 	sigset_t mask;
 	int r;
-	char *cm;
 
 	m = calloc(1, sizeof(*m));
 	if (!m)
@@ -251,13 +255,24 @@ static int manager_new(struct manager **out)
 
 
 	if (config_methods) {
-		cm = strdup(config_methods);
+		char *cm = strdup(config_methods);
 		if (!cm)
 			return log_ENOMEM();
 
 		free(m->config_methods);
 		m->config_methods = cm;
 	}
+
+	if (driver_param) {
+		char *dp = strdup(driver_param);
+		if (!dp)
+			return log_ENOMEM();
+
+		free(m->driver_param);
+		m->driver_param = dp;
+	}
+
+	m->go_intent = go_intent;
 
 	r = sd_event_default(&m->event);
 	if (r < 0) {
@@ -492,6 +507,7 @@ static int help(void)
 	       "     --use-dev             enable workaround for 'no ifname' issue\n"
 	       "     --lazy-managed        manage interface only when user decide to do\n"
 	       "     --ip-binary <path>    path to 'ip' binary [default: "XSTR(IP_BINARY)"]\n"
+	       "     --go-intent <0-15>    group owner intent, 0-15, the higher number indicates preference to become the GO, default 0\n"
 	       , program_invocation_short_name);
 	/*
 	 * 80-char barrier:
@@ -514,6 +530,8 @@ static int parse_argv(int argc, char *argv[])
 		ARG_CONFIG_METHODS,
 		ARG_LAZY_MANAGED,
 		ARG_IP_BINARY,
+		ARG_GO_INTENT,
+		ARG_DRIVER_PARAM,
 	};
 	static const struct option options[] = {
 		{ "help",       	no_argument,		NULL,	'h' },
@@ -529,6 +547,8 @@ static int parse_argv(int argc, char *argv[])
 		{ "config-methods",	required_argument,	NULL,	ARG_CONFIG_METHODS },
 		{ "lazy-managed",	no_argument,	NULL,	ARG_LAZY_MANAGED },
 		{ "ip-binary",	required_argument,	NULL,	ARG_IP_BINARY },
+		{ "go-intent",	required_argument,	NULL,	ARG_GO_INTENT },
+		{ "driver-param",	required_argument,	NULL,	ARG_DRIVER_PARAM },
 		{}
 	};
 	int c;
@@ -562,13 +582,19 @@ static int parse_argv(int argc, char *argv[])
 			lazy_managed = true;
 			break;
 		case ARG_WPA_LOGLEVEL:
-			arg_wpa_loglevel = log_parse_arg(optarg);
+			wpa_loglevel = log_parse_arg(optarg);
 			break;
 		case ARG_WPA_SYSLOG:
-			arg_wpa_syslog = true;
+			wpa_syslog = true;
 			break;
 		case ARG_IP_BINARY:
-			arg_ip_binary = optarg;
+			ip_binary = optarg;
+			break;
+		case ARG_GO_INTENT:
+			go_intent = atoi(optarg);
+			break;
+		case ARG_DRIVER_PARAM:
+			driver_param = optarg;
 			break;
 		case '?':
 			return -EINVAL;
@@ -588,6 +614,28 @@ static int parse_argv(int argc, char *argv[])
 	return 1;
 }
 
+void load_ini_config()
+{
+	GKeyFile* gkf = load_ini_file();
+
+	if (gkf) {
+		gchar* log_level;
+		log_level = g_key_file_get_string (gkf, "wifid", "log-level", NULL);
+		if (log_level) {
+			log_max_sev = log_parse_arg(log_level);
+			g_free(log_level);
+		}
+		ip_binary = g_key_file_get_string (gkf, "wifid", "ip-binary", NULL);
+		lazy_managed = g_key_file_get_boolean (gkf, "wifid", "lazy-managed", NULL);
+		use_dev = g_key_file_get_boolean (gkf, "wifid", "use-dev", NULL);
+		wpa_syslog = g_key_file_get_boolean (gkf, "wifid", "wpa-syslog", NULL);
+		config_methods = g_key_file_get_string (gkf, "wifid", "config_methods", NULL);
+		go_intent = g_key_file_get_uint64 (gkf, "wifid", "go-intent", NULL);
+		driver_param = g_key_file_get_string (gkf, "wifid", "driver-param", NULL);
+		g_key_file_free(gkf);
+	}
+}
+
 int main(int argc, char **argv)
 {
 	struct manager *m = NULL;
@@ -595,17 +643,7 @@ int main(int argc, char **argv)
 
 	srand(time(NULL));
 
-   GKeyFile* gkf = load_ini_file();
-
-   if (gkf) {
-      gchar* log_level;
-      log_level = g_key_file_get_string (gkf, "wifid", "log-level", NULL);
-      if (log_level) {
-         log_max_sev = log_parse_arg(log_level);
-         g_free(log_level);
-      }
-      g_key_file_free(gkf);
-   }
+	load_ini_config();
 
 	r = parse_argv(argc, argv);
 	if (r < 0)
@@ -614,9 +652,9 @@ int main(int argc, char **argv)
 		return EXIT_SUCCESS;
 
 	if (getuid() != 0) {
-      r = EACCES;
+		r = EACCES;
 		log_notice("Must run as root");
-      goto finish;
+		goto finish;
 	}
 
 	r = manager_new(&m);

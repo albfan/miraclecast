@@ -35,10 +35,11 @@ struct peer;
 struct supplicant;
 struct supplicant_peer;
 
+void load_ini_config();
+
 /* supplicant */
 
-int supplicant_new(struct link *l,
-		   struct supplicant **out);
+int supplicant_new(struct link *l, struct supplicant **out);
 void supplicant_free(struct supplicant *s);
 
 int supplicant_start(struct supplicant *s);
@@ -131,6 +132,8 @@ struct link {
 	char *wfd_subelements;
 	char *config_methods;
 	char *ip_binary;
+	int go_intent;
+	char *driver_param;
 
 	size_t peer_cnt;
 	struct shl_htable peers;
@@ -168,6 +171,8 @@ int link_renamed(struct link *l, const char *ifname);
 
 int link_set_config_methods(struct link *l, char *config_methods);
 int link_set_friendly_name(struct link *l, const char *name);
+int link_set_driver_param(struct link *l, char *driver_param);
+int link_set_go_intent(struct link *l, unsigned int go_intent);
 const char *link_get_friendly_name(struct link *l);
 int link_set_wfd_subelements(struct link *l, const char *val);
 const char *link_get_wfd_subelements(struct link *l);
@@ -195,6 +200,8 @@ struct manager {
 
 	char *friendly_name;
 	char *config_methods;
+	int go_intent;
+	char *driver_param;
 
 	size_t link_cnt;
 	struct shl_htable links;
@@ -215,7 +222,7 @@ void manager_dbus_disconnect(struct manager *m);
 
 /* cli arguments */
 
-extern unsigned int arg_wpa_loglevel;
-extern bool arg_wpa_syslog;
+extern unsigned int wpa_loglevel;
+extern bool wpa_syslog;
 
 #endif /* WIFID_H */

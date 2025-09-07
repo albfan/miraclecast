@@ -34,22 +34,34 @@
 #include <glib.h>
 
 static inline GKeyFile* load_ini_file() {
-   GKeyFile* gkf = NULL;
-   gchar* config_file;
+	GKeyFile* gkf = NULL;
+	gchar* config_file;
 
-   gkf = g_key_file_new();
-   
-   config_file = g_build_filename(g_get_home_dir(), ".config", "miraclecastrc", NULL);
-   if (!g_key_file_load_from_file(gkf, config_file, G_KEY_FILE_NONE, NULL)) {
-      g_free(config_file);
-      config_file = g_build_filename(g_get_home_dir(), ".miraclecast", NULL);
-      if (!g_key_file_load_from_file(gkf, config_file, G_KEY_FILE_NONE, NULL)) {
-         g_key_file_free(gkf);
-         gkf = NULL;
-      }
-   }
-   g_free(config_file);
-   return gkf;
+	const gchar *home_dir = g_get_home_dir();
+
+	const gchar *config_paths[][5] = {
+		{ home_dir, ".miraclecastrc", NULL },
+		{ home_dir, ".miraclecast", "config", NULL },
+		{ home_dir, ".config", "miraclecastrc", NULL },
+		{ home_dir, ".config", "miraclecast", "config", NULL },
+		{ "/etc", "miraclecastrc", NULL },
+		{ "/etc", "miraclecast", "config", NULL },
+		{ NULL }
+	};
+
+	gkf = g_key_file_new();
+
+  int i = 0;
+	for (const gchar **path = config_paths[0]; *path != NULL; path = config_paths[++i]) {
+		config_file = g_build_filenamev((gchar**)path);
+		if (g_key_file_load_from_file(gkf, config_file, G_KEY_FILE_NONE, NULL)) {
+			g_free(config_file);
+			return gkf;
+		}
+		g_free(config_file);
+	}
+	g_key_file_free(gkf);
+	return NULL;
 }
 
 static inline void cleanup_sd_bus_message(sd_bus_message **ptr)

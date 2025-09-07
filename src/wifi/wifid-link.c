@@ -149,6 +149,22 @@ bool link_is_using_dev(struct link *l)
 	return l->use_dev;
 }
 
+int link_set_driver_param(struct link *l, char *driver_param)
+{
+	char *dp;
+
+	if (!driver_param)
+		return log_EINVAL();
+
+	dp = strdup(driver_param);
+	if (!dp)
+		return log_ENOMEM();
+
+	free(l->driver_param);
+	l->driver_param = dp;
+	return 0;
+}
+
 int link_set_config_methods(struct link *l, char *config_methods)
 {
 	char *cm;
@@ -162,6 +178,15 @@ int link_set_config_methods(struct link *l, char *config_methods)
 
 	free(l->config_methods);
 	l->config_methods = cm;
+	return 0;
+}
+
+int link_set_go_intent(struct link *l, unsigned int go_intent)
+{
+	if (0 > go_intent || 15 < go_intent)
+		return log_EINVAL();
+
+	l->go_intent = go_intent;
 	return 0;
 }
 
