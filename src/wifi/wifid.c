@@ -619,11 +619,11 @@ void load_ini_config()
 	GKeyFile* gkf = load_ini_file();
 
 	if (gkf) {
-		gchar* log_level;
-		log_level = g_key_file_get_string (gkf, "wifid", "log-level", NULL);
-		if (log_level) {
-			log_max_sev = log_parse_arg(log_level);
-			g_free(log_level);
+		gchar* log_level_tmp;
+		log_level_tmp = g_key_file_get_string (gkf, "wifid", "log-level", NULL);
+		if (log_level_tmp) {
+			log_max_sev = log_parse_arg(log_level_tmp);
+			g_free(log_level_tmp);
 		}
 		ip_binary = g_key_file_get_string (gkf, "wifid", "ip-binary", NULL);
 		lazy_managed = g_key_file_get_boolean (gkf, "wifid", "lazy-managed", NULL);
@@ -632,6 +632,11 @@ void load_ini_config()
 		config_methods = g_key_file_get_string (gkf, "wifid", "config_methods", NULL);
 		go_intent = g_key_file_get_uint64 (gkf, "wifid", "go-intent", NULL);
 		driver_param = g_key_file_get_string (gkf, "wifid", "driver-param", NULL);
+		log_level_tmp = g_key_file_get_string (gkf, "wifid", "wpa-log-level", NULL);
+		if (log_level_tmp) {
+			wpa_loglevel = log_parse_arg(log_level_tmp);
+			g_free(log_level_tmp);
+		}
 		g_key_file_free(gkf);
 	}
 }
