@@ -757,7 +757,10 @@ int supplicant_peer_connect(struct supplicant_peer *sp,
 	if (!pin)
 		pin = sp->pin;
 
-	log_debug("connect to %s via %s/%s", sp->p->p2p_mac, prov_type, pin);
+	if (pin)
+		log_debug("connect to %s via %s, pin:%s", sp->p->p2p_mac, prov_type, pin);
+	else
+		log_debug("connect to %s via %s", sp->p->p2p_mac, prov_type);
 
 	r = wpas_message_new_request(sp->s->bus_global,
 				     "P2P_CONNECT",
