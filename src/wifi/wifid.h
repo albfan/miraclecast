@@ -133,6 +133,7 @@ struct link {
 	char *config_methods;
 	char *ip_binary;
 	int go_intent;
+	int same_interface;
 	char *driver_param;
 
 	size_t peer_cnt;
@@ -173,6 +174,7 @@ int link_set_config_methods(struct link *l, char *config_methods);
 int link_set_friendly_name(struct link *l, const char *name);
 int link_set_driver_param(struct link *l, char *driver_param);
 int link_set_go_intent(struct link *l, unsigned int go_intent);
+int link_set_same_interface(struct link *l, unsigned int same_interface);
 const char *link_get_friendly_name(struct link *l);
 int link_set_wfd_subelements(struct link *l, const char *val);
 const char *link_get_wfd_subelements(struct link *l);
@@ -201,6 +203,7 @@ struct manager {
 	char *friendly_name;
 	char *config_methods;
 	int go_intent;
+	int same_interface;
 	char *driver_param;
 
 	size_t link_cnt;

@@ -2633,6 +2633,7 @@ static int supplicant_write_config(struct supplicant *s)
 		"driver_param=%s\n"
 		"ap_scan=%s\n"
 		"p2p_go_intent=%d\n"
+		"p2p_no_group_iface=%d\n"
 		"# End of configuration\n",
 
 		s->l->friendly_name ?: "unknown",
@@ -2640,7 +2641,8 @@ static int supplicant_write_config(struct supplicant *s)
 		s->l->config_methods ?: "pbc",
 		s->l->driver_param ?: "",
 		"1",
-		s->l->go_intent ?: 0);
+		s->l->go_intent ?: 0,
+		s->l->same_interface ?: 0);
 	if (r < 0) {
 		r = log_ERRNO();
 		fclose(f);

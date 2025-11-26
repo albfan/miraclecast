@@ -190,6 +190,15 @@ int link_set_go_intent(struct link *l, unsigned int go_intent)
 	return 0;
 }
 
+int link_set_same_interface(struct link *l, unsigned int same_interface)
+{
+	if (0 > same_interface || 1 < same_interface)
+		return log_EINVAL();
+
+	l->same_interface = same_interface;
+	return 0;
+}
+
 int link_set_ip_binary(struct link *l, const char *ip_binary)
 {
 	char *ipb;
