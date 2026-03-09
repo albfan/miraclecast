@@ -418,7 +418,7 @@ error:
 }
 
 
-static uint8_t check_packet_type(struct dhcp_packet *packet)
+static uint8_t check_packet_type(struct dhcp_packet *packet, uint16_t packet_len)
 {
 	uint8_t *type;
 
@@ -428,7 +428,7 @@ static uint8_t check_packet_type(struct dhcp_packet *packet)
 	if (packet->op != BOOTREQUEST)
 		return 0;
 
-	type = dhcp_get_option(packet, DHCP_MESSAGE_TYPE);
+	type = dhcp_get_option(packet, packet_len, DHCP_MESSAGE_TYPE);
 
 	if (!type)
 		return 0;
@@ -658,6 +658,7 @@ static gboolean listener_event(GIOChannel *channel, GIOCondition condition,
 	struct dhcp_lease *lease;
 	uint32_t requested_nip = 0;
 	uint8_t type, *server_id_option, *request_ip_option;
+	uint16_t packet_len;
 	int re;
 
 	if (condition & (G_IO_NVAL | G_IO_ERR | G_IO_HUP)) {
@@ -668,12 +669,13 @@ static gboolean listener_event(GIOChannel *channel, GIOCondition condition,
 	re = dhcp_recv_l3_packet(&packet, dhcp_server->listener_sockfd);
 	if (re < 0)
 		return TRUE;
+	packet_len = (uint16_t)(unsigned int)re;
 
-	type = check_packet_type(&packet);
+	type = check_packet_type(&packet, packet_len);
 	if (type == 0)
 		return TRUE;
 
-	server_id_option = dhcp_get_option(&packet, DHCP_SERVER_ID);
+	server_id_option = dhcp_get_option(&packet, packet_len, DHCP_SERVER_ID);
 	if (server_id_option) {
 		uint32_t server_nid = get_be32(server_id_option);
 
@@ -681,7 +683,7 @@ static gboolean listener_event(GIOChannel *channel, GIOCondition condition,
 			return TRUE;
 	}
 
-	request_ip_option = dhcp_get_option(&packet, DHCP_REQUESTED_IP);
+	request_ip_option = dhcp_get_option(&packet, packet_len, DHCP_REQUESTED_IP);
 	if (request_ip_option)
 		requested_nip = get_be32(request_ip_option);
 
