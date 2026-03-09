@@ -71,18 +71,21 @@ GDHCPOptionType dhcp_get_code_type(uint8_t code)
 	return OPTION_UNKNOWN;
 }
 
-uint8_t *dhcp_get_option(struct dhcp_packet *packet, int code)
+uint8_t *dhcp_get_option(struct dhcp_packet *packet, uint16_t packet_len, int code)
 {
 	int len, rem;
-	uint8_t *optionptr;
+	uint8_t *optionptr, *options_end;
+	size_t options_len;
 	uint8_t overload = 0;
 
 	/* option bytes: [code][len][data1][data2]..[dataLEN] */
 	optionptr = packet->options;
 	rem = sizeof(packet->options);
+	options_len = packet_len - (sizeof(*packet) - sizeof(packet->options));
+	options_end = optionptr + options_len - 1;
 
 	while (1) {
-		if (rem <= 0)
+		if ((rem <= 0) && (optionptr + OPT_CODE > options_end))
 			/* Bad packet, malformed option field */
 			return NULL;
 
@@ -113,14 +116,25 @@ uint8_t *dhcp_get_option(struct dhcp_packet *packet, int code)
 			break;
 		}
 
+		if (optionptr + OPT_LEN > options_end) {
+			/* bad packet, would read length field from OOB */
+			return NULL;
+		}
+
 		len = 2 + optionptr[OPT_LEN];
 
 		rem -= len;
 		if (rem < 0)
 			continue; /* complain and return NULL */
 
-		if (optionptr[OPT_CODE] == code)
-			return optionptr + OPT_DATA;
+		if (optionptr[OPT_CODE] == code) {
+			if (optionptr + len > options_end) {
+				/* bad packet, option length points OOB */
+				return NULL;
+			} else {
+				return optionptr + OPT_DATA;
+			}
+		}
 
 		if (optionptr[OPT_CODE] == DHCP_OPTION_OVERLOAD)
 			overload |= optionptr[OPT_DATA];
