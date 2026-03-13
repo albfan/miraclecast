@@ -46,6 +46,7 @@ const char *interface_name = NULL;
 const char *config_methods = NULL;
 unsigned int wpa_loglevel = LOG_NOTICE;
 unsigned int go_intent = 0;
+unsigned int same_interface = 0;
 const char *driver_param = NULL;
 bool wpa_syslog = false;
 bool use_dev = false;
@@ -116,7 +117,10 @@ static void manager_add_udev_link(struct manager *m,
 		link_set_config_methods(l, m->config_methods);
 	if (m->driver_param)
 		link_set_driver_param(l, m->driver_param);
-	link_set_go_intent(l, m->go_intent);
+	if (m->go_intent)
+		link_set_go_intent(l, m->go_intent);
+	if (m->same_interface)
+		link_set_same_interface(l, m->same_interface);
 
 	if(use_dev)
 		link_use_dev(l);
@@ -273,6 +277,7 @@ static int manager_new(struct manager **out)
 	}
 
 	m->go_intent = go_intent;
+	m->same_interface = same_interface;
 
 	r = sd_event_default(&m->event);
 	if (r < 0) {
@@ -493,21 +498,22 @@ static int help(void)
 	 */
 	printf("%s [OPTIONS...] ...\n\n"
 	       "Wifi Management Daemon.\n\n"
-	       "  -h --help                Show this help\n"
-	       "     --version             Show package version\n"
-	       "     --log-level <lvl>     Maximum level for log messages\n"
-	       "     --log-time            Prefix log-messages with timestamp\n"
-	       "     --log-date-time       Prefix log-messages with date time\n"
+	       "  -h --help                 Show this help\n"
+	       "     --version              Show package version\n"
+	       "     --log-level <lvl>      Maximum level for log messages\n"
+	       "     --log-time             Prefix log-messages with timestamp\n"
+	       "     --log-date-time        Prefix log-messages with date time\n"
 	       "\n"
-	       "  -i --interface           Choose the interface to use\n"
-	       "     --config-methods      Define config methods for pairing, default 'pbc'\n"
+	       "  -i --interface            Choose the interface to use\n"
+	       "     --config-methods       Define config methods for pairing, default 'pbc'\n"
 	       "\n"
-	       "     --wpa-loglevel <lvl>  wpa_supplicant log-level\n"
-	       "     --wpa-syslog          wpa_supplicant use syslog\n"
-	       "     --use-dev             enable workaround for 'no ifname' issue\n"
-	       "     --lazy-managed        manage interface only when user decide to do\n"
-	       "     --ip-binary <path>    path to 'ip' binary [default: "XSTR(IP_BINARY)"]\n"
-	       "     --go-intent <0-15>    group owner intent, 0-15, the higher number indicates preference to become the GO, default 0\n"
+	       "     --wpa-loglevel <lvl>   wpa_supplicant log-level\n"
+	       "     --wpa-syslog           wpa_supplicant use syslog\n"
+	       "     --use-dev              enable workaround for 'no ifname' issue\n"
+	       "     --lazy-managed         manage interface only when user decide to do\n"
+	       "     --ip-binary <path>     path to 'ip' binary [default: "XSTR(IP_BINARY)"]\n"
+	       "     --go-intent <0-15>     group owner intent, 0-15, the higher number indicates preference to become the GO, default 0\n"
+	       "     --same-interface <0-1> Use same interface for group, default 0 (new virtual interace is created)\n"
 	       , program_invocation_short_name);
 	/*
 	 * 80-char barrier:
@@ -531,23 +537,25 @@ static int parse_argv(int argc, char *argv[])
 		ARG_LAZY_MANAGED,
 		ARG_IP_BINARY,
 		ARG_GO_INTENT,
+		ARG_SAME_INTERFACE,
 		ARG_DRIVER_PARAM,
 	};
 	static const struct option options[] = {
-		{ "help",       	no_argument,		NULL,	'h' },
-		{ "version",	        no_argument,		NULL,	ARG_VERSION },
-		{ "log-level",	        required_argument,	NULL,	ARG_LOG_LEVEL },
-		{ "log-time",	        no_argument,		NULL,	ARG_LOG_TIME },
+		{ "help",		no_argument,		NULL,	'h' },
+		{ "version",		no_argument,		NULL,	ARG_VERSION },
+		{ "log-level",		required_argument,	NULL,	ARG_LOG_LEVEL },
+		{ "log-time",		no_argument,		NULL,	ARG_LOG_TIME },
 		{ "log-date-time",	no_argument,		NULL,	ARG_LOG_DATE_TIME },
 
 		{ "wpa-loglevel",	required_argument,	NULL,	ARG_WPA_LOGLEVEL },
-		{ "wpa-syslog",	no_argument,	NULL,	ARG_WPA_SYSLOG },
-		{ "interface",	required_argument,	NULL,	'i' },
-		{ "use-dev",	no_argument,	NULL,	ARG_USE_DEV },
+		{ "wpa-syslog",		no_argument,		NULL,	ARG_WPA_SYSLOG },
+		{ "interface",		required_argument,	NULL,	'i' },
+		{ "use-dev",		no_argument,		NULL,	ARG_USE_DEV },
 		{ "config-methods",	required_argument,	NULL,	ARG_CONFIG_METHODS },
-		{ "lazy-managed",	no_argument,	NULL,	ARG_LAZY_MANAGED },
-		{ "ip-binary",	required_argument,	NULL,	ARG_IP_BINARY },
-		{ "go-intent",	required_argument,	NULL,	ARG_GO_INTENT },
+		{ "lazy-managed",	no_argument,		NULL,	ARG_LAZY_MANAGED },
+		{ "ip-binary",		required_argument,	NULL,	ARG_IP_BINARY },
+		{ "go-intent",		required_argument,	NULL,	ARG_GO_INTENT },
+		{ "same-interface",	required_argument,	NULL,	ARG_SAME_INTERFACE },
 		{ "driver-param",	required_argument,	NULL,	ARG_DRIVER_PARAM },
 		{}
 	};
@@ -593,6 +601,9 @@ static int parse_argv(int argc, char *argv[])
 		case ARG_GO_INTENT:
 			go_intent = atoi(optarg);
 			break;
+		case ARG_SAME_INTERFACE:
+			same_interface = atoi(optarg);
+			break;
 		case ARG_DRIVER_PARAM:
 			driver_param = optarg;
 			break;
@@ -631,6 +642,7 @@ void load_ini_config()
 		wpa_syslog = g_key_file_get_boolean (gkf, "wifid", "wpa-syslog", NULL);
 		config_methods = g_key_file_get_string (gkf, "wifid", "config_methods", NULL);
 		go_intent = g_key_file_get_uint64 (gkf, "wifid", "go-intent", NULL);
+		same_interface = g_key_file_get_uint64 (gkf, "wifid", "same-interface", NULL);
 		driver_param = g_key_file_get_string (gkf, "wifid", "driver-param", NULL);
 		log_level_tmp = g_key_file_get_string (gkf, "wifid", "wpa-log-level", NULL);
 		if (log_level_tmp) {
